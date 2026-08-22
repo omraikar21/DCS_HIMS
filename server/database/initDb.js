@@ -55,10 +55,20 @@ const initDatabase = async () => {
         joining_date DATE,
         salary NUMERIC(12,2),
         employment_status VARCHAR(30) DEFAULT 'ACTIVE',
+        bank_name VARCHAR(100) DEFAULT 'HDFC Bank',
+        bank_account VARCHAR(100) DEFAULT '50100482910482',
+        ifsc_code VARCHAR(50) DEFAULT 'HDFC0001234',
         address TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    // Ensure columns exist on existing databases
+    await pool.query(`
+      ALTER TABLE employees ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100) DEFAULT 'HDFC Bank';
+      ALTER TABLE employees ADD COLUMN IF NOT EXISTS bank_account VARCHAR(100) DEFAULT '50100482910482';
+      ALTER TABLE employees ADD COLUMN IF NOT EXISTS ifsc_code VARCHAR(50) DEFAULT 'HDFC0001234';
     `);
 
     // 4. ATTENDANCE TABLE
@@ -108,10 +118,22 @@ const initDatabase = async () => {
         net_salary NUMERIC(12,2) DEFAULT 0,
         payment_status VARCHAR(30) DEFAULT 'PENDING',
         payment_date DATE,
+        bank_name VARCHAR(100),
+        bank_account VARCHAR(100),
+        ifsc_code VARCHAR(50),
+        transaction_ref VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE (employee_id, payroll_month, payroll_year)
       );
+    `);
+
+    // Ensure columns exist on existing databases
+    await pool.query(`
+      ALTER TABLE payroll ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100);
+      ALTER TABLE payroll ADD COLUMN IF NOT EXISTS bank_account VARCHAR(100);
+      ALTER TABLE payroll ADD COLUMN IF NOT EXISTS ifsc_code VARCHAR(50);
+      ALTER TABLE payroll ADD COLUMN IF NOT EXISTS transaction_ref VARCHAR(100);
     `);
 
     // 7. PAYSLIPS TABLE
