@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <!-- Vibrant Solid Luminous White Gradient -->
+    <linearGradient id="dcsWhite" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#FFFFFF" />
+    </linearGradient>
+
+    <!-- Bright Pink Radiant Gradient (#E85BC7 -> #FFAEF2) -->
+    <linearGradient id="dcsPinkGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFA8F1" />
+      <stop offset="60%" stop-color="#E85BC7" />
+      <stop offset="100%" stop-color="#C225A6" />
+    </linearGradient>
+
+    <!-- Platinum Soft Silver -->
+    <linearGradient id="dcsSilverGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#DDD2E2" />
+    </linearGradient>
+
+    <!-- Soft Glassmorphism Backdrop for Maximum Contrast -->
+    <radialGradient id="dcsBackdropGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.22)" />
+      <stop offset="70%" stop-color="rgba(255, 255, 255, 0.08)" />
+      <stop offset="100%" stop-color="rgba(255, 255, 255, 0)" />
+    </radialGradient>
+
+    <filter id="crispShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000000" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Ambient Contrast Glow Circle -->
+  <circle cx="200" cy="200" r="190" fill="url(#dcsBackdropGlow)" />
+
+  <g filter="url(#crispShadow)">
+    <!-- Outer Dynamic Sweeps (Thick & Bold) -->
+    <path d="M 65 320 C 15 230 25 95 145 35 C 225 -5 325 15 375 80 C 350 60 280 20 205 35 C 105 55 45 170 65 320 Z" fill="url(#dcsPinkGlow)" />
+    <path d="M 88 335 C 45 255 52 140 152 75 C 218 35 305 45 350 95 C 330 78 275 50 215 62 C 132 80 75 185 88 335 Z" fill="url(#dcsWhite)" />
+
+    <!-- Inner Platinum Arch Sweep -->
+    <path d="M 115 345 C 80 280 85 185 168 130 C 220 90 292 98 332 140 C 315 120 262 105 210 118 C 145 138 100 225 115 345 Z" fill="url(#dcsSilverGlow)" />
+
+    <!-- Bottom Dynamic Swoosh Wings -->
+    <path d="M 140 280 C 225 325 330 305 390 270 C 330 308 230 318 155 292 C 205 318 295 318 355 298 C 290 330 195 335 130 298 Z" fill="url(#dcsPinkGlow)" />
+    <path d="M 168 312 C 248 348 350 335 405 295 C 348 335 250 348 178 322 C 225 348 310 348 370 322 C 305 358 208 362 145 328 Z" fill="url(#dcsWhite)" />
+
+    <!-- DCS Bold Monogram (Enlarged & Ultra-Crisp) -->
+    <!-- D -->
+    <path d="M 115 145 L 168 145 C 208 145 228 168 228 200 C 228 232 208 255 168 255 L 115 255 Z M 138 168 L 138 232 L 165 232 C 190 232 202 220 202 200 C 202 180 190 168 165 168 Z" fill="url(#dcsWhite)" />
+    
+    <!-- C -->
+    <path d="M 298 172 L 275 186 C 268 172 254 165 238 172 C 212 184 208 214 228 232 C 244 246 266 240 280 226 L 302 238 C 284 262 252 272 222 254 C 185 232 185 174 235 148 C 268 132 298 148 298 172 Z" fill="url(#dcsWhite)" />
+
+    <!-- S -->
+    <path d="M 305 230 C 305 248 324 258 350 255 C 375 252 388 240 388 224 C 388 196 342 196 330 186 C 315 176 322 155 342 148 C 362 140 385 148 394 165 L 372 178 C 368 168 354 162 344 168 C 332 172 332 180 342 185 C 358 192 410 192 410 226 C 410 256 382 276 345 276 C 310 276 280 258 280 230 Z" fill="url(#dcsWhite)" />
+  </g>
+</svg>
+
+

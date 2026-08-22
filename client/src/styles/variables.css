@@ -1,0 +1,83 @@
+:root {
+  /* ==========================================================================
+     Decent Luxury Palette: Light Pink / Blush Rose + Obsidian Black + Pure White
+     ========================================================================== */
+  --primary-brand: #DB2777;           /* Vibrant Rose 600 */
+  --primary-hover: #BE185D;           /* Deep Rose 700 */
+  --primary-light: #F472B6;           /* Soft Light Pink 400 */
+  --primary-blush: #FCE7F3;           /* Ultra Soft Blush 100 */
+  --primary-blush-soft: #FFF0F7;      /* Rose Mist Canvas 50 */
+  
+  --dark-obsidian: #18181B;          /* Sleek Obsidian Black */
+  --dark-surface: #111827;           /* Midnight Card Surface */
+  --dark-secondary: #27272A;         /* Charcoal Secondary */
+
+  --light-bg: #FFF5FA;               /* Soft Light Pink Canvas */
+  --card-bg: #FFFFFF;                /* Crisp Pure White */
+  --border-color: #F3D3E7;           /* Delicate Rose Border */
+  --border-pink-light: #FCE7F3;      /* Subtle Light Pink Divider */
+  
+  --success-color: #10B981;          /* Emerald Green */
+  --error-color: #EF4444;            /* Crimson Red */
+
+  /* Aliases for System-wide Consistency */
+  --primary-purple: #DB2777;
+  --secondary-purple: #18181B;
+  --primary-purple-light: #FFF0F7;
+  --primary-purple-subtle: rgba(219, 39, 119, 0.08);
+
+  --primary-gradient: linear-gradient(135deg, #F472B6 0%, #DB2777 100%);
+  --hero-gradient: linear-gradient(145deg, #1C0A1B 0%, #2D0F2A 50%, #150514 100%);
+  --hero-gradient-light: linear-gradient(135deg, #FFF1F7 0%, #FCE7F3 50%, #FBCFE8 100%);
+  --hero-gradient-hover: linear-gradient(135deg, #FB7185 0%, #E11D48 100%);
+  --hero-text: #FFFFFF;
+  --primary-glow: 0 4px 20px rgba(219, 39, 119, 0.3);
+
+  --brand-silver: #94A3B8;
+  --brand-silver-dark: #64748B;
+  --brand-silver-light: #FFF0F7;
+  --brand-silver-border: #F3D3E7;
+  --brand-gray: #94A3B8;
+  --dark-gray: #18181B;
+
+  --light-gray: #FFF5FA;
+  --border-gray: #F3D3E7;
+  --white: #FFFFFF;
+
+
+
+  /* Refined Status Palette */
+  --success: #2E9B67;
+  --success-bg: #EDF9F2;
+  --success-border: #A3E4C3;
+
+  --warning: #F59E0B;
+  --warning-bg: #FFFBEB;
+  --warning-border: #FDE68A;
+
+  --danger: #D64545;
+  --danger-bg: #FEF2F2;
+  --danger-border: #F9C0C0;
+
+  --info: #2563EB;
+  --info-bg: #EFF6FF;
+  --info-border: #BFDBFE;
+
+  /* Typography Colors */
+  --text-primary: #18243A;
+  --text-secondary: #475569;
+  --text-muted: #8492A6;
+
+  /* Layout Constants */
+  --sidebar-width: 260px;
+  --navbar-height: 72px;
+
+  /* Modern Radius & Elevations */
+  --radius-small: 8px;
+  --radius-medium: 12px;
+  --radius-large: 18px;
+
+  --shadow-small: 0 1px 3px rgba(24, 36, 58, 0.05), 0 1px 2px rgba(24, 36, 58, 0.03);
+  --shadow-medium: 0 4px 20px -2px rgba(133, 25, 117, 0.08), 0 2px 6px -1px rgba(24, 36, 58, 0.03);
+  --shadow-large: 0 10px 30px -4px rgba(133, 25, 117, 0.14), 0 4px 10px -2px rgba(24, 36, 58, 0.04);
+}
