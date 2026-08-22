@@ -375,8 +375,8 @@ function Reports() {
     recordAuditEvent({
       eventAction: "Finance Report Generated & Sent",
       category: "FINANCE",
-      actorName: user?.name || "Finance Manager",
-      actorEmail: user?.email || "finance@dcshims.com",
+      actorName: user?.name || "Om Raikar",
+      actorEmail: user?.email || "omraikar2128@gmail.com",
       role: userRole,
       details: `Generated ${newReport.title} issued to ${targetName} (${currencySymbol}${net.toLocaleString("en-IN")}).`,
       status: "SUCCESS",
@@ -409,8 +409,8 @@ function Reports() {
     recordAuditEvent({
       eventAction: "Report Exported / Printed",
       category: "REPORT",
-      actorName: user?.name || "User",
-      actorEmail: user?.email || "user@dcshims.com",
+      actorName: user?.name || "Om Raikar",
+      actorEmail: user?.email || "omraikar2128@gmail.com",
       role: userRole,
       details: `Exported printable PDF for '${report.title}' (${report.id}).`,
       status: "SUCCESS",

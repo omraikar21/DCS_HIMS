@@ -1,17 +1,10 @@
+import { useState, useEffect } from "react";
 import {
   Search,
   SlidersHorizontal,
   X,
 } from "lucide-react";
-
-const departments = [
-  "All Departments",
-  "Development",
-  "AI/ML",
-  "IoT",
-  "HR",
-  "Finance",
-];
+import { getDepartments } from "../../services/departmentService";
 
 const employeeStatuses = [
   "All Status",
@@ -28,6 +21,21 @@ function EmployeeFilters({
   status,
   setStatus,
 }) {
+  const [departmentsList, setDepartmentsList] = useState(["All Departments"]);
+
+  useEffect(() => {
+    getDepartments()
+      .then((data) => {
+        if (data && data.length > 0) {
+          const names = data.map((d) => d.name).filter(Boolean);
+          setDepartmentsList(["All Departments", ...names]);
+        } else {
+          setDepartmentsList(["All Departments"]);
+        }
+      })
+      .catch(() => setDepartmentsList(["All Departments"]));
+  }, []);
+
   const clearFilters = () => {
     setSearch("");
     setDepartment("All Departments");
@@ -68,7 +76,7 @@ function EmployeeFilters({
             setDepartment(e.target.value)
           }
         >
-          {departments.map((item) => (
+          {departmentsList.map((item) => (
             <option
               key={item}
               value={item}

@@ -412,7 +412,7 @@ function Login() {
                   id="login-email"
                   type="text"
                   name="email"
-                  placeholder="admin@dcshims.com"
+                  placeholder="omraikar2128@gmail.com"
                   value={formData.email}
                   onChange={handleChange}
                   autoComplete="username"

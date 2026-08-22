@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 
 import { X } from "lucide-react";
+import { getDepartments } from "../../services/departmentService";
 
 const initialForm = {
   name: "",
   email: "",
   phone: "",
-  department: "Software Development",
+  department: "",
   designation: "",
   status: "Active",
   joiningDate: "",
@@ -23,11 +24,22 @@ function EmployeeModal({
   const [form, setForm] =
     useState(initialForm);
 
+  const [departments, setDepartments] =
+    useState([]);
+
   const [saving, setSaving] =
     useState(false);
 
   const [generalError, setGeneralError] =
     useState("");
+
+  useEffect(() => {
+    if (isOpen) {
+      getDepartments()
+        .then((data) => setDepartments(data || []))
+        .catch((err) => console.warn("Failed to load departments in modal:", err));
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (employee) {
@@ -185,19 +197,12 @@ function EmployeeModal({
                 value={form.department}
                 onChange={handleChange}
               >
-                <option value="Software Development">Software Development</option>
-                <option value="Artificial Intelligence & ML">Artificial Intelligence & ML</option>
-                <option value="Cloud & DevOps">Cloud & DevOps</option>
-                <option value="IoT & Embedded Systems">IoT & Embedded Systems</option>
-                <option value="Human Resources">Human Resources</option>
-                <option value="Finance & Payroll">Finance & Payroll</option>
-                <option value="UI/UX & Product Design">UI/UX & Product Design</option>
-                <option value="Quality Assurance">Quality Assurance</option>
-                <option value="Development">Development (Legacy)</option>
-                <option value="AI/ML">AI/ML (Legacy)</option>
-                <option value="IoT">IoT (Legacy)</option>
-                <option value="HR">HR (Legacy)</option>
-                <option value="Finance">Finance (Legacy)</option>
+                <option value="">-- Select Department --</option>
+                {departments.map((dept) => (
+                  <option key={dept.id || dept.name} value={dept.name}>
+                    {dept.name}
+                  </option>
+                ))}
               </select>
 
             </div>

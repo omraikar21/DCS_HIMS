@@ -6,11 +6,12 @@ import {
 import {
   X,
 } from "lucide-react";
+import { getDepartments } from "../../services/departmentService";
 
 const initialForm = {
   employeeName: "",
   employeeId: "",
-  department: "Development",
+  department: "",
   leaveType: "Casual Leave",
   fromDate: "",
   toDate: "",
@@ -28,6 +29,17 @@ function LeaveModal({
 
   const [form, setForm] =
     useState(initialForm);
+
+  const [departments, setDepartments] =
+    useState([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      getDepartments()
+        .then((data) => setDepartments(data || []))
+        .catch(() => setDepartments([]));
+    }
+  }, [isOpen]);
 
 
   useEffect(() => {
@@ -179,32 +191,15 @@ function LeaveModal({
 
               <select
                 name="department"
-                value={
-                  form.department
-                }
+                value={form.department}
                 onChange={handleChange}
               >
-
-                <option>
-                  Development
-                </option>
-
-                <option>
-                  AI/ML
-                </option>
-
-                <option>
-                  IoT
-                </option>
-
-                <option>
-                  HR
-                </option>
-
-                <option>
-                  Finance
-                </option>
-
+                <option value="">-- Select Department --</option>
+                {departments.map((dept) => (
+                  <option key={dept.id || dept.name} value={dept.name}>
+                    {dept.name}
+                  </option>
+                ))}
               </select>
 
             </div>

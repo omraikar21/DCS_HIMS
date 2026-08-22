@@ -73,7 +73,7 @@ function HRDashboard() {
     : "100% attendance";
 
   const attendanceChartData = useMemo(() => {
-    const presentCount = presentToday || 3;
+    const presentCount = presentToday || 0;
     const absentCount = Math.max(0, totalEmployees - presentCount);
     return [
       { day: "Mon", present: presentCount, absent: absentCount },

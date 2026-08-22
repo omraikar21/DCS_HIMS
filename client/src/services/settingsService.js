@@ -7,7 +7,7 @@ import { get, put } from "./apiClient";
 
 const DEFAULT_SETTINGS = {
   companyName: "Dharam Consultancy Services (DCS)",
-  systemEmail: "admin@dcshims.com",
+  systemEmail: "omraikar2128@gmail.com",
   timezone: "Asia/Kolkata (IST)",
   currency: "INR (₹)",
   currencySymbol: "₹",

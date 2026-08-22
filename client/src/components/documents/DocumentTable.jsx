@@ -64,7 +64,16 @@ function DocumentTable({
                   </div>
                 </td>
 
-                <td>{record.employeeName}</td>
+                <td>
+                  <div>
+                    <strong style={{ fontSize: "13.5px", color: "#1e293b", display: "block" }}>
+                      {record.employeeName}
+                    </strong>
+                    <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "600" }}>
+                      {record.employeeId}
+                    </span>
+                  </div>
+                </td>
                 <td>
                   <span className="status-badge" style={{ backgroundColor: "#f1f5f9", color: "#475569", fontSize: "11.5px" }}>
                     {record.category}

@@ -15,7 +15,7 @@ function ProfileHeader() {
 
   const name = user?.name || "Om Raikar";
   const role = user?.role || "ADMIN";
-  const email = user?.email || "admin@dcshims.com";
+  const email = user?.email || "omraikar2128@gmail.com";
   const avatar = user?.avatar || "";
 
   const initials = name

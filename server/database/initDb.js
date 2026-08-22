@@ -251,41 +251,21 @@ const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_recruitment_status ON recruitment(status);
     `);
 
-    // 14. SEED DEFAULT DEPARTMENTS IF EMPTY
-    const deptCount = await pool.query("SELECT COUNT(*) FROM departments");
-    if (parseInt(deptCount.rows[0].count, 10) === 0) {
-      await pool.query(`
-        INSERT INTO departments (name, description, department_head)
-        VALUES
-          ('Human Resources', 'Handles employee management and HR operations', 'Anita Sharma'),
-          ('Information Technology', 'Handles software and technology operations', 'Rajesh Kumar'),
-          ('Finance', 'Handles payroll and financial operations', 'Priya Patel'),
-          ('Administration', 'Handles administrative activities', 'Suresh Rao'),
-          ('Operations', 'Handles daily organizational operations', 'Meena Joshi')
-        ON CONFLICT (name) DO NOTHING;
-      `);
-      console.log("[DB INIT] Default departments seeded.");
-    }
+    // 14. SEED SUPER ADMIN (omraikar2128@gmail.com / Admin@123)
+    const adminEmail = "omraikar2128@gmail.com";
+    const adminCheck = await pool.query(
+      "SELECT id FROM users WHERE email = $1",
+      [adminEmail]
+    );
 
-    // 15. SEED DEFAULT ADMIN IF NO USERS EXIST
-    const userCount = await pool.query("SELECT COUNT(*) FROM users");
-    if (parseInt(userCount.rows[0].count, 10) === 0) {
+    if (adminCheck.rows.length === 0) {
       const adminPass = await bcrypt.hash("Admin@123", 10);
-      const hrPass = await bcrypt.hash("HR@123", 10);
-      const financePass = await bcrypt.hash("Finance@123", 10);
-      const employeePass = await bcrypt.hash("Employee@123", 10);
-
       await pool.query(`
         INSERT INTO users (name, email, password_hash, role, is_super_admin, is_active)
-        VALUES
-          ('System Administrator', 'admin@dcshims.com', $1, 'ADMIN', TRUE, TRUE),
-          ('HR Manager', 'hr@dcshims.com', $2, 'HR', FALSE, TRUE),
-          ('Finance Manager', 'finance@dcshims.com', $3, 'FINANCE', FALSE, TRUE),
-          ('Test Employee', 'employee@dcshims.com', $4, 'EMPLOYEE', FALSE, TRUE)
+        VALUES ('Om Raikar', $1, $2, 'ADMIN', TRUE, TRUE)
         ON CONFLICT (email) DO NOTHING;
-      `, [adminPass, hrPass, financePass, employeePass]);
-
-      console.log("[DB INIT] Default users seeded (admin@dcshims.com / Admin@123).");
+      `, [adminEmail, adminPass]);
+      console.log(`[DB INIT] Primary Super Admin created (${adminEmail} / Admin@123).`);
     }
 
     console.log("[DB INIT] Database initialization completed successfully.");

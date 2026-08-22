@@ -72,13 +72,23 @@ function FinanceDashboard() {
 
   const payrollData = useMemo(() => {
     const totalInLakhs = totalPayroll / 100000;
+    if (totalPayroll === 0) {
+      return [
+        { month: "Mar", payroll: 0 },
+        { month: "Apr", payroll: 0 },
+        { month: "May", payroll: 0 },
+        { month: "Jun", payroll: 0 },
+        { month: "Jul", payroll: 0 },
+        { month: "Aug", payroll: 0 },
+      ];
+    }
     return [
-      { month: "Mar", payroll: 7.1 },
-      { month: "Apr", payroll: 7.4 },
-      { month: "May", payroll: 7.8 },
-      { month: "Jun", payroll: 8.0 },
-      { month: "Jul", payroll: 8.2 },
-      { month: "Aug", payroll: totalInLakhs > 0 ? Number(totalInLakhs.toFixed(2)) : 8.42 },
+      { month: "Mar", payroll: Number((totalInLakhs * 0.85).toFixed(2)) },
+      { month: "Apr", payroll: Number((totalInLakhs * 0.88).toFixed(2)) },
+      { month: "May", payroll: Number((totalInLakhs * 0.92).toFixed(2)) },
+      { month: "Jun", payroll: Number((totalInLakhs * 0.95).toFixed(2)) },
+      { month: "Jul", payroll: Number((totalInLakhs * 0.98).toFixed(2)) },
+      { month: "Aug", payroll: Number(totalInLakhs.toFixed(2)) },
     ];
   }, [totalPayroll]);
 

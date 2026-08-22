@@ -126,7 +126,7 @@ function Navbar({
   };
 
   const userName = currentUser?.name || user?.name || "Om Raikar";
-  const userEmail = currentUser?.email || user?.email || "admin@dcshims.com";
+  const userEmail = currentUser?.email || user?.email || "omraikar2128@gmail.com";
   const userRole = role || currentUser?.role || user?.role || "ADMIN";
   const userAvatar = currentUser?.avatar || "";
 

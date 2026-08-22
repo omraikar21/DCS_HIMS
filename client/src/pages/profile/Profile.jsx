@@ -86,7 +86,7 @@ function Profile() {
   }, []);
 
   const userName = currentUser?.name || user?.name || "Om Raikar";
-  const userEmail = (currentUser?.email || user?.email || "admin@dcshims.com").trim().toLowerCase();
+  const userEmail = (currentUser?.email || user?.email || "omraikar2128@gmail.com").trim().toLowerCase();
   const userRole = (role || currentUser?.role || user?.role || "ADMIN").toUpperCase();
   const userAvatar = currentUser?.avatar || "";
 

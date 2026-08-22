@@ -96,7 +96,7 @@ function EmployeeDashboard() {
         };
       }
     }
-    return { formatted: "₹85K", month: "August 2026" };
+    return { formatted: "₹0K", month: "No records" };
   }, [payrolls, user]);
 
   // Dynamic Leave Balance

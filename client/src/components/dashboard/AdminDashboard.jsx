@@ -96,32 +96,36 @@ function AdminDashboard() {
         if (dashboard?.employeesByDepartment && dashboard.employeesByDepartment.length > 0) {
             return dashboard.employeesByDepartment.map((d) => ({
                 name: d.department || "Other",
-                value: Number(d.employee_count) || 1,
-            }));
+                value: Number(d.employee_count) || 0,
+            })).filter((d) => d.value > 0);
         }
-        return [
-            { name: "Development", value: 4 },
-            { name: "AI/ML", value: 2 },
-            { name: "IoT", value: 1 },
-            { name: "HR", value: 1 },
-            { name: "Finance", value: 1 },
-        ];
+        return [];
     }, [dashboard]);
 
     const employeeGrowthData = useMemo(() => {
-        const currentCount = totalEmployees || 4;
+        if (totalEmployees === 0) {
+            return [
+                { month: "Mar", employees: 0 },
+                { month: "Apr", employees: 0 },
+                { month: "May", employees: 0 },
+                { month: "Jun", employees: 0 },
+                { month: "Jul", employees: 0 },
+                { month: "Aug", employees: 0 },
+            ];
+        }
+        const currentCount = totalEmployees;
         return [
-            { month: "Mar", employees: Math.max(1, currentCount - 3) },
-            { month: "Apr", employees: Math.max(1, currentCount - 2) },
-            { month: "May", employees: Math.max(2, currentCount - 1) },
-            { month: "Jun", employees: Math.max(2, currentCount - 1) },
-            { month: "Jul", employees: Math.max(3, currentCount) },
+            { month: "Mar", employees: Math.max(0, currentCount - 3) },
+            { month: "Apr", employees: Math.max(0, currentCount - 2) },
+            { month: "May", employees: Math.max(0, currentCount - 1) },
+            { month: "Jun", employees: Math.max(0, currentCount - 1) },
+            { month: "Jul", employees: Math.max(0, currentCount) },
             { month: "Aug", employees: currentCount },
         ];
     }, [totalEmployees]);
 
     const attendanceChartData = useMemo(() => {
-        const presentCount = presentToday || 3;
+        const presentCount = presentToday || 0;
         const absentCount = Math.max(0, totalEmployees - presentCount);
         return [
             { day: "Mon", present: presentCount, absent: absentCount },
@@ -294,47 +298,46 @@ function AdminDashboard() {
                     onAction={() => navigate("/reports?reportId=REP-DEP-05")}
                 >
 
-                    <ResponsiveContainer
-                        width="100%"
-                        height={270}
-                    >
-
-                        <PieChart>
-
-                            <Pie
-                                data={departmentChartData}
-                                dataKey="value"
-                                nameKey="name"
-                                cx="50%"
-                                cy="45%"
-                                outerRadius={85}
-                                label
-                            >
-
-                                {departmentChartData.map(
-                                    (entry, index) => (
-                                        <Cell
-                                            key={entry.name}
-                                            fill={
-                                                chartColors[
-                                                index %
-                                                chartColors.length
-                                                ]
-                                            }
-                                        />
-                                    )
-                                )}
-
-                            </Pie>
-
-                            <Tooltip />
-
-                            <Legend />
-
-                        </PieChart>
-
-                    </ResponsiveContainer>
-
+                    {departmentChartData.length > 0 ? (
+                        <ResponsiveContainer
+                            width="100%"
+                            height={270}
+                        >
+                            <PieChart>
+                                <Pie
+                                    data={departmentChartData}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="45%"
+                                    outerRadius={85}
+                                    label
+                                >
+                                    {departmentChartData.map(
+                                        (entry, index) => (
+                                            <Cell
+                                                key={entry.name}
+                                                fill={
+                                                    chartColors[
+                                                    index %
+                                                    chartColors.length
+                                                    ]
+                                                }
+                                            />
+                                        )
+                                    )}
+                                </Pie>
+                                <Tooltip />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div style={{ height: "270px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#94A3B8", textAlign: "center", padding: "20px" }}>
+                            <Users size={36} style={{ marginBottom: "10px", opacity: 0.4 }} />
+                            <p style={{ margin: 0, fontSize: "14px", fontWeight: "600", color: "#64748B" }}>No Department Data</p>
+                            <span style={{ fontSize: "12px", marginTop: "4px" }}>Add employees to see department distribution</span>
+                        </div>
+                    )}
                 </ChartCard>
 
             </div>

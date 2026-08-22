@@ -36,19 +36,24 @@ function DocumentModal({ isOpen, onClose, onSave, employees = [] }) {
   };
 
   const handleEmployeeSelect = (e) => {
-    const empCode = e.target.value;
-    const selected = employees.find((emp) => emp.employee_code === empCode || `EMP-${emp.id}` === empCode);
+    const val = e.target.value;
+    const selected = employees.find(
+      (emp) =>
+        emp.employee_code === val ||
+        `EMP-${emp.id}` === val ||
+        String(emp.id) === String(val)
+    );
     if (selected) {
       setForm({
         ...form,
-        employeeId: empCode,
+        employeeId: selected.employee_code || `EMP-${selected.id}`,
         employeeName: `${selected.first_name || ""} ${selected.last_name || ""}`.trim(),
         department: selected.department_name || form.department,
       });
     } else {
       setForm({
         ...form,
-        employeeId: empCode,
+        employeeId: val,
       });
     }
   };
@@ -143,30 +148,42 @@ function DocumentModal({ isOpen, onClose, onSave, employees = [] }) {
 
         <form onSubmit={handleSubmit}>
           <div className="form-grid" style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "14px" }}>
-            {/* EMPLOYEE PICKER */}
+            {/* EMPLOYEE ID REFERENCE */}
             <div className="form-field">
-              <label>Assign to Employee</label>
+              <label>Employee ID (Main Reference)</label>
               {employees.length > 0 ? (
                 <select
                   value={form.employeeId}
                   onChange={handleEmployeeSelect}
                   required
                 >
-                  <option value="">Select an Employee</option>
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.employee_code || `EMP-${emp.id}`}>
-                      {emp.first_name} {emp.last_name} ({emp.employee_code || `EMP-${emp.id}`})
-                    </option>
-                  ))}
+                  <option value="">-- Select Employee ID --</option>
+                  {employees.map((emp) => {
+                    const code = emp.employee_code || `EMP-${emp.id}`;
+                    return (
+                      <option key={emp.id} value={code}>
+                        {code} · {emp.first_name} {emp.last_name} ({emp.department_name || "General"})
+                      </option>
+                    );
+                  })}
                 </select>
               ) : (
-                <input
-                  name="employeeName"
-                  value={form.employeeName}
-                  onChange={handleChange}
-                  placeholder="Employee name"
-                  required
-                />
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <input
+                    name="employeeId"
+                    value={form.employeeId}
+                    onChange={handleChange}
+                    placeholder="Employee ID (e.g. EMP-1001)"
+                    required
+                  />
+                  <input
+                    name="employeeName"
+                    value={form.employeeName}
+                    onChange={handleChange}
+                    placeholder="Employee Full Name"
+                    required
+                  />
+                </div>
               )}
             </div>
 
