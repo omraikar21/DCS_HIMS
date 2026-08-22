@@ -336,8 +336,11 @@ const startServer =
 
       // Test PostgreSQL
       // before starting server.
-
       await testDatabaseConnection();
+
+      // Ensure all database tables, relations, and initial seeds exist
+      const { initDatabase } = require("./database/initDb");
+      await initDatabase();
 
       // Ensure system settings table & defaults exist
       const { initSettingsTable } = require("./models/settingsModel");
