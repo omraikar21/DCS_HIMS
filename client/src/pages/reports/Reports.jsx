@@ -54,7 +54,6 @@ function Reports() {
   // Live Employee List for targeting reports
   const [employees, setEmployees] = useState([]);
 
-
   // Fetch employees for Finance/Admin targeting
   useEffect(() => {
     const fetchEmps = async () => {
@@ -68,16 +67,72 @@ function Reports() {
     fetchEmps();
   }, []);
 
+  // Available Target Employees: Exclude the logged-in user (self cannot be receiver)
+  const availableTargetEmployees = useMemo(() => {
+    const currentEmail = (userEmail || "").toLowerCase().trim();
+
+    return employees.filter((emp) => {
+      const empEmail = (emp.email || "").toLowerCase().trim();
+      // 1. Exclude self (Self receiver report cannot be made)
+      if (empEmail === currentEmail) return false;
+
+      // 2. If sender is Finance, they can only send reports to HR and Employees (not Admin)
+      if (userRole === "FINANCE") {
+        const empRole = (emp.user_role || emp.role || "").toUpperCase();
+        const empDesignation = (emp.designation || "").toUpperCase();
+        const empDept = (emp.department_name || emp.department || "").toUpperCase();
+        if (empRole === "ADMIN" || empDesignation.includes("ADMIN") || empDept.includes("ADMIN")) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [employees, userEmail, userRole]);
+
   // Form State for creating and sending Finance Report
   const [financeForm, setFinanceForm] = useState({
     targetEmail: "",
-    reportTitle: "Monthly Salary & Compensation Statement",
+    reportTitle: "Monthly Salary Statement",
     fiscalPeriod: new Date().toLocaleString("en-US", { month: "long", year: "numeric" }),
-    grossSalary: "",
-    allowances: "",
-    deductions: "",
+    grossSalary: "55000",
+    allowances: "5000",
+    deductions: "3000",
     specialNotes: "Regular monthly salary credit with verified statutory deductions.",
   });
+
+  const handleOpenCreateModal = () => {
+    const firstEmp = availableTargetEmployees[0];
+    const initialTargetEmail = firstEmp?.email || "";
+    setFinanceForm({
+      targetEmail: initialTargetEmail,
+      reportTitle: "Monthly Salary Statement",
+      fiscalPeriod: new Date().toLocaleString("en-US", { month: "long", year: "numeric" }),
+      grossSalary: firstEmp?.salary ? String(Number(firstEmp.salary)) : "55000",
+      allowances: firstEmp?.allowances ? String(Number(firstEmp.allowances)) : "5000",
+      deductions: (firstEmp?.pf_deduction || firstEmp?.tax_deduction)
+        ? String((Number(firstEmp.pf_deduction) || 0) + (Number(firstEmp.tax_deduction) || 0))
+        : "3000",
+      specialNotes: "Regular monthly salary credit with verified statutory deductions.",
+    });
+    setCreateModalOpen(true);
+  };
+
+  const handleTargetEmployeeChange = (e) => {
+    const selectedEmail = e.target.value;
+    const emp = availableTargetEmployees.find(
+      (em) => (em.email || "").toLowerCase() === selectedEmail.toLowerCase()
+    );
+    setFinanceForm((prev) => ({
+      ...prev,
+      targetEmail: selectedEmail,
+      grossSalary: emp?.salary ? String(Number(emp.salary)) : prev.grossSalary,
+      allowances: emp?.allowances ? String(Number(emp.allowances)) : prev.allowances,
+      deductions: (emp?.pf_deduction || emp?.tax_deduction)
+        ? String((Number(emp.pf_deduction) || 0) + (Number(emp.tax_deduction) || 0))
+        : prev.deductions,
+    }));
+  };
 
   // Local Storage Custom Finance Reports
   const [customReports, setCustomReports] = useState(() => {
@@ -359,7 +414,7 @@ function Reports() {
           {isFinance && (
             <button
               className="primary-button"
-              onClick={() => setCreateModalOpen(true)}
+              onClick={handleOpenCreateModal}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -623,131 +678,208 @@ function Reports() {
 
       {createModalOpen && (
         <div className="modal-overlay">
-          <div className="employee-modal" style={{ maxWidth: "620px", maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
-            <div className="modal-header">
+          <div className="employee-modal" style={{ maxWidth: "620px", width: "100%", borderRadius: "16px", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }}>
+            <div className="modal-header" style={{ padding: "20px 24px", borderBottom: "1px solid #F1F5F9" }}>
               <div>
-                <p className="section-label">FINANCE DEPARTMENT ACTION</p>
-                <h2>Create & Send Finance Report</h2>
+                <p className="section-label" style={{ fontSize: "11px", fontWeight: "700", color: "#9E2682", letterSpacing: "0.6px", textTransform: "uppercase", margin: 0 }}>
+                  FINANCE DEPARTMENT ACTION
+                </p>
+                <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#0F172A", margin: "4px 0 0" }}>
+                  Create & Send Finance Report
+                </h2>
               </div>
               <button className="modal-close" onClick={() => setCreateModalOpen(false)}>
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handlePublishFinanceReport} style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}>
-              <div className="modal-body" style={{ overflowY: "auto", flex: 1, padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div className="form-field">
-                  <label style={{ fontSize: "12.5px", fontWeight: "700", color: "#18243A", display: "block", marginBottom: "6px" }}>
+            <form onSubmit={handlePublishFinanceReport} style={{ display: "flex", flexDirection: "column", flex: 1, margin: 0 }}>
+              <div className="modal-body" style={{ padding: "22px 26px", display: "flex", flexDirection: "column", gap: "18px", maxHeight: "75vh", overflowY: "auto" }}>
+                {/* TARGET EMPLOYEE */}
+                <div>
+                  <label style={{ fontSize: "12px", fontWeight: "700", color: "#334155", display: "block", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.3px" }}>
                     Select Target Employee to Receive Report: *
                   </label>
-                  <div className="input-wrapper" style={{ padding: "8px 12px" }}>
-                    <select
-                      value={financeForm.targetEmail}
-                      onChange={(e) => setFinanceForm({ ...financeForm, targetEmail: e.target.value })}
-                      style={{ width: "100%", border: "none", background: "transparent", fontSize: "14px", color: "#18243A", outline: "none" }}
-                      required
-                    >
-                      {employees.map((emp) => (
-                        <option key={emp.id} value={emp.email}>
-                          {emp.first_name} {emp.last_name || ""} ({emp.employee_code || `EMP-${emp.id}`}) — {emp.email}
+                  <select
+                    value={financeForm.targetEmail}
+                    onChange={handleTargetEmployeeChange}
+                    required
+                    style={{
+                      width: "100%",
+                      height: "44px",
+                      padding: "0 36px 0 14px",
+                      border: "1.5px solid #CBD5E1",
+                      borderRadius: "8px",
+                      fontSize: "13.5px",
+                      color: "#0F172A",
+                      backgroundColor: "#FFFFFF",
+                      cursor: "pointer",
+                      outline: "none",
+                    }}
+                  >
+                    {availableTargetEmployees.length === 0 ? (
+                      <option value="" disabled>No eligible recipient employees found</option>
+                    ) : (
+                      availableTargetEmployees.map((emp) => (
+                        <option key={emp.id} value={emp.email} style={{ padding: "8px", background: "#FFFFFF", color: "#0F172A" }}>
+                          {emp.first_name} {emp.last_name || ""} ({emp.employee_code || `DCS-EMP-${emp.id}`}) — {emp.email}
                         </option>
-                      ))}
-                      {employees.length === 0 && (
-                        <option value="anandck89@gmail.com">Anand (Senior AI Engineer) — anandck89@gmail.com</option>
-                      )}
-                      <option value="ALL">All Company Employees (General Release)</option>
-                    </select>
-                  </div>
+                      ))
+                    )}
+                    <option value="ALL" style={{ padding: "8px", background: "#FFFFFF", color: "#0F172A" }}>All Company Employees (General Broadcast)</option>
+                  </select>
+                  {availableTargetEmployees.length === 0 && (
+                    <span style={{ fontSize: "12px", color: "#E11D48", marginTop: "4px", display: "block" }}>
+                      Self-recipient reporting is disabled. Other staff members must be onboarded to receive reports.
+                    </span>
+                  )}
                 </div>
 
-
+                {/* REPORT TITLE & FISCAL PERIOD */}
                 <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "14px" }}>
-                  <div className="form-field">
-                    <label style={{ fontSize: "12.5px", fontWeight: "700", color: "#18243A", display: "block", marginBottom: "6px" }}>
+                  <div>
+                    <label style={{ fontSize: "12px", fontWeight: "700", color: "#334155", display: "block", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.3px" }}>
                       Report Title: *
                     </label>
-                    <div className="input-wrapper">
-                      <input
-                        type="text"
-                        value={financeForm.reportTitle}
-                        onChange={(e) => setFinanceForm({ ...financeForm, reportTitle: e.target.value })}
-                        required
-                        placeholder="e.g. Monthly Salary Statement"
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      value={financeForm.reportTitle}
+                      onChange={(e) => setFinanceForm({ ...financeForm, reportTitle: e.target.value })}
+                      required
+                      placeholder="e.g. Monthly Salary Statement"
+                      style={{
+                        width: "100%",
+                        height: "44px",
+                        padding: "0 14px",
+                        border: "1.5px solid #CBD5E1",
+                        borderRadius: "8px",
+                        fontSize: "13.5px",
+                        color: "#0F172A",
+                        backgroundColor: "#FFFFFF",
+                        outline: "none",
+                      }}
+                    />
                   </div>
 
-                  <div className="form-field">
-                    <label style={{ fontSize: "12.5px", fontWeight: "700", color: "#18243A", display: "block", marginBottom: "6px" }}>
+                  <div>
+                    <label style={{ fontSize: "12px", fontWeight: "700", color: "#334155", display: "block", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.3px" }}>
                       Fiscal Period: *
                     </label>
-                    <div className="input-wrapper">
-                      <input
-                        type="text"
-                        value={financeForm.fiscalPeriod}
-                        onChange={(e) => setFinanceForm({ ...financeForm, fiscalPeriod: e.target.value })}
-                        required
-                        placeholder="e.g. August 2026"
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      value={financeForm.fiscalPeriod}
+                      onChange={(e) => setFinanceForm({ ...financeForm, fiscalPeriod: e.target.value })}
+                      required
+                      placeholder="e.g. August 2026"
+                      style={{
+                        width: "100%",
+                        height: "44px",
+                        padding: "0 14px",
+                        border: "1.5px solid #CBD5E1",
+                        borderRadius: "8px",
+                        fontSize: "13.5px",
+                        color: "#0F172A",
+                        backgroundColor: "#FFFFFF",
+                        outline: "none",
+                      }}
+                    />
                   </div>
                 </div>
 
+                {/* SALARY EARNINGS / DEDUCTIONS 3 COLUMNS */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
-                  <div className="form-field">
-                    <label style={{ fontSize: "12px", fontWeight: "700", color: "#18243A", display: "block", marginBottom: "6px" }}>
-                      Gross Base Salary ({currencySymbol}):
+                  <div>
+                    <label style={{ fontSize: "11.5px", fontWeight: "700", color: "#334155", display: "block", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.2px" }}>
+                      Gross Base ({currencySymbol}):
                     </label>
-                    <div className="input-wrapper">
-                      <input
-                        type="number"
-                        value={financeForm.grossSalary}
-                        onChange={(e) => setFinanceForm({ ...financeForm, grossSalary: e.target.value })}
-                        required
-                      />
-                    </div>
+                    <input
+                      type="number"
+                      value={financeForm.grossSalary}
+                      onChange={(e) => setFinanceForm({ ...financeForm, grossSalary: e.target.value })}
+                      required
+                      style={{
+                        width: "100%",
+                        height: "44px",
+                        padding: "0 12px",
+                        border: "1.5px solid #CBD5E1",
+                        borderRadius: "8px",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        color: "#0F172A",
+                        backgroundColor: "#FFFFFF",
+                        outline: "none",
+                      }}
+                    />
                   </div>
 
-                  <div className="form-field">
-                    <label style={{ fontSize: "12px", fontWeight: "700", color: "#18243A", display: "block", marginBottom: "6px" }}>
-                      Allowances/Bonus ({currencySymbol}):
+                  <div>
+                    <label style={{ fontSize: "11.5px", fontWeight: "700", color: "#334155", display: "block", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.2px" }}>
+                      Allowances ({currencySymbol}):
                     </label>
-                    <div className="input-wrapper">
-                      <input
-                        type="number"
-                        value={financeForm.allowances}
-                        onChange={(e) => setFinanceForm({ ...financeForm, allowances: e.target.value })}
-                      />
-                    </div>
+                    <input
+                      type="number"
+                      value={financeForm.allowances}
+                      onChange={(e) => setFinanceForm({ ...financeForm, allowances: e.target.value })}
+                      style={{
+                        width: "100%",
+                        height: "44px",
+                        padding: "0 12px",
+                        border: "1.5px solid #CBD5E1",
+                        borderRadius: "8px",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        color: "#0F172A",
+                        backgroundColor: "#FFFFFF",
+                        outline: "none",
+                      }}
+                    />
                   </div>
 
-                  <div className="form-field">
-                    <label style={{ fontSize: "12px", fontWeight: "700", color: "#18243A", display: "block", marginBottom: "6px" }}>
-                      Deductions (PF/Tax):
+                  <div>
+                    <label style={{ fontSize: "11.5px", fontWeight: "700", color: "#334155", display: "block", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.2px" }}>
+                      Deductions ({currencySymbol}):
                     </label>
-                    <div className="input-wrapper">
-                      <input
-                        type="number"
-                        value={financeForm.deductions}
-                        onChange={(e) => setFinanceForm({ ...financeForm, deductions: e.target.value })}
-                      />
-                    </div>
+                    <input
+                      type="number"
+                      value={financeForm.deductions}
+                      onChange={(e) => setFinanceForm({ ...financeForm, deductions: e.target.value })}
+                      style={{
+                        width: "100%",
+                        height: "44px",
+                        padding: "0 12px",
+                        border: "1.5px solid #CBD5E1",
+                        borderRadius: "8px",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        color: "#0F172A",
+                        backgroundColor: "#FFFFFF",
+                        outline: "none",
+                      }}
+                    />
                   </div>
                 </div>
 
+                {/* NET PAYOUT CALCULATION */}
                 <div
                   style={{
-                    backgroundColor: "#F8F2FA",
-                    border: "1px solid #DDD2E2",
-                    borderRadius: "8px",
-                    padding: "12px 16px",
+                    backgroundColor: "#FDF2F8",
+                    border: "1.5px solid #FBCFE8",
+                    borderRadius: "10px",
+                    padding: "14px 18px",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
                   }}
                 >
-                  <span style={{ fontSize: "13px", fontWeight: "700", color: "#18243A" }}>Calculated Net Take-Home Payout:</span>
-                  <strong style={{ fontSize: "18px", color: "#A51D8D", fontWeight: "900" }}>
+                  <div>
+                    <span style={{ fontSize: "13px", fontWeight: "700", color: "#0F172A", display: "block" }}>
+                      Calculated Net Take-Home Payout:
+                    </span>
+                    <span style={{ fontSize: "11px", color: "#94A3B8" }}>
+                      Gross + Allowances − Deductions
+                    </span>
+                  </div>
+                  <strong style={{ fontSize: "20px", color: "#9E2682", fontWeight: "800" }}>
                     {currencySymbol}
                     {(
                       (Number(financeForm.grossSalary) || 0) +
@@ -757,33 +889,48 @@ function Reports() {
                   </strong>
                 </div>
 
-                <div className="form-field">
-                  <label style={{ fontSize: "12.5px", fontWeight: "700", color: "#18243A", display: "block", marginBottom: "6px" }}>
+                {/* REMARKS */}
+                <div>
+                  <label style={{ fontSize: "12px", fontWeight: "700", color: "#334155", display: "block", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.3px" }}>
                     Finance Remarks & Notes for Employee:
                   </label>
-                  <div className="input-wrapper" style={{ padding: "8px" }}>
-                    <textarea
-                      rows={2}
-                      value={financeForm.specialNotes}
-                      onChange={(e) => setFinanceForm({ ...financeForm, specialNotes: e.target.value })}
-                      style={{ width: "100%", border: "none", background: "transparent", fontSize: "13.5px", color: "#18243A", outline: "none", resize: "none" }}
-                    />
-                  </div>
+                  <textarea
+                    rows={2}
+                    value={financeForm.specialNotes}
+                    onChange={(e) => setFinanceForm({ ...financeForm, specialNotes: e.target.value })}
+                    placeholder="Enter notes or statutory remarks..."
+                    style={{
+                      width: "100%",
+                      minHeight: "65px",
+                      padding: "10px 14px",
+                      border: "1.5px solid #CBD5E1",
+                      borderRadius: "8px",
+                      fontSize: "13.5px",
+                      color: "#0F172A",
+                      backgroundColor: "#FFFFFF",
+                      outline: "none",
+                      resize: "vertical",
+                    }}
+                  />
                 </div>
               </div>
 
-              <div className="modal-actions" style={{ padding: "16px 24px", borderTop: "1px solid #DDD2E2", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                <button type="button" className="secondary-button" onClick={() => setCreateModalOpen(false)}>
+              <div className="modal-actions" style={{ padding: "16px 24px", borderTop: "1px solid #E2E8F0", display: "flex", justifyContent: "flex-end", gap: "10px", background: "#F8FAFC" }}>
+                <button type="button" className="secondary-button" onClick={() => setCreateModalOpen(false)} style={{ padding: "10px 20px", borderRadius: "8px" }}>
                   Cancel
                 </button>
                 <button
                   type="submit"
                   className="primary-button"
+                  disabled={!financeForm.targetEmail && availableTargetEmployees.length === 0}
                   style={{
-                    background: "linear-gradient(135deg, #A51D8D 0%, #7B2A9B 100%)",
+                    background: "linear-gradient(135deg, #9E2682 0%, #D946EF 100%)",
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "8px",
+                    padding: "10px 22px",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 12px rgba(158, 38, 130, 0.25)",
                   }}
                 >
                   <Send size={15} />
