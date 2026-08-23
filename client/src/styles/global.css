@@ -5682,6 +5682,30 @@ form label {
   outline: none !important;
 }
 
+/* CUSTOM DROPDOWN SELECT STYLING */
+select,
+.form-field select,
+.modal-form select,
+.dashboard-card select {
+  padding-right: 36px !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: calc(100% - 12px) center !important;
+  background-size: 16px 16px !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  cursor: pointer !important;
+}
+
+select option,
+.form-field select option {
+  padding: 10px 12px !important;
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+  font-size: 13.5px !important;
+}
+
 .form-field > input::placeholder,
 .modal-form > input::placeholder,
 .dashboard-card input::placeholder,
@@ -5691,17 +5715,27 @@ textarea::placeholder {
 }
 
 .form-field > input:focus:not([type="checkbox"]):not([type="radio"]),
+.form-field > input:focus-visible:not([type="checkbox"]):not([type="radio"]),
 .form-field select:focus,
+.form-field select:focus-visible,
 .form-field textarea:focus,
+.form-field textarea:focus-visible,
 .modal-form > input:focus:not([type="checkbox"]):not([type="radio"]),
+.modal-form > input:focus-visible:not([type="checkbox"]):not([type="radio"]),
 .modal-form select:focus,
+.modal-form select:focus-visible,
 .modal-form textarea:focus,
+.modal-form textarea:focus-visible,
 .dashboard-card > input:focus:not([type="checkbox"]):not([type="radio"]),
+.dashboard-card > input:focus-visible:not([type="checkbox"]):not([type="radio"]),
 .dashboard-card select:focus,
-.dashboard-card textarea:focus {
-  border-color: #9B2282 !important;
-  box-shadow: 0 0 0 3.5px rgba(155, 34, 130, 0.12) !important;
-  background: #FFFFFF !important;
+.dashboard-card select:focus-visible,
+.dashboard-card textarea:focus,
+.dashboard-card textarea:focus-visible {
+  border-color: #9E2682 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(158, 38, 130, 0.14) !important;
+  background-color: #FFFFFF !important;
 }
 
 /* INPUT-WRAPPER SINGLE BOX ENFORCEMENT */
