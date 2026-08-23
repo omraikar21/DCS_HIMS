@@ -38,13 +38,15 @@ const createUser = async (req, res) => {
     const { name, email, password, role } = req.body;
     const requester = req.user;
 
-    const user = await createNewUser({
-      name,
-      email,
-      password,
-      role,
-      requester,
-    });
+    const user = await createNewUser(
+      {
+        name,
+        email,
+        password,
+        role,
+      },
+      requester
+    );
 
     return res.status(201).json({
       success: true,

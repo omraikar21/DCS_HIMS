@@ -54,7 +54,8 @@ const fetchUsersList = async (requester) => {
 // ------------------------------------------
 // PROVISION USER ACCOUNT WITH ROLE
 // ------------------------------------------
-const createNewUser = async ({ name, email, role, password }, requester) => {
+const createNewUser = async ({ name, email, role, password, requester: reqInPayload }, requesterParam) => {
+  const requester = requesterParam || reqInPayload;
   const cleanName = (name || "").trim();
   const cleanEmail = (email || "").trim().toLowerCase();
   const targetRole = (role || "").trim().toUpperCase();

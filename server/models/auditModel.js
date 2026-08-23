@@ -35,14 +35,24 @@ ensureAuditTable();
 // ------------------------------------------
 const createAuditLog = async ({
   eventAction,
+  action,
   category = "SYSTEM",
-  actorName = "System",
-  actorEmail = "system@dcshims.internal",
-  role = "SYSTEM",
+  actorName,
+  actorEmail,
+  user_email,
+  user_name,
+  role,
+  user_role,
   details = "",
   status = "SUCCESS",
 }) => {
   try {
+    const finalEventAction = eventAction || action || "System Event";
+    const finalEmail = actorEmail || user_email || "system@dcshims.internal";
+    const finalName = actorName || user_name || finalEmail.split("@")[0] || "System";
+    const finalRole = (role || user_role || "SYSTEM").toUpperCase();
+    const finalDetails = typeof details === "object" ? JSON.stringify(details) : String(details || "");
+
     const timestamp = Date.now().toString().slice(-6);
     const randomHex = Math.floor(Math.random() * 900 + 100);
     const logCode = `LOG-2026-${timestamp}${randomHex}`;
@@ -66,12 +76,12 @@ const createAuditLog = async ({
       `,
       [
         logCode,
-        eventAction,
+        finalEventAction,
         category.toUpperCase(),
-        actorName,
-        actorEmail,
-        role.toUpperCase(),
-        details,
+        finalName,
+        finalEmail,
+        finalRole,
+        finalDetails,
         status.toUpperCase(),
       ]
     );
