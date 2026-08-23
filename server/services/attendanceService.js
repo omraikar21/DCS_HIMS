@@ -1,16 +1,11 @@
-// ==========================================
-// ATTENDANCE SERVICE
-// B11
-// ==========================================
-
 const {
   getAllAttendance,
   getAttendanceById,
   createAttendance,
   updateAttendance,
   deleteAttendance,
+  recordFacePunch,
 } = require("../models/attendanceModel");
-
 
 // ------------------------------------------
 // GET ALL ATTENDANCE
@@ -118,6 +113,51 @@ const removeAttendance =
 
   };
 
+// ------------------------------------------
+// PROCESS FACE PUNCH (BIOMETRIC AI)
+// ------------------------------------------
+
+const processFacePunchService = async (punchData) => {
+  return await recordFacePunch(punchData);
+};
+
+// ------------------------------------------
+// PROCESS BATCH BIOMETRIC PUNCHES
+// ------------------------------------------
+
+const processBiometricBatchService = async (records = [], deviceId = "FACE_BATCH_SYS") => {
+  const results = [];
+  const errors = [];
+
+  for (const item of records) {
+    try {
+      const punchRes = await recordFacePunch({
+        employeeCode: item.employee_code || item.employeeCode,
+        employeeId: item.employee_id || item.employeeId,
+        email: item.email,
+        punchTime: item.punch_time || item.punchTime || item.timestamp,
+        deviceId: item.device_id || item.deviceId || deviceId,
+        confidence: item.confidence !== undefined ? item.confidence : 1.0,
+        punchType: item.punch_type || item.punchType || "AUTO",
+        remarks: item.remarks || "Batch Biometric Sync",
+      });
+      results.push(punchRes);
+    } catch (err) {
+      errors.push({
+        record: item,
+        error: err.message,
+      });
+    }
+  }
+
+  return {
+    total: records.length,
+    successful: results.length,
+    failed: errors.length,
+    results,
+    errors,
+  };
+};
 
 module.exports = {
   getAttendanceRecords,
@@ -125,4 +165,6 @@ module.exports = {
   addAttendance,
   editAttendance,
   removeAttendance,
+  processFacePunchService,
+  processBiometricBatchService,
 };

@@ -1,12 +1,14 @@
 import {
   Eye,
   Pencil,
+  Trash2,
 } from "lucide-react";
 
 function EmployeeTable({
   employees,
   onView,
   onEdit,
+  onDelete,
   canEdit = true,
 }) {
   const getInitials = (name) => {
@@ -110,7 +112,7 @@ function EmployeeTable({
                   <div className="employee-actions">
 
                     <button
-                      title="View employee"
+                      title="View employee profile"
                       onClick={() =>
                         onView(employee)
                       }
@@ -118,14 +120,27 @@ function EmployeeTable({
                       <Eye size={16} />
                     </button>
 
+
                     {canEdit && (
                       <button
-                        title="Edit employee"
+                        title="Edit employee details"
                         onClick={() =>
                           onEdit(employee)
                         }
                       >
                         <Pencil size={16} />
+                      </button>
+                    )}
+
+                    {canEdit && onDelete && (
+                      <button
+                        title="Delete / Offboard employee"
+                        onClick={() =>
+                          onDelete(employee)
+                        }
+                        style={{ color: "#e11d48" }}
+                      >
+                        <Trash2 size={16} />
                       </button>
                     )}
 

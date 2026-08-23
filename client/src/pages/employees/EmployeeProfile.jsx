@@ -8,18 +8,24 @@ import {
   MapPin,
   CalendarDays,
   Building2,
+  Trash2,
 } from "lucide-react";
 
-import { getEmployee } from "../../services/employeeService";
+import { getEmployee, deleteEmployee } from "../../services/employeeService";
+import { useAuth } from "../../hooks/useAuth";
+import { useNotification } from "../../hooks/useNotification";
 
 function EmployeeProfile() {
   const { id } = useParams();
-
   const navigate = useNavigate();
+  const { role } = useAuth();
+  const notification = useNotification();
+  const canManage = ["ADMIN", "HR"].includes((role || "").toUpperCase());
 
   const [employee, setEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const loadEmployee = async () => {
@@ -60,6 +66,29 @@ function EmployeeProfile() {
     }
   }, [id]);
 
+  const handleDelete = async () => {
+    if (!employee) return;
+    const confirmMsg = `Are you sure you want to offboard and permanently delete ${employee.name} (${employee.id})?`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      setDeleting(true);
+      await deleteEmployee(employee.databaseId);
+      if (notification?.success) {
+        notification.success(`Employee ${employee.name} deleted successfully.`);
+      }
+      navigate("/employees");
+    } catch (err) {
+      console.error("Delete employee error:", err);
+      if (notification?.error) {
+        notification.error(err.message || "Failed to delete employee");
+      } else {
+        alert(err.message || "Failed to delete employee");
+      }
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="dashboard-card">
@@ -95,16 +124,41 @@ function EmployeeProfile() {
   return (
     <div className="employee-profile-page">
 
-      <button
-        className="back-button"
-        onClick={() =>
-          navigate("/employees")
-        }
-      >
-        <ArrowLeft size={16} />
-        Back to Employees
-      </button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <button
+          className="back-button"
+          onClick={() =>
+            navigate("/employees")
+          }
+        >
+          <ArrowLeft size={16} />
+          Back to Employees
+        </button>
 
+        {canManage && (
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            style={{
+              backgroundColor: "#fff1f2",
+              color: "#e11d48",
+              border: "1px solid #fecdd3",
+              padding: "9px 16px",
+              borderRadius: "8px",
+              fontWeight: "600",
+              fontSize: "13.5px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <Trash2 size={16} />
+            {deleting ? "Deleting..." : "Delete / Offboard Employee"}
+          </button>
+        )}
+      </div>
 
       <div className="employee-profile-header">
 

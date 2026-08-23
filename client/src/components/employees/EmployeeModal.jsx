@@ -19,6 +19,7 @@ function EmployeeModal({
   isOpen,
   onClose,
   onSave,
+  onDelete,
   employee,
   errors = {},
 }) {
@@ -283,25 +284,53 @@ function EmployeeModal({
             </div>
           </div>
 
-          <div className="modal-footer">
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={onClose}
-              disabled={saving}
-            >
-              Cancel
-            </button>
+          <div className="modal-footer" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              {employee && onDelete && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(`Are you sure you want to delete and offboard ${employee.name} (${employee.id})? This will remove their profile and system access.`)) {
+                      onDelete(employee);
+                      onClose();
+                    }
+                  }}
+                  style={{
+                    backgroundColor: "#fff1f2",
+                    color: "#e11d48",
+                    border: "1px solid #fecdd3",
+                    padding: "8px 14px",
+                    borderRadius: "8px",
+                    fontWeight: "600",
+                    fontSize: "13px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Delete Employee
+                </button>
+              )}
+            </div>
 
-            <button
-              type="submit"
-              className="primary-button"
-              disabled={saving}
-            >
-              {saving
-                ? "Saving..."
-                : (employee ? "Update Employee" : "Add Employee")}
-            </button>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={onClose}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                className="primary-button"
+                disabled={saving}
+              >
+                {saving
+                  ? "Saving..."
+                  : (employee ? "Update Employee" : "Add Employee")}
+              </button>
+            </div>
           </div>
         </form>
       </div>

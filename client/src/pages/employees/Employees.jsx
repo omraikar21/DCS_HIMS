@@ -31,6 +31,7 @@ import {
   getEmployees,
   createEmployee,
   updateEmployee,
+  deleteEmployee,
 } from "../../services/employeeService";
 
 
@@ -595,6 +596,40 @@ function Employees() {
     };
 
 
+  /*
+   * =========================================
+   * DELETE / OFFBOARD EMPLOYEE
+   * =========================================
+   */
+
+  const handleDelete = async (employee) => {
+    if (!employee || !employee.databaseId) return;
+
+    const confirmMsg = `Are you sure you want to offboard and delete ${employee.name} (${employee.id})?\n\nThis will remove their profile and system access.`;
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await deleteEmployee(employee.databaseId);
+      if (notification?.success) {
+        notification.success(`Employee ${employee.name} (${employee.id}) deleted successfully.`);
+      }
+      await loadEmployees();
+    } catch (err) {
+      console.error("Delete employee error:", err);
+      if (notification?.error) {
+        notification.error(err.message || "Failed to delete employee");
+      } else {
+        alert(err.message || "Failed to delete employee");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
 
   /*
    * =========================================
@@ -785,23 +820,21 @@ function Employees() {
 
 
         <EmployeeTable
-
           employees={
             filteredEmployees
           }
-
           onView={
             handleView
           }
-
           onEdit={
             handleEdit
           }
-
+          onDelete={
+            handleDelete
+          }
           canEdit={
             canManageEmployees
           }
-
         />
 
       </section>
@@ -812,27 +845,24 @@ function Employees() {
       ====================================== */}
 
       <EmployeeModal
-
         isOpen={
           modalOpen
         }
-
         onClose={
           handleCloseModal
         }
-
         onSave={
           handleSave
         }
-
+        onDelete={
+          handleDelete
+        }
         employee={
           selectedEmployee
         }
-
         errors={
           errors
         }
-
       />
 
     </div>
