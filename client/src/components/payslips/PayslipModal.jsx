@@ -1,8 +1,6 @@
 import {
   X,
-  Download,
   Printer,
-  FileCheck,
 } from "lucide-react";
 
 function PayslipModal({

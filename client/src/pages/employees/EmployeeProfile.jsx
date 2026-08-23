@@ -14,6 +14,7 @@ import {
 import { getEmployee, deleteEmployee } from "../../services/employeeService";
 import { useAuth } from "../../hooks/useAuth";
 import { useNotification } from "../../hooks/useNotification";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 
 function EmployeeProfile() {
   const { id } = useParams();
@@ -26,6 +27,7 @@ function EmployeeProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     const loadEmployee = async () => {
@@ -66,11 +68,13 @@ function EmployeeProfile() {
     }
   }, [id]);
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!employee) return;
-    const confirmMsg = `Are you sure you want to offboard and permanently delete ${employee.name} (${employee.id})?`;
-    if (!window.confirm(confirmMsg)) return;
+    setConfirmOpen(true);
+  };
 
+  const confirmDeleteAction = async () => {
+    if (!employee) return;
     try {
       setDeleting(true);
       await deleteEmployee(employee.databaseId);
@@ -86,6 +90,7 @@ function EmployeeProfile() {
         alert(err.message || "Failed to delete employee");
       }
       setDeleting(false);
+      setConfirmOpen(false);
     }
   };
 
@@ -272,6 +277,16 @@ function EmployeeProfile() {
         </div>
 
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Delete Employee Profile?"
+        message={`Are you sure you want to offboard and permanently delete ${employee?.name} (${employee?.id})? This action cannot be undone.`}
+        confirmText="Delete Profile"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteAction}
+        onCancel={() => setConfirmOpen(false)}
+      />
 
     </div>
   );

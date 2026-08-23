@@ -11,6 +11,7 @@ import {
 
 import { useAuth } from "../../hooks/useAuth";
 import { useNotification } from "../../hooks/useNotification";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 
 import EmployeeFilters
   from "../../components/employees/EmployeeFilters";
@@ -39,6 +40,7 @@ function Employees() {
   const { role } = useAuth();
   const notification = useNotification();
   const canManageEmployees = ["ADMIN", "HR"].includes((role || "").toUpperCase());
+  const [deleteConfirmEmployee, setDeleteConfirmEmployee] = useState(null);
 
   /*
    * =========================================
@@ -593,20 +595,22 @@ function Employees() {
    * =========================================
    */
 
-  const handleDelete = async (employee) => {
+  const handleDelete = (employee) => {
     if (!employee || !employee.databaseId) return;
+    setDeleteConfirmEmployee(employee);
+  };
 
-    const confirmMsg = `Are you sure you want to offboard and delete ${employee.name} (${employee.id})?\n\nThis will remove their profile and system access.`;
-    if (!window.confirm(confirmMsg)) {
-      return;
-    }
+  const confirmDeleteAction = async () => {
+    if (!deleteConfirmEmployee || !deleteConfirmEmployee.databaseId) return;
 
     try {
       setLoading(true);
-      await deleteEmployee(employee.databaseId);
+      await deleteEmployee(deleteConfirmEmployee.databaseId);
       if (notification?.success) {
-        notification.success(`Employee ${employee.name} (${employee.id}) deleted successfully.`);
+        notification.success(`Employee ${deleteConfirmEmployee.name} (${deleteConfirmEmployee.id}) deleted successfully.`);
       }
+      setModalOpen(false);
+      setSelectedEmployee(null);
       await loadEmployees();
     } catch (err) {
       console.error("Delete employee error:", err);
@@ -617,6 +621,7 @@ function Employees() {
       }
     } finally {
       setLoading(false);
+      setDeleteConfirmEmployee(null);
     }
   };
 
@@ -850,6 +855,16 @@ function Employees() {
         errors={
           errors
         }
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteConfirmEmployee)}
+        title="Offboard & Delete Employee?"
+        message={`Are you sure you want to offboard and delete ${deleteConfirmEmployee?.name} (${deleteConfirmEmployee?.id})? This will remove their profile and system access.`}
+        confirmText="Offboard Employee"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteAction}
+        onCancel={() => setDeleteConfirmEmployee(null)}
       />
 
     </div>

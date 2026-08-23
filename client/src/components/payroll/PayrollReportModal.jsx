@@ -1,13 +1,8 @@
 import {
   X,
   Printer,
-  Building2,
-  CreditCard,
   CheckCircle2,
-  Clock,
-  Download,
-  Receipt,
-  FileCheck,
+  CreditCard,
 } from "lucide-react";
 
 function PayrollReportModal({

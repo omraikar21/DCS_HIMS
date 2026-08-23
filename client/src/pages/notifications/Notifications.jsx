@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, CheckCircle2, Clock, FileText, Check, Trash2, Megaphone, Receipt, ArrowRight } from "lucide-react";
+import { Bell, Clock, FileText, Check, Megaphone, Receipt, ArrowRight } from "lucide-react";
 import {
   getNotifications,
   markNotificationRead,

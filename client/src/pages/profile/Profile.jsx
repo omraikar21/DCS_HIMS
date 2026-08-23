@@ -1,47 +1,37 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  User,
   Mail,
   Shield,
   Building2,
-  Calendar,
   CheckCircle,
   Key,
   LogOut,
   Lock,
   Camera,
   Edit3,
-  Pencil,
   X,
   Save,
   AlertCircle,
   CheckCircle2,
-  Sparkles,
   DollarSign,
   CreditCard,
-  Download,
   Printer,
   Receipt,
   TrendingUp,
   Wallet,
-  FileText,
   BadgeCheck,
   Building,
   Server,
   Cpu,
   Activity,
-  Radio,
-  BellRing,
-  Terminal,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useNotification } from "../../hooks/useNotification";
-import { updateUserProfile, getStoredUser, updateStoredUser } from "../../services/authService";
-import { getEmployees, updateEmployeeCompensation } from "../../services/employeeService";
+import { updateUserProfile, getStoredUser } from "../../services/authService";
+import { getEmployees } from "../../services/employeeService";
 import { getPayslips } from "../../services/payslipService";
 import { getLoadedSettings } from "../../services/settingsService";
-import { createAnnouncement } from "../../services/notificationService";
 
 
 const AVATAR_PRESETS = [
@@ -53,7 +43,7 @@ const AVATAR_PRESETS = [
 ];
 
 function Profile() {
-  const { user, role, logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const notification = useNotification();
   const fileInputRef = useRef(null);
@@ -82,7 +72,7 @@ function Profile() {
   const currencySymbol = settings.currencySymbol || "₹";
   const [employeeData, setEmployeeData] = useState(null);
   const [payslips, setPayslips] = useState([]);
-  const [loadingPayroll, setLoadingPayroll] = useState(true);
+  const [_loadingPayroll, setLoadingPayroll] = useState(true);
 
   useEffect(() => {
     const handleProfileUpdate = () => {
@@ -153,45 +143,6 @@ function Profile() {
   useEffect(() => {
     loadProfilePayroll();
   }, [userEmail, user?.id]);
-
-  // Super Admin Server Notice Modal State
-  const [isServerNoticeModalOpen, setIsServerNoticeModalOpen] = useState(false);
-  const [serverNoticeData, setServerNoticeData] = useState({
-    title: "Server Operations & Low Load Status Notice",
-    message: "All backend services, PostgreSQL database cluster, and API systems are operating normally under low load (12%). System latency < 40ms.",
-    priority: "NORMAL",
-  });
-  const [sendingServerNotice, setSendingServerNotice] = useState(false);
-
-  const handleSendServerNotice = async (e) => {
-    if (e) e.preventDefault();
-    if (!serverNoticeData.title.trim() || !serverNoticeData.message.trim()) {
-      if (notification?.error) notification.error("Notice title and message are required");
-      return;
-    }
-
-    try {
-      setSendingServerNotice(true);
-      await createAnnouncement({
-        title: serverNoticeData.title.trim(),
-        message: serverNoticeData.message.trim(),
-        priority: serverNoticeData.priority || "NORMAL",
-        category: "System Infrastructure",
-      });
-      setIsServerNoticeModalOpen(false);
-      if (notification?.success) {
-        notification.success("System & Server notification successfully broadcast to all platform users!");
-      }
-    } catch (err) {
-      console.error("Failed to broadcast server notice:", err);
-      if (notification?.error) {
-        notification.error(err.message || "Failed to broadcast server notice");
-      }
-    } finally {
-      setSendingServerNotice(false);
-    }
-  };
-
 
   const getInitials = (name) => {
     if (!name) return "OR";
@@ -330,7 +281,7 @@ function Profile() {
 
     try {
       setSaving(true);
-      const res = await updateUserProfile(editName.trim(), editAvatar);
+      await updateUserProfile(editName.trim(), editAvatar);
 
       setEditSuccess("Profile updated and permanently saved!");
       if (notification?.success) {

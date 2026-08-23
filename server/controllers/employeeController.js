@@ -1,7 +1,5 @@
-const bcrypt = require("bcryptjs");
-const crypto = require("crypto");
-
 const {
+  provisionEmployeeAccount,
   getEmployees,
   getEmployee,
   addEmployee,
@@ -9,15 +7,6 @@ const {
   editEmployeeCompensation,
   removeEmployee,
 } = require("../services/employeeService");
-
-const {
-  getUserByEmail,
-  createUser,
-} = require("../models/userModel");
-
-const {
-  sendEmployeeWelcomeEmail,
-} = require("../services/emailService");
 
 const {
   getDepartmentByNameService,
@@ -238,51 +227,22 @@ const create =
         }
       }
 
-      // 1. Auto-Provision DCS Portal Login Account if requested
+      // 1. Auto-Provision DCS Portal Login Account via Employee Service
       let generatedPassword = null;
       let createdUserId = null;
 
-      if (autoCreateUser !== false) {
-        try {
-          const existingUser = await getUserByEmail(email.trim().toLowerCase());
-          if (!existingUser) {
-            // Generate clean secure temp password
-            const rawRandom = crypto.randomBytes(4).toString("hex");
-            generatedPassword = `DCS@${rawRandom}`;
-            const passwordHash = await bcrypt.hash(generatedPassword, 10);
-
-            // Determine system role
-            let userRole = "EMPLOYEE";
-            const roleDesignation = (designation || "").toUpperCase();
-            if (roleDesignation.includes("ADMIN")) userRole = "ADMIN";
-            else if (roleDesignation.includes("HR") || roleDesignation.includes("HUMAN RESOURCE")) userRole = "HR";
-            else if (roleDesignation.includes("FINANCE") || roleDesignation.includes("ACCOUNT")) userRole = "FINANCE";
-
-            const newUser = await createUser({
-              name: `${firstName} ${lastName || ""}`.trim(),
-              email: email.trim().toLowerCase(),
-              passwordHash,
-              role: userRole,
-            });
-
-            createdUserId = newUser.id;
-
-            // Send Welcome Email with credentials via Nodemailer
-            sendEmployeeWelcomeEmail({
-              employeeName: `${firstName} ${lastName || ""}`.trim(),
-              employeeEmail: email.trim().toLowerCase(),
-              temporaryPassword: generatedPassword,
-              role: userRole,
-              designation: designation || "Staff",
-            }).catch((emailErr) => {
-              console.warn("Welcome email async error:", emailErr.message);
-            });
-          } else {
-            createdUserId = existingUser.id;
-          }
-        } catch (authErr) {
-          console.warn("Auto user creation notice:", authErr.message);
-        }
+      try {
+        const provisionResult = await provisionEmployeeAccount({
+          firstName,
+          lastName,
+          email,
+          designation,
+          autoCreateUser,
+        });
+        createdUserId = provisionResult.userId;
+        generatedPassword = provisionResult.generatedPassword;
+      } catch (authErr) {
+        console.warn("Auto user creation notice:", authErr.message);
       }
 
       // ------------------------------------

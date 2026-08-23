@@ -112,12 +112,36 @@ const createNotification = async (data) => {
 };
 
 // ------------------------------------------
-// MARK AS READ
+// MARK AS READ (SCOPED TO AUTHENTICATED USER)
 // ------------------------------------------
-const markAsRead = async (id) => {
+const markAsRead = async (id, user = {}) => {
+  const userId = user.id || user.userId || 0;
+  const email = (user.email || "").trim().toLowerCase();
+  const role = (user.role || "").toUpperCase();
+
+  // If ADMIN or SUPER_ADMIN, allow marking any notification as read
+  if (role === "ADMIN" || role === "SUPER_ADMIN" || user.is_super_admin) {
+    const result = await pool.query(
+      `UPDATE notifications SET is_read = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *;`,
+      [id]
+    );
+    return result.rows[0];
+  }
+
+  // Otherwise, ensure notification is targeted to ALL, or user's email/id/role
   const result = await pool.query(
-    `UPDATE notifications SET is_read = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *;`,
-    [id]
+    `UPDATE notifications 
+     SET is_read = TRUE, updated_at = CURRENT_TIMESTAMP 
+     WHERE id = $1 
+       AND (
+         target_role = 'ALL' 
+         OR LOWER(target_email) = $2 
+         OR target_email = 'ALL'
+         OR target_user_id = $3
+         OR target_role = $4
+       )
+     RETURNING *;`,
+    [id, email, userId, role]
   );
   return result.rows[0];
 };
@@ -135,10 +159,22 @@ const markAllAsRead = async (email, role) => {
   return true;
 };
 
+// ------------------------------------------
+// DELETE NOTIFICATION / ANNOUNCEMENT
+// ------------------------------------------
+const deleteNotificationById = async (id) => {
+  const result = await pool.query(
+    `DELETE FROM notifications WHERE id = $1 RETURNING *;`,
+    [id]
+  );
+  return result.rows[0];
+};
+
 module.exports = {
   getNotificationsForUser,
   getCompanyAnnouncements,
   createNotification,
   markAsRead,
   markAllAsRead,
+  deleteNotificationById,
 };

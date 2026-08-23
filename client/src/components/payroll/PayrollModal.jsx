@@ -6,7 +6,6 @@ import {
 import {
   X,
   Save,
-  CheckCircle2,
 } from "lucide-react";
 
 const initialForm = {

@@ -2,7 +2,6 @@ import {
   Eye,
   Download,
   Trash2,
-  FileText,
 } from "lucide-react";
 
 function DocumentTable({

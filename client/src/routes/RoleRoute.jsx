@@ -66,20 +66,15 @@ function RoleRoute({
    * ---------------------------------------
    */
 
-  const normalizedRole =
-    role?.toUpperCase();
-
+  const normalizedRole = (role || "").toUpperCase().replace(/[\s-]+/g, "_");
+  const normalizedAllowed = allowedRoles.map((item) =>
+    item.toUpperCase().replace(/[\s-]+/g, "_")
+  );
 
   const hasPermission =
-    allowedRoles
-      .map(
-        (item) =>
-          item.toUpperCase()
-      )
-      .includes(
-        normalizedRole
-      );
-
+    normalizedRole === "SUPER_ADMIN" ||
+    normalizedRole === "ADMIN" ||
+    normalizedAllowed.includes(normalizedRole);
 
   /*
    * ---------------------------------------
@@ -88,14 +83,12 @@ function RoleRoute({
    */
 
   if (!hasPermission) {
-
     return (
       <Navigate
         to="/unauthorized"
         replace
       />
     );
-
   }
 
 

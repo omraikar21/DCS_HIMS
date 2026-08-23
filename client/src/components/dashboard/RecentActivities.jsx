@@ -46,7 +46,7 @@ function RecentActivities({ activities: customActivities }) {
         }
 
         setActivities(items.slice(0, 5));
-      } catch (err) {
+      } catch {
         setActivities([
           { text: "Database synchronized", time: "Just now", type: "green" },
           { text: "DCS Portal operations active", time: "Today", type: "blue" },

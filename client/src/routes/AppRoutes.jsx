@@ -1,205 +1,43 @@
+import { lazy, Suspense } from "react";
 import {
   Routes,
   Route,
   Navigate,
 } from "react-router-dom";
 
+// Layout & Route Guards (Static)
+import Layout from "../components/layout/Layout";
+import ProtectedRoute from "./ProtectedRoute";
+import RoleRoute from "./RoleRoute";
+import PageLoader from "../components/common/PageLoader";
 
-// ============================================
-// AUTHENTICATION
-// ============================================
-
-import Login
-  from "../pages/auth/Login";
-
-import ApiTestPage
-  from "../pages/ApiTestPage";
-
-
-// ============================================
-// LAYOUT
-// ============================================
-
-import Layout
-  from "../components/layout/Layout";
-
-
-// ============================================
-// DASHBOARDS
-// ============================================
-
-import AdminDashboard
-  from "../components/dashboard/AdminDashboard";
-
-import HRDashboard
-  from "../pages/dashboard/HRDashboard";
-
-import EmployeeDashboard
-  from "../pages/dashboard/EmployeeDashboard";
-
-import FinanceDashboard
-  from "../pages/dashboard/FinanceDashboard";
-
-
-// ============================================
-// EMPLOYEES
-// ============================================
-
-import Employees
-  from "../pages/employees/Employees";
-
-import EmployeeProfile
-  from "../pages/employees/EmployeeProfile";
-
-
-// ============================================
-// DEPARTMENTS
-// ============================================
-
-import Departments
-  from "../pages/departments/Departments";
-
-import DepartmentProfile
-  from "../pages/departments/DepartmentProfile";
-
-
-// ============================================
-// ATTENDANCE
-// ============================================
-
-import Attendance
-  from "../pages/attendance/Attendance";
-
-
-// ============================================
-// LEAVE
-// ============================================
-
-import LeaveManagement
-  from "../pages/leave/LeaveManagement";
-
-
-// ============================================
-// PAYROLL
-// ============================================
-
-import Payroll
-  from "../pages/payroll/Payroll";
-
-
-// ============================================
-// DOCUMENTS
-// ============================================
-
-import Documents
-  from "../pages/documents/Documents";
-
-
-// ============================================
-// PAYSLIPS
-// ============================================
-
-import Payslips
-  from "../pages/payslips/Payslips";
-
-
-// ============================================
-// RECRUITMENT
-// ============================================
-
-import Recruitment
-  from "../pages/recruitment/Recruitment";
-
-
-// ============================================
-// ONBOARDING
-// ============================================
-
-import Onboarding
-  from "../pages/onboarding/Onboarding";
-
-
-// ============================================
-// ROUTE PROTECTION
-// ============================================
-
-import ProtectedRoute
-  from "./ProtectedRoute";
-
-import RoleRoute
-  from "./RoleRoute";
-
-
-// ============================================
-// ERROR PAGE
-// ============================================
-
-import Unauthorized
-  from "../pages/errors/Unauthorized";
-
-import StateTest
-  from "../pages/errors/StateTest";
-
-
-// ============================================
-// SECONDARY PAGES
-// ============================================
-
-import Reports from "../pages/reports/Reports";
-import Announcements from "../pages/announcements/Announcements";
-import Notifications from "../pages/notifications/Notifications";
-import Settings from "../pages/settings/Settings";
-import AuditLogs from "../pages/audit/AuditLogs";
-import Profile from "../pages/profile/Profile";
-import UserManagement from "../pages/users/UserManagement";
-
-
-function Tasks() {
-  return (
-    <div>
-      <div className="module-heading">
-        <div>
-          <p className="section-label">WORKFLOW</p>
-          <h1>Tasks</h1>
-          <p>Assigned duties, project milestones, and action items.</p>
-        </div>
-      </div>
-      <section className="dashboard-card">
-        <div className="card-header">
-          <div>
-            <h3>Task List</h3>
-            <p>Track ongoing task assignments and deliverables.</p>
-          </div>
-        </div>
-        <div style={{ padding: "24px 0", color: "#64748b", fontSize: "14px" }}>
-          <p>All assigned tasks are up to date.</p>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function Salary() {
-  return (
-    <div>
-      <div className="module-heading">
-        <div>
-          <p className="section-label">FINANCE</p>
-          <h1>Salary</h1>
-          <p>Employee compensation and salary structures.</p>
-        </div>
-      </div>
-      <section className="dashboard-card">
-        <div className="card-header">
-          <div>
-            <h3>Salary Structure</h3>
-            <p>Breakdown of base pay, standard allowances, and statutory deductions.</p>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-}
+// Lazy-Loaded Page Components (Route-Based Code Splitting)
+const Login = lazy(() => import("../pages/auth/Login"));
+const ApiTestPage = lazy(() => import("../pages/ApiTestPage"));
+const AdminDashboard = lazy(() => import("../components/dashboard/AdminDashboard"));
+const HRDashboard = lazy(() => import("../pages/dashboard/HRDashboard"));
+const EmployeeDashboard = lazy(() => import("../pages/dashboard/EmployeeDashboard"));
+const FinanceDashboard = lazy(() => import("../pages/dashboard/FinanceDashboard"));
+const Employees = lazy(() => import("../pages/employees/Employees"));
+const EmployeeProfile = lazy(() => import("../pages/employees/EmployeeProfile"));
+const Departments = lazy(() => import("../pages/departments/Departments"));
+const DepartmentProfile = lazy(() => import("../pages/departments/DepartmentProfile"));
+const Attendance = lazy(() => import("../pages/attendance/Attendance"));
+const LeaveManagement = lazy(() => import("../pages/leave/LeaveManagement"));
+const Payroll = lazy(() => import("../pages/payroll/Payroll"));
+const Documents = lazy(() => import("../pages/documents/Documents"));
+const Payslips = lazy(() => import("../pages/payslips/Payslips"));
+const Recruitment = lazy(() => import("../pages/recruitment/Recruitment"));
+const Onboarding = lazy(() => import("../pages/onboarding/Onboarding"));
+const Unauthorized = lazy(() => import("../pages/errors/Unauthorized"));
+const StateTest = lazy(() => import("../pages/errors/StateTest"));
+const Reports = lazy(() => import("../pages/reports/Reports"));
+const Announcements = lazy(() => import("../pages/announcements/Announcements"));
+const Notifications = lazy(() => import("../pages/notifications/Notifications"));
+const Settings = lazy(() => import("../pages/settings/Settings"));
+const AuditLogs = lazy(() => import("../pages/audit/AuditLogs"));
+const Profile = lazy(() => import("../pages/profile/Profile"));
+const UserManagement = lazy(() => import("../pages/users/UserManagement"));
 
 
 
@@ -208,10 +46,9 @@ function Salary() {
 // ============================================
 
 function AppRoutes() {
-
   return (
-
-    <Routes>
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
 
 
       {/* ======================================
@@ -241,36 +78,24 @@ function AppRoutes() {
 
 
         {/* ====================================
-            A10 API TEST PAGE
-
-            TEMPORARY TEST ROUTE
-
-            Purpose:
-            Test React → API → PostgreSQL
-            before full frontend integration.
-
-            Authentication is required because
-            the Employee API requires JWT.
+            A10 API TEST PAGE & STATE TEST (DEV ONLY)
         ==================================== */}
-
-        <Route
-          path="/api-test"
-          element={
-            <ApiTestPage />
-          }
-        />
-
-
-        {/* ====================================
-            STATE TEST
-        ==================================== */}
-
-        <Route
-          path="/state-test"
-          element={
-            <StateTest />
-          }
-        />
+        {import.meta.env.DEV && (
+          <>
+            <Route
+              path="/api-test"
+              element={
+                <ApiTestPage />
+              }
+            />
+            <Route
+              path="/state-test"
+              element={
+                <StateTest />
+              }
+            />
+          </>
+        )}
 
 
         {/* ====================================
@@ -802,30 +627,6 @@ function AppRoutes() {
         {/* ====================================
             TASKS
             EMPLOYEE
-        ==================================== */}
-
-        <Route
-          element={
-            <RoleRoute
-              allowedRoles={[
-                "EMPLOYEE",
-              ]}
-            />
-          }
-        >
-
-          <Route
-            path="/tasks"
-            element={
-              <Layout>
-                <Tasks />
-              </Layout>
-            }
-          />
-
-        </Route>
-
-
         {/* ====================================
             AUDIT LOGS
             ADMIN ONLY
@@ -873,9 +674,7 @@ function AppRoutes() {
           <Route
             path="/salary"
             element={
-              <Layout>
-                <Salary />
-              </Layout>
+              <Navigate to="/payslips" replace />
             }
           />
 
@@ -961,7 +760,8 @@ function AppRoutes() {
       />
 
 
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }
 

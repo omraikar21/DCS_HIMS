@@ -56,7 +56,7 @@ function Recruitment() {
   const [departments, setDepartments] =
     useState([]);
 
-  const [loading, setLoading] =
+  const [_loading, setLoading] =
     useState(true);
 
   const [error, setError] =

@@ -8,7 +8,6 @@ import {
     FileText,
     BarChart3,
     Megaphone,
-    Bell,
     Settings,
     ScrollText,
     UserCircle,
@@ -22,10 +21,9 @@ import {
 
 
 import { useNavigate, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useNotification } from "../../hooks/useNotification";
-import { getLoadedSettings } from "../../services/settingsService";
 import { createAnnouncement } from "../../services/notificationService";
 
 const menuItems = {
@@ -295,16 +293,6 @@ function Sidebar({
     const navigate = useNavigate();
     const location = useLocation();
 
-    const [settings, setSettings] = useState(() => getLoadedSettings());
-
-    useEffect(() => {
-        const handleSettingsUpdate = () => {
-            setSettings(getLoadedSettings());
-        };
-        window.addEventListener("dcsSettingsUpdated", handleSettingsUpdate);
-        return () => window.removeEventListener("dcsSettingsUpdated", handleSettingsUpdate);
-    }, []);
-
     const { user, role: authRole } = useAuth();
     const isSuperAdmin = Boolean(
         user?.is_super_admin ||
@@ -368,11 +356,6 @@ function Sidebar({
         navigate(item.path);
         onClose();
     };
-
-    const companyTitle = settings.companyName || "Dharam Consultancy Services";
-    const titleParts = companyTitle.split(" ");
-    const firstWord = titleParts[0] || "DCS";
-    const restWords = titleParts.slice(1).join(" ") || "Corporate System";
 
     return (
         <>

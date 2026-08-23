@@ -102,8 +102,8 @@ export const deleteDepartment = async (
 export const getDepartmentCodeAndId = (name = "", id = 1) => {
   const clean = (name || "").trim().toUpperCase();
 
-  let prefix = "DEPT";
-  let badgeCode = "DEPT";
+  let prefix;
+  let badgeCode;
 
   if (clean.includes("ADMIN")) {
     prefix = "ADM";

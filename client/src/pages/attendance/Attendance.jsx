@@ -59,13 +59,13 @@ const statusToBackend = {
 };
 
 function Attendance() {
-    const { role, user } = useAuth();
+    const { role } = useAuth();
     const isAdminOrHR = ["ADMIN", "HR"].includes((role || "").toUpperCase());
     const isSelfView = !isAdminOrHR;
     const canEditAttendance = isAdminOrHR;
 
     const [records, setRecords] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [_loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [search, setSearch] = useState("");
     const [department, setDepartment] = useState("All Departments");

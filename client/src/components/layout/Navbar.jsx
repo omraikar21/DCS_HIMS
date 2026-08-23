@@ -2,16 +2,12 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Menu,
-  Search,
   Bell,
   ChevronDown,
   User,
   Settings,
   ScrollText,
   LogOut,
-  CheckCircle2,
-  Clock,
-  ExternalLink,
   Megaphone,
   Receipt,
   FileText,

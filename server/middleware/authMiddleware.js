@@ -86,16 +86,10 @@ const authenticateToken =
       // ------------------------------------
 
       req.user = {
-
-        id:
-          decoded.userId,
-
-        email:
-          decoded.email,
-
-        role:
-          decoded.role,
-
+        id: decoded.userId,
+        email: decoded.email,
+        name: decoded.name || decoded.email,
+        role: decoded.role,
       };
 
 

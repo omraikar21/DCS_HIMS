@@ -37,6 +37,7 @@ const settingsRoutes = require("./routes/settingsRoutes");
 const auditRoutes = require("./routes/auditRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const userRoutes = require("./routes/userRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 
 // ==========================================
 // INITIALIZE EXPRESS APP & PORT
@@ -50,16 +51,27 @@ const PORT = process.env.PORT || 5000;
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl, postman)
+      // Allow requests with no origin (e.g. mobile apps, curl, postman, same-origin)
       if (!origin) return callback(null, true);
+      
+      const allowedOrigins = [
+        process.env.CLIENT_URL,
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:5000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5000",
+      ].filter(Boolean);
+
       if (
+        allowedOrigins.includes(origin) ||
         /^http:\/\/localhost:\d+$/.test(origin) ||
-        /^http:\/\/127\.0\.0\.1:\d+$/.test(origin) ||
-        origin === process.env.CLIENT_URL
+        /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)
       ) {
         return callback(null, true);
       }
-      return callback(null, true);
+      return callback(new Error(`CORS policy: Access denied for origin ${origin}`));
     },
     credentials: true,
   })
@@ -106,6 +118,7 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/audit-logs", auditRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/reports", reportRoutes);
 
 // ==========================================
 // 404 CATCH-ALL ROUTE
@@ -125,7 +138,11 @@ const startServer = async () => {
     // 1. Verify PostgreSQL connection
     await testDatabaseConnection();
 
-    // 2. Ensure all database tables, relations, and initial seeds exist
+    // 2. Run Database Migrations
+    const { runMigrations } = require("./database/migrator");
+    await runMigrations();
+
+    // 3. Ensure all database tables, relations, and initial seeds exist
     const { initDatabase } = require("./database/initDb");
     await initDatabase();
 

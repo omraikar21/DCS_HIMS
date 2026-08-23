@@ -33,29 +33,18 @@ import { getDashboardData } from "../../services/dashboardService";
 
 function FinanceDashboard() {
   const navigate = useNavigate();
-
-  const [dashboard, setDashboard] =
-    useState(null);
-
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState("");
+  const [dashboard, setDashboard] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const load = async () => {
       try {
-        setLoading(true);
         setError("");
         const data = await getDashboardData();
         setDashboard(data);
       } catch (err) {
         console.error("Finance Dashboard error:", err);
         setError(err.message || "Failed to load dashboard data");
-      } finally {
-        setLoading(false);
       }
     };
 

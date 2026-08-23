@@ -4,24 +4,16 @@ import {
   FileSpreadsheet,
   Download,
   BarChart3,
-  TrendingUp,
-  Calendar,
   Users,
-  Building2,
-  WalletCards,
-  Award,
   Receipt,
   Printer,
   Eye,
   X,
-  FileCheck,
   CheckCircle2,
-  Lock,
   PlusCircle,
   Send,
-  UserCheck,
-  Info,
   Sparkles,
+  ScrollText,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useNotification } from "../../hooks/useNotification";
@@ -29,6 +21,7 @@ import { getLoadedSettings } from "../../services/settingsService";
 import { getEmployees } from "../../services/employeeService";
 import { recordAuditEvent } from "../../services/auditService";
 import { sendFinanceNotification } from "../../services/notificationService";
+import { getCustomReports, saveCustomReport } from "../../services/reportService";
 
 const getReportIcon = (report) => {
   if (typeof report?.icon === "function" || (typeof report?.icon === "object" && report?.icon?.$$typeof)) {
@@ -50,14 +43,11 @@ function Reports() {
   const userRole = (role || user?.role || "EMPLOYEE").toUpperCase();
   const userEmail = (user?.email || "").trim().toLowerCase();
   const isEmployee = userRole === "EMPLOYEE";
-  const isHR = ["HR", "ADMIN"].includes(userRole);
   const isFinance = ["FINANCE", "ADMIN"].includes(userRole);
 
   const settings = getLoadedSettings();
   const currencySymbol = settings.currencySymbol || "₹";
 
-  const initialTab = searchParams.get("tab") || (isEmployee ? "my-reports" : "all");
-  const [activeTab, setActiveTab] = useState(initialTab);
   const [selectedReport, setSelectedReport] = useState(null);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -145,32 +135,42 @@ function Reports() {
     }));
   };
 
-  // Local Storage Custom Finance Reports
-  const [customReports, setCustomReports] = useState(() => {
+  // PostgreSQL Persisted Custom Finance Reports
+  const [customReports, setCustomReports] = useState([]);
+
+  const loadReports = async () => {
     try {
-      const stored = localStorage.getItem("dcs_custom_finance_reports");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          return parsed.filter(
-            (r) =>
-              r.id !== "REP-FIN-ANAND-01" &&
-              !r.title?.includes("August 2026 Salary")
-          );
-        }
+      const data = await getCustomReports();
+      if (Array.isArray(data) && data.length > 0) {
+        const formatted = data.map((r) => ({
+          id: `REP-DB-${r.id}`,
+          title: r.report_title,
+          category: "Personal Finance & Compensation",
+          generatedBy: r.created_by_name ? `Finance Team (${r.created_by_name})` : "Finance Team",
+          targetRoles: ["EMPLOYEE", "FINANCE", "ADMIN"],
+          targetEmployeeEmail: r.parameters?.targetEmail || "ALL",
+          targetEmployeeName: r.parameters?.targetName || "Employee",
+          purpose: "Official Salary Disbursement & Statutory Tax Slip",
+          usage: "Referred and issued by Finance Team directly for verification and record.",
+          format: "PDF / Verified Slip",
+          scope: "Confidential Financial Statement",
+          date: r.created_at ? new Date(r.created_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+          icon: Receipt,
+          color: "#A51D8D",
+          data: r.data || {},
+        }));
+        setCustomReports(formatted);
       }
-    } catch {
-      // fallback
+    } catch (err) {
+      console.warn("Failed to load reports from database:", err.message);
     }
-    return [];
-  });
+  };
 
-  // Base Corporate Catalog
-  const standardReports = [];
+  useEffect(() => {
+    loadReports();
+  }, []);
 
-  const allReports = useMemo(() => {
-    return [...customReports, ...standardReports];
-  }, [customReports]);
+  const allReports = customReports;
 
   const visibleReports = useMemo(() => {
     if (isEmployee) {
@@ -199,7 +199,7 @@ function Reports() {
     }
   }, [searchParams, allReports]);
 
-  const handlePublishFinanceReport = (e) => {
+  const handlePublishFinanceReport = async (e) => {
 
     e.preventDefault();
     const targetEmp = employees.find(
@@ -216,6 +216,21 @@ function Reports() {
     const deductions = Number(financeForm.deductions) || 0;
     const net = gross + allowances - deductions;
 
+    const reportPayloadData = {
+      summary: [
+        { label: "Gross Earnings", value: `${currencySymbol}${gross.toLocaleString("en-IN")}` },
+        { label: "Allowances & Bonus", value: `${currencySymbol}${allowances.toLocaleString("en-IN")}` },
+        { label: "Total Deductions", value: `${currencySymbol}${deductions.toLocaleString("en-IN")}` },
+        { label: "Net Bank Transfer", value: `${currencySymbol}${net.toLocaleString("en-IN")}` },
+      ],
+      details: [
+        { item: "Base Salary Package", dept: "Earnings", metric: "Monthly Basic", score: `${currencySymbol}${gross.toLocaleString("en-IN")}` },
+        { item: "Special & Travel Allowance", dept: "Earnings", metric: "Allowance", score: `${currencySymbol}${allowances.toLocaleString("en-IN")}` },
+        { item: "PF Contribution & TDS", dept: "Deductions", metric: "Statutory", score: `-${currencySymbol}${deductions.toLocaleString("en-IN")}` },
+        { item: "Special Remarks", dept: "Finance Note", metric: "Status", score: financeForm.specialNotes || "Verified" },
+      ],
+    };
+
     const newReport = {
       id: `REP-FIN-${Date.now().toString().slice(-6)}`,
       title: `${financeForm.fiscalPeriod} - ${financeForm.reportTitle}`,
@@ -231,28 +246,31 @@ function Reports() {
       date: new Date().toISOString().slice(0, 10),
       icon: Receipt,
       color: "#A51D8D",
-      data: {
-        summary: [
-          { label: "Gross Earnings", value: `${currencySymbol}${gross.toLocaleString("en-IN")}` },
-          { label: "Allowances & Bonus", value: `${currencySymbol}${allowances.toLocaleString("en-IN")}` },
-          { label: "Total Deductions", value: `${currencySymbol}${deductions.toLocaleString("en-IN")}` },
-          { label: "Net Bank Transfer", value: `${currencySymbol}${net.toLocaleString("en-IN")}` },
-        ],
-        details: [
-          { item: "Base Salary Package", dept: "Earnings", metric: "Monthly Basic", score: `${currencySymbol}${gross.toLocaleString("en-IN")}` },
-          { item: "Special & Travel Allowance", dept: "Earnings", metric: "Allowance", score: `${currencySymbol}${allowances.toLocaleString("en-IN")}` },
-          { item: "PF Contribution & TDS", dept: "Deductions", metric: "Statutory", score: `-${currencySymbol}${deductions.toLocaleString("en-IN")}` },
-          { item: "Special Remarks", dept: "Finance Note", metric: "Status", score: financeForm.specialNotes || "Verified" },
-        ],
-      },
+      data: reportPayloadData,
     };
 
     const updated = [newReport, ...customReports];
     setCustomReports(updated);
+
+    // Save to PostgreSQL Backend
     try {
-      localStorage.setItem("dcs_custom_finance_reports", JSON.stringify(updated));
-    } catch {
-      // storage
+      await saveCustomReport({
+        reportTitle: `${financeForm.fiscalPeriod} - ${financeForm.reportTitle}`,
+        reportType: "FINANCE",
+        period: financeForm.fiscalPeriod,
+        parameters: {
+          targetEmail: financeForm.targetEmail,
+          targetName,
+          grossSalary: gross,
+          allowances,
+          deductions,
+          netSalary: net,
+        },
+        data: reportPayloadData,
+      });
+      loadReports();
+    } catch (saveErr) {
+      console.warn("Failed saving report to database:", saveErr.message);
     }
 
     // Record Live Audit Event in Database

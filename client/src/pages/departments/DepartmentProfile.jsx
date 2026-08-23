@@ -6,20 +6,16 @@ import {
 import {
     useParams,
     useNavigate,
-    Link,
 } from "react-router-dom";
 
 import {
     ArrowLeft,
     Users,
     MapPin,
-    Building2,
     Mail,
-    Phone,
     Calendar,
     Briefcase,
     ExternalLink,
-    Shield,
 } from "lucide-react";
 
 import {

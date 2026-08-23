@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { X, FileText, Upload, AlertCircle, CheckCircle2 } from "lucide-react";
+import { X, FileText, Upload, AlertCircle } from "lucide-react";
 
 const initialForm = {
   employeeDatabaseId: "",

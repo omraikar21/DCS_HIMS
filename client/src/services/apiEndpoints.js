@@ -38,6 +38,10 @@ export const API_ENDPOINTS = {
 
   users: "/users",
 
+  reports: "/reports",
+
+  settings: "/settings",
+
 };
 
 

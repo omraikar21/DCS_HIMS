@@ -4,8 +4,6 @@ import {
   useState,
 } from "react";
 
-import { useNavigate } from "react-router-dom";
-
 import {
   Users,
   UserPlus,
@@ -24,39 +22,33 @@ import {
   Tooltip,
 } from "recharts";
 
-import StatCard from "../../components/dashboard/StatCard";
-import ChartCard from "../../components/dashboard/ChartCard";
-import RecentActivities from "../../components/dashboard/RecentActivities";
+import StatCard
+  from "../../components/dashboard/StatCard";
+
+import ChartCard
+  from "../../components/dashboard/ChartCard";
+
+import RecentActivities
+  from "../../components/dashboard/RecentActivities";
+
 import ProfileHeader from "../../components/dashboard/ProfileHeader";
 import CompanyAnnouncementsCard from "../../components/dashboard/CompanyAnnouncementsCard";
 
 import { getDashboardData } from "../../services/dashboardService";
 
 function HRDashboard() {
-  const navigate = useNavigate();
-
-  const [dashboard, setDashboard] =
-    useState(null);
-
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState("");
+  const [dashboard, setDashboard] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const load = async () => {
       try {
-        setLoading(true);
         setError("");
         const data = await getDashboardData();
         setDashboard(data);
       } catch (err) {
         console.error("HR Dashboard error:", err);
         setError(err.message || "Failed to load dashboard data");
-      } finally {
-        setLoading(false);
       }
     };
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Megaphone, Calendar, Pin, ArrowRight, PlusCircle, X, Send, Sparkles } from "lucide-react";
+import { Megaphone, Calendar, ArrowRight, PlusCircle, X, Send } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useNotification } from "../../hooks/useNotification";
 import { getAnnouncements, createAnnouncement } from "../../services/notificationService";

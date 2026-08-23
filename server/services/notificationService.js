@@ -9,6 +9,7 @@ const {
   createNotification,
   markAsRead,
   markAllAsRead,
+  deleteNotificationById,
 } = require("../models/notificationModel");
 
 const { createAuditLog } = require("../models/auditModel");
@@ -181,10 +182,10 @@ const deployFinanceNotification = async ({
 };
 
 // ------------------------------------------
-// MARK AS READ
+// MARK AS READ (SCOPED TO AUTHENTICATED USER)
 // ------------------------------------------
-const markNotificationAsRead = async (id) => {
-  return await markAsRead(id);
+const markNotificationAsRead = async (id, user) => {
+  return await markAsRead(id, user);
 };
 
 // ------------------------------------------
@@ -195,6 +196,34 @@ const markAllNotificationsAsRead = async (user) => {
   return await markAllAsRead(user.email, user.role);
 };
 
+// ------------------------------------------
+// REMOVE ANNOUNCEMENT (HR / ADMIN)
+// ------------------------------------------
+const removeAnnouncement = async (id, user) => {
+  const deleted = await deleteNotificationById(id);
+  if (!deleted) {
+    throw new Error("Announcement not found or already removed.");
+  }
+
+  try {
+    await createAuditLog({
+      action: "DELETE_ANNOUNCEMENT",
+      user_id: user?.id || null,
+      user_email: user?.email || "system",
+      user_role: user?.role || "ADMIN",
+      ip_address: "127.0.0.1",
+      details: {
+        announcementId: id,
+        title: deleted.title,
+      },
+    });
+  } catch (auditErr) {
+    console.warn("Delete announcement audit log warning:", auditErr.message);
+  }
+
+  return deleted;
+};
+
 module.exports = {
   fetchUserNotifications,
   fetchCompanyAnnouncements,
@@ -202,4 +231,5 @@ module.exports = {
   deployFinanceNotification,
   markNotificationAsRead,
   markAllNotificationsAsRead,
+  removeAnnouncement,
 };

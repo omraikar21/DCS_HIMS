@@ -87,12 +87,8 @@ const sendPasswordResetOtp = async (toEmail, otpCode, userName = "Employee") => 
   };
 
   if (!transporter) {
-    console.log(`\n======================================================`);
-    console.log(`[GMAIL SERVICE SIMULATION / NO CREDENTIALS CONFIGURED]`);
-    console.log(`To: ${toEmail}`);
-    console.log(`Password Reset OTP: ${otpCode}`);
-    console.log(`======================================================\n`);
-    return { simulated: true, otpCode };
+    console.log(`[EMAIL SERVICE] Simulation Mode: Password Reset OTP dispatched for ${toEmail}. (Sensitive OTP code suppressed from logs)`);
+    return { simulated: true };
   }
 
   return transporter.sendMail(mailOptions);
@@ -255,14 +251,8 @@ const sendEmployeeWelcomeEmail = async (
   };
 
   if (!transporter) {
-    console.log(`\n======================================================`);
-    console.log(`[GMAIL SIMULATION] Employee Welcome Email`);
-    console.log(`To: ${toEmail} (${userName})`);
-    console.log(`Employee Code: ${employeeCode}`);
-    console.log(`Temporary Password: ${tempPassword}`);
-    console.log(`Portal URL: ${portalUrl}`);
-    console.log(`======================================================\n`);
-    return { simulated: true, tempPassword };
+    console.log(`[EMAIL SERVICE] Simulation Mode: Employee Welcome Email dispatched for ${toEmail} (${userName}, ID: ${employeeCode || "DCS"}). (Credentials suppressed)`);
+    return { simulated: true };
   }
 
   return transporter.sendMail(mailOptions).catch((err) => {

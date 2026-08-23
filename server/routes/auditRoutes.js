@@ -11,13 +11,26 @@ const {
 } = require("../controllers/auditController");
 
 const {
-  protect,
+  authenticateToken,
 } = require("../middleware/authMiddleware");
 
-// GET /api/audit-logs
-router.get("/", getAuditLogs);
+const {
+  authorizeRoles,
+} = require("../middleware/roleMiddleware");
 
-// POST /api/audit-logs
-router.post("/", recordAuditEvent);
+// GET /api/audit-logs - ADMIN / SUPER_ADMIN only
+router.get(
+  "/",
+  authenticateToken,
+  authorizeRoles("ADMIN", "SUPER_ADMIN"),
+  getAuditLogs
+);
+
+// POST /api/audit-logs - All authenticated users can record system audit events
+router.post(
+  "/",
+  authenticateToken,
+  recordAuditEvent
+);
 
 module.exports = router;

@@ -59,16 +59,10 @@ const request = async (
 
   let data = null;
 
-
   try {
-
-    data =
-      await response.json();
-
+    data = await response.json();
   } catch {
-
-    data = null;
-
+    // Keep data as null if body cannot be parsed as JSON
   }
 
 
@@ -163,3 +157,5 @@ export const remove = (
   );
 
 };
+
+export const del = remove;

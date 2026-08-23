@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  Megaphone,
   Calendar,
-  Tag,
   Plus,
   Pin,
   X,
@@ -11,6 +9,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 import {
   getAnnouncements,
   createAnnouncement,
@@ -22,8 +21,10 @@ function Announcements() {
   const userRole = (role || "").toUpperCase();
   const canDeploy = ["ADMIN", "HR"].includes(userRole);
 
-  const [announcements, setAnnouncements] = useState(() => getAnnouncements());
+  const [announcements, setAnnouncements] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [formData, setFormData] = useState({
     title: "",
     category: "Notice",
@@ -32,15 +33,28 @@ function Announcements() {
   });
   const [error, setError] = useState("");
 
+  const loadAnnouncements = async () => {
+    try {
+      setLoading(true);
+      const data = await getAnnouncements();
+      setAnnouncements(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.warn("Failed loading announcements:", err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
+    loadAnnouncements();
     const handleUpdate = () => {
-      setAnnouncements(getAnnouncements());
+      loadAnnouncements();
     };
     window.addEventListener("dcsAnnouncementsUpdated", handleUpdate);
     return () => window.removeEventListener("dcsAnnouncementsUpdated", handleUpdate);
   }, []);
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.content.trim()) {
       setError("Please provide a title and notice description.");
@@ -51,7 +65,7 @@ function Announcements() {
       ? `${user.name} (${userRole === "HR" ? "HR Department" : "Management"})`
       : (userRole === "HR" ? "HR Department" : "Management");
 
-    createAnnouncement({
+    await createAnnouncement({
       title: formData.title.trim(),
       category: formData.category,
       pinned: formData.pinned,
@@ -67,12 +81,11 @@ function Announcements() {
     });
     setError("");
     setModalOpen(false);
+    loadAnnouncements();
   };
 
   const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to remove this announcement?")) {
-      deleteAnnouncement(id);
-    }
+    setDeleteConfirmId(id);
   };
 
   return (
@@ -99,7 +112,11 @@ function Announcements() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-        {announcements.length === 0 ? (
+        {loading ? (
+          <div className="dashboard-card" style={{ textAlign: "center", padding: "40px" }}>
+            <p style={{ color: "#64748b" }}>Loading announcements...</p>
+          </div>
+        ) : announcements.length === 0 ? (
           <div className="dashboard-card" style={{ textAlign: "center", padding: "40px" }}>
             <p style={{ color: "#64748b" }}>No announcements posted yet.</p>
           </div>
@@ -122,12 +139,12 @@ function Announcements() {
                   </span>
                   <span style={{ fontSize: "12px", color: "#94a3b8", display: "flex", alignItems: "center", gap: "4px" }}>
                     <Calendar size={13} />
-                    {item.date}
+                    {item.date || (item.created_at ? new Date(item.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Recent")}
                   </span>
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  {item.pinned && (
+                  {(item.pinned || item.priority === "HIGH") && (
                     <div
                       style={{
                         display: "flex",
@@ -171,11 +188,11 @@ function Announcements() {
 
               <h3 style={{ fontSize: "18px", marginBottom: "8px", color: "#0f172a" }}>{item.title}</h3>
               <p style={{ color: "#475569", fontSize: "14px", lineHeight: "1.6", marginBottom: "14px" }}>
-                {item.content}
+                {item.content || item.message}
               </p>
 
               <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 500 }}>
-                Posted by: <strong style={{ color: "#334155" }}>{item.author}</strong>
+                Posted by: <strong style={{ color: "#334155" }}>{item.author || item.sender_name || "Management"}</strong>
               </div>
             </div>
           ))
@@ -298,6 +315,22 @@ function Announcements() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteConfirmId)}
+        title="Remove Announcement?"
+        message="Are you sure you want to delete this company announcement? This will remove it from all employee dashboards."
+        confirmText="Delete Notice"
+        cancelText="Cancel"
+        onConfirm={async () => {
+          if (deleteConfirmId) {
+            await deleteAnnouncement(deleteConfirmId);
+            setDeleteConfirmId(null);
+            loadAnnouncements();
+          }
+        }}
+        onCancel={() => setDeleteConfirmId(null)}
+      />
     </div>
   );
 }

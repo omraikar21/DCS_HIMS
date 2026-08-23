@@ -7,8 +7,6 @@ import {
 import {
   Plus,
   Files,
-  FileText,
-  AlertCircle,
 } from "lucide-react";
 
 import {
@@ -38,6 +36,7 @@ import DocumentPreviewModal
 
 import { useAuth } from "../../hooks/useAuth";
 import { useNotification } from "../../hooks/useNotification";
+import ConfirmDialog from "../../components/common/ConfirmDialog";
 
 function Documents() {
   const { user, role } = useAuth();
@@ -50,6 +49,7 @@ function Documents() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deleteConfirmRecord, setDeleteConfirmRecord] = useState(null);
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All Categories");
@@ -80,7 +80,6 @@ function Documents() {
       return employees.filter((emp) => {
         const empRole = (emp.role || "").toUpperCase();
         const empDept = (emp.department_name || "").toLowerCase();
-        const empDesig = (emp.designation || "").toLowerCase();
         return (
           empRole !== "SUPER_ADMIN" &&
           empRole !== "ADMIN" &&
@@ -238,19 +237,26 @@ function Documents() {
   };
 
 
-  const handleDelete = async (record) => {
+  const handleDelete = (record) => {
     if (!canDeploy) return;
-    if (window.confirm(`Are you sure you want to delete "${record.documentName}"?`)) {
-      try {
-        await deleteDocument(record.databaseId);
-        setRecords((prev) => prev.filter((r) => r.databaseId !== record.databaseId));
-        if (notification?.success) {
-          notification.success("Document removed successfully.");
-        }
-      } catch (err) {
-        console.error("Failed to delete document:", err);
-        alert(err.message || "Failed to delete document.");
+    setDeleteConfirmRecord(record);
+  };
+
+  const confirmDeleteAction = async () => {
+    if (!deleteConfirmRecord) return;
+    try {
+      await deleteDocument(deleteConfirmRecord.databaseId);
+      setRecords((prev) => prev.filter((r) => r.databaseId !== deleteConfirmRecord.databaseId));
+      if (notification?.success) {
+        notification.success("Document removed successfully.");
       }
+    } catch (err) {
+      console.error("Failed to delete document:", err);
+      if (notification?.error) {
+        notification.error(err.message || "Failed to delete document.");
+      }
+    } finally {
+      setDeleteConfirmRecord(null);
     }
   };
 
@@ -379,6 +385,16 @@ function Documents() {
           setPreviewDoc(null);
         }}
         document={previewDoc}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteConfirmRecord)}
+        title="Delete Document?"
+        message={`Are you sure you want to delete "${deleteConfirmRecord?.documentName}"? This action cannot be undone.`}
+        confirmText="Delete Document"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteAction}
+        onCancel={() => setDeleteConfirmRecord(null)}
       />
     </div>
   );

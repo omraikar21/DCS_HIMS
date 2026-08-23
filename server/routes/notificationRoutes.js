@@ -17,6 +17,7 @@ const {
   getNotifications,
   getAnnouncements,
   createAnnouncement,
+  deleteAnnouncement,
   sendFinanceNotice,
   markRead,
   markAllRead,
@@ -48,6 +49,17 @@ router.post(
 );
 
 // ------------------------------------------
+// DELETE COMPANY ANNOUNCEMENT
+// ADMIN + HR
+// ------------------------------------------
+router.delete(
+  "/announcements/:id",
+  authenticateToken,
+  authorizeRoles("ADMIN", "HR"),
+  deleteAnnouncement
+);
+
+// ------------------------------------------
 // POST FINANCE NOTICE (TARGET EMPLOYEE + ADMIN)
 // FINANCE + ADMIN
 // ------------------------------------------
@@ -67,5 +79,15 @@ router.put("/:id/read", authenticateToken, markRead);
 // PUT MARK ALL AS READ
 // ------------------------------------------
 router.put("/read-all", authenticateToken, markAllRead);
+
+// ------------------------------------------
+// DELETE NOTIFICATION (ADMIN / HR)
+// ------------------------------------------
+router.delete(
+  "/:id",
+  authenticateToken,
+  authorizeRoles("ADMIN", "HR"),
+  deleteAnnouncement
+);
 
 module.exports = router;

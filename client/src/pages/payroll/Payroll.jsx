@@ -6,9 +6,6 @@ import {
 
 import {
   WalletCards,
-  Building,
-  CreditCard,
-  CheckCircle2,
   Plus,
 } from "lucide-react";
 
@@ -155,7 +152,7 @@ function Payroll() {
 
       return matchesSearch && matchesDepartment && matchesStatus;
     });
-  }, [records, search, department, status, month]);
+  }, [records, search, department, status]);
 
   /* TREND COMPUTATION */
   const payrollTrend = useMemo(() => {

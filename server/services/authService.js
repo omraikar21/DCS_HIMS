@@ -87,26 +87,18 @@ const loginUser =
 
     const token =
       jwt.sign(
-
         {
-          userId:
-            user.id,
-
-          email:
-            user.email,
-
-          role:
-            user.role,
+          userId: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
         },
-
         process.env.JWT_SECRET,
-
         {
           expiresIn:
             process.env.JWT_EXPIRES_IN ||
             "1d",
         }
-
       );
 
 
@@ -187,6 +179,7 @@ const firstLoginChangePassword = async (email, currentPassword, newPassword) => 
   const token = jwt.sign(
     {
       userId: updatedUser.id,
+      name: updatedUser.name,
       email: updatedUser.email,
       role: updatedUser.role,
     },
@@ -273,14 +266,17 @@ const resetUserPasswordWithOtp = async (email, otp, newPassword) => {
     throw new Error("Email and new password are required");
   }
 
-  const trimmedEmail = email.trim();
+  if (!otp || typeof otp !== "string" || !otp.trim()) {
+    throw new Error("Valid OTP verification code is required to reset password");
+  }
 
-  // If OTP is provided, verify it
-  if (otp) {
-    const otpValidation = verifyOtp(trimmedEmail, otp);
-    if (!otpValidation.valid) {
-      throw new Error(otpValidation.message || "Invalid or expired OTP");
-    }
+  const trimmedEmail = email.trim().toLowerCase();
+  const trimmedOtp = otp.trim();
+
+  // Strictly verify OTP
+  const otpValidation = verifyOtp(trimmedEmail, trimmedOtp);
+  if (!otpValidation.valid) {
+    throw new Error(otpValidation.message || "Invalid or expired OTP");
   }
 
   const user = await getUserByEmail(trimmedEmail);
@@ -318,22 +314,15 @@ const resetUserPasswordWithOtp = async (email, otp, newPassword) => {
     status: "SUCCESS",
   }).catch(() => {});
 
-
   return updatedUser;
 };
 
-
 // ------------------------------------------
-// DIRECT RESET PASSWORD (FOR COMPATIBILITY)
+// DIRECT RESET PASSWORD (ENFORCES OTP)
 // ------------------------------------------
-
-const resetUserPassword =
-  async (
-    email,
-    newPassword
-  ) => {
-    return resetUserPasswordWithOtp(email, null, newPassword);
-  };
+const resetUserPassword = async (email, newPassword, otp) => {
+  return resetUserPasswordWithOtp(email, otp, newPassword);
+};
 
 
 // ------------------------------------------

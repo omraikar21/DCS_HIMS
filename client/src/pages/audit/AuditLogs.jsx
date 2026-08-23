@@ -1,25 +1,14 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   ShieldCheck,
-  ShieldAlert,
-  Key,
-  User,
-  Clock,
-  Filter,
   Search,
-  Download,
-  Info,
-  Lock,
   RefreshCw,
   FileSpreadsheet,
-  CheckCircle2,
   Printer,
   Calendar,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
 } from "lucide-react";
-import { useAuth } from "../../hooks/useAuth";
 import { useNotification } from "../../hooks/useNotification";
 import { getAuditLogs } from "../../services/auditService";
 import { getLoadedSettings } from "../../services/settingsService";
@@ -53,7 +42,6 @@ const formatAuditDetails = (raw) => {
 };
 
 function AuditLogs() {
-  const { user, role } = useAuth();
   const notification = useNotification();
   const settings = getLoadedSettings();
 

@@ -17,12 +17,6 @@ function OnboardingSummary({
         item.status === "Started"
     ).length;
 
-  const inProgress =
-    records.filter(
-      (item) =>
-        item.status === "In Progress"
-    ).length;
-
   const completed =
     records.filter(
       (item) =>

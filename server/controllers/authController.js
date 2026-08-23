@@ -200,6 +200,7 @@ const forgotPassword =
 
       if (
         !email ||
+        !otp ||
         !newPassword
       ) {
 
@@ -208,7 +209,7 @@ const forgotPassword =
           success: false,
 
           message:
-            "Email and new password are required",
+            "Email, valid OTP code, and new password are required",
 
         });
 

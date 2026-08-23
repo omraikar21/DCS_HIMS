@@ -290,10 +290,7 @@ function EmployeeModal({
                 <button
                   type="button"
                   onClick={() => {
-                    if (window.confirm(`Are you sure you want to delete and offboard ${employee.name} (${employee.id})? This will remove their profile and system access.`)) {
-                      onDelete(employee);
-                      onClose();
-                    }
+                    onDelete(employee);
                   }}
                   style={{
                     backgroundColor: "#fff1f2",

@@ -13,19 +13,15 @@ import {
     WalletCards,
     UserPlus,
     Server,
-    Cpu,
     Activity,
     Radio,
     BellRing,
     Terminal,
     ShieldCheck,
-    AlertTriangle,
-    Shield,
     X,
     BadgeCheck,
     Database,
     Printer,
-    Download,
 } from "lucide-react";
 
 import {
@@ -77,7 +73,7 @@ function AdminDashboard() {
     );
 
     const [dashboard, setDashboard] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [_loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [isTelemetryReportOpen, setIsTelemetryReportOpen] = useState(false);
 

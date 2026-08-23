@@ -11,13 +11,6 @@ const documentCategories = [
   "Policy",
 ];
 
-const documentStatuses = [
-  "All Status",
-  "Verified",
-  "Pending",
-  "Rejected",
-];
-
 function DocumentFilters({
   search,
   setSearch,
@@ -25,8 +18,6 @@ function DocumentFilters({
   setCategory,
   department,
   setDepartment,
-  status,
-  setStatus,
 }) {
   const [departmentsList, setDepartmentsList] = useState(["All Departments"]);
 

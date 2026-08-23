@@ -4,8 +4,6 @@ import {
   useMemo,
 } from "react";
 
-import { useNavigate } from "react-router-dom";
-
 import {
   CalendarCheck,
   ClipboardList,
@@ -39,7 +37,6 @@ import { getAttendance } from "../../services/attendanceService";
 import { getDocuments } from "../../services/documentService";
 
 function EmployeeDashboard() {
-  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [dashboard, setDashboard] = useState(null);
   const [payrolls, setPayrolls] = useState([]);
@@ -179,7 +176,7 @@ function EmployeeDashboard() {
       { day: "Fri", hours: 8.5 },
     ];
     return defaultDays;
-  }, [myAttendance]);
+  }, []);
 
   return (
     <div className="admin-dashboard">
@@ -204,8 +201,7 @@ function EmployeeDashboard() {
           </h1>
 
           <p className="dashboard-description">
-            Here is a summary of your
-            work activity.
+            {loading ? "Refreshing your work activity..." : (dashboard?.summary?.description || "Here is a summary of your work activity.")}
           </p>
 
         </div>

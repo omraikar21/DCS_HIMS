@@ -4,7 +4,7 @@ import {
   Download,
   Printer,
   FileText,
-  ShieldCheck,
+  HardDrive,
   Building,
   User,
   Calendar,

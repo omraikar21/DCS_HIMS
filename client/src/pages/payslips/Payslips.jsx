@@ -41,7 +41,7 @@ function Payslips() {
   const [records, setRecords] =
     useState([]);
 
-  const [loading, setLoading] =
+  const [_loading, setLoading] =
     useState(true);
 
   const [error, setError] =
@@ -119,7 +119,6 @@ function Payslips() {
           // If logged in as employee, only show matching employee records
           if (isEmployee && user) {
             const userNameLower = (user.name || "").toLowerCase();
-            const userEmailLower = (user.email || "").toLowerCase();
             const recordNameLower = record.employeeName.toLowerCase();
 
             const isMatch = recordNameLower.includes(userNameLower) ||
@@ -162,7 +161,6 @@ function Payslips() {
       records,
       search,
       department,
-      month,
       isEmployee,
       user,
     ]);
