@@ -6,6 +6,7 @@ const {
   getEmployee,
   addEmployee,
   editEmployee,
+  editEmployeeCompensation,
   removeEmployee,
 } = require("../services/employeeService");
 
@@ -109,7 +110,7 @@ const getById =
     } catch (error) {
 
       console.error(
-        "Get employee error:",
+        "Get employee by id error:",
         error
       );
 
@@ -138,7 +139,6 @@ const create =
     try {
 
       const {
-        employeeCode,
         firstName,
         lastName,
         email,
@@ -148,8 +148,16 @@ const create =
         designation,
         joiningDate,
         salary,
+        hra,
+        allowances,
+        pfDeduction,
+        taxDeduction,
         employmentStatus,
+        bankName,
+        bankAccount,
+        ifscCode,
         address,
+        autoCreateUser,
       } = req.body;
 
 
@@ -168,23 +176,21 @@ const create =
           success: false,
 
           message:
-            "First name, email and designation are required",
+            "First name, email, and designation are required",
 
         });
 
       }
 
 
-      if (
-        !isValidEmail(email)
-      ) {
+      if (!isValidEmail(email)) {
 
         return res.status(400).json({
 
           success: false,
 
           message:
-            "Please provide a valid email",
+            "Valid corporate email is required",
 
         });
 
@@ -193,6 +199,8 @@ const create =
 
       if (
         salary !== undefined &&
+        salary !== null &&
+        salary !== "" &&
         !isPositiveNumber(salary)
       ) {
 
@@ -201,19 +209,12 @@ const create =
           success: false,
 
           message:
-            "Salary must be a valid positive number",
+            "Salary must be a positive number",
 
         });
 
       }
 
-
-      if (!department && !departmentId) {
-        return res.status(400).json({
-          success: false,
-          message: "Department is required",
-        });
-      }
 
       let resolvedDepartmentId =
         departmentId || null;
@@ -237,6 +238,53 @@ const create =
         }
       }
 
+      // 1. Auto-Provision DCS Portal Login Account if requested
+      let generatedPassword = null;
+      let createdUserId = null;
+
+      if (autoCreateUser !== false) {
+        try {
+          const existingUser = await getUserByEmail(email.trim().toLowerCase());
+          if (!existingUser) {
+            // Generate clean secure temp password
+            const rawRandom = crypto.randomBytes(4).toString("hex");
+            generatedPassword = `DCS@${rawRandom}`;
+            const passwordHash = await bcrypt.hash(generatedPassword, 10);
+
+            // Determine system role
+            let userRole = "EMPLOYEE";
+            const roleDesignation = (designation || "").toUpperCase();
+            if (roleDesignation.includes("ADMIN")) userRole = "ADMIN";
+            else if (roleDesignation.includes("HR") || roleDesignation.includes("HUMAN RESOURCE")) userRole = "HR";
+            else if (roleDesignation.includes("FINANCE") || roleDesignation.includes("ACCOUNT")) userRole = "FINANCE";
+
+            const newUser = await createUser({
+              name: `${firstName} ${lastName || ""}`.trim(),
+              email: email.trim().toLowerCase(),
+              passwordHash,
+              role: userRole,
+            });
+
+            createdUserId = newUser.id;
+
+            // Send Welcome Email with credentials via Nodemailer
+            sendEmployeeWelcomeEmail({
+              employeeName: `${firstName} ${lastName || ""}`.trim(),
+              employeeEmail: email.trim().toLowerCase(),
+              temporaryPassword: generatedPassword,
+              role: userRole,
+              designation: designation || "Staff",
+            }).catch((emailErr) => {
+              console.warn("Welcome email async error:", emailErr.message);
+            });
+          } else {
+            createdUserId = existingUser.id;
+          }
+        } catch (authErr) {
+          console.warn("Auto user creation notice:", authErr.message);
+        }
+      }
+
       // ------------------------------------
       // CREATE EMPLOYEE
       // ------------------------------------
@@ -244,13 +292,14 @@ const create =
       const employee =
         await addEmployee({
 
-          employeeCode,
+          userId:
+            createdUserId,
 
           firstName,
 
           lastName,
 
-          email: email.trim(),
+          email,
 
           phone,
 
@@ -263,59 +312,54 @@ const create =
             joiningDate || null,
 
           salary:
-            salary || 0,
+            salary ? Number(salary) : 0,
+
+          hra:
+            hra ? Number(hra) : 0,
+
+          allowances:
+            allowances ? Number(allowances) : 0,
+
+          pfDeduction:
+            pfDeduction ? Number(pfDeduction) : 0,
+
+          taxDeduction:
+            taxDeduction ? Number(taxDeduction) : 0,
 
           employmentStatus:
             employmentStatus ||
             "ACTIVE",
 
+          bankName,
+          bankAccount,
+          ifscCode,
           address,
 
         });
 
 
-      // ------------------------------------
-      // PROVISION USER ACCOUNT
-      // ------------------------------------
-
-      try {
-        const trimmedEmail = email.trim().toLowerCase();
-        const existingUser = await getUserByEmail(trimmedEmail);
-
-        if (!existingUser) {
-          const passwordHash = await bcrypt.hash("Employee@123", 10);
-          const fullName = `${firstName || ""} ${lastName || ""}`.trim() || "Employee";
-
-          await createUser({
-            name: fullName,
-            email: trimmedEmail,
-            passwordHash,
-            role: "EMPLOYEE",
-            mustChangePassword: false,
-          });
-        }
-      } catch (userProvisionErr) {
-        console.warn("User account provisioning warning:", userProvisionErr.message);
-      }
-
-
       // Record Audit Event
       createAuditLog({
-        eventAction: "Employee Profile Provisioned",
+        eventAction: "Employee Onboarded",
         category: "EMPLOYEE",
         actorName: req.user?.name || "Om Raikar",
         actorEmail: req.user?.email || "omraikar2128@gmail.com",
         role: req.user?.role || "HR",
-        details: `Provisioned ${firstName} ${lastName || ""} (${employee.employee_code || "Code Generated"}) as ${designation}.`,
+        details: `Successfully added employee ${firstName} ${lastName || ""} (${email}) under ${designation}.`,
         status: "SUCCESS",
       }).catch(() => {});
 
       return res.status(201).json({
-        success: true,
-        message: "Employee created successfully",
-        data: employee,
-      });
 
+        success: true,
+
+        message:
+          "Employee created successfully",
+
+        data:
+          employee,
+
+      });
 
     } catch (error) {
 
@@ -325,10 +369,11 @@ const create =
       );
 
 
-      // PostgreSQL unique violation
-
       if (
-        error.code === "23505"
+        error.message &&
+        error.message.includes(
+          "duplicate key"
+        )
       ) {
 
         return res.status(409).json({
@@ -336,7 +381,7 @@ const create =
           success: false,
 
           message:
-            "Employee code or email already exists",
+            "An employee with this email or code already exists",
 
         });
 
@@ -375,7 +420,14 @@ const update =
         designation,
         joiningDate,
         salary,
+        hra,
+        allowances,
+        pfDeduction,
+        taxDeduction,
         employmentStatus,
+        bankName,
+        bankAccount,
+        ifscCode,
         address,
       } = req.body;
 
@@ -399,6 +451,8 @@ const update =
 
       if (
         salary !== undefined &&
+        salary !== null &&
+        salary !== "" &&
         !isPositiveNumber(salary)
       ) {
 
@@ -407,7 +461,7 @@ const update =
           success: false,
 
           message:
-            "Salary must be a valid positive number",
+            "Salary must be a positive number",
 
         });
 
@@ -458,12 +512,27 @@ const update =
               joiningDate || null,
 
             salary:
-              salary || 0,
+              salary !== undefined ? Number(salary) : undefined,
+
+            hra:
+              hra !== undefined ? Number(hra) : undefined,
+
+            allowances:
+              allowances !== undefined ? Number(allowances) : undefined,
+
+            pfDeduction:
+              pfDeduction !== undefined ? Number(pfDeduction) : undefined,
+
+            taxDeduction:
+              taxDeduction !== undefined ? Number(taxDeduction) : undefined,
 
             employmentStatus:
               employmentStatus ||
               "ACTIVE",
 
+            bankName,
+            bankAccount,
+            ifscCode,
             address,
 
           }
@@ -502,6 +571,61 @@ const update =
 
     }
 
+  };
+
+
+// ------------------------------------------
+// UPDATE EMPLOYEE COMPENSATION (FINANCE & ADMIN)
+// ------------------------------------------
+
+const updateCompensation =
+  async (req, res) => {
+    try {
+      const {
+        salary = 0,
+        hra = 0,
+        allowances = 0,
+        pfDeduction = 0,
+        taxDeduction = 0,
+        bankName = "",
+        bankAccount = "",
+        ifscCode = "",
+      } = req.body;
+
+      const employee = await editEmployeeCompensation(req.params.id, {
+        salary: Number(salary) || 0,
+        hra: Number(hra) || 0,
+        allowances: Number(allowances) || 0,
+        pfDeduction: Number(pfDeduction) || 0,
+        taxDeduction: Number(taxDeduction) || 0,
+        bankName,
+        bankAccount,
+        ifscCode,
+      });
+
+      // Record Audit Event
+      createAuditLog({
+        eventAction: "Employee Compensation & Salary Structure Updated",
+        category: "PAYROLL",
+        actorName: req.user?.name || "Finance Manager",
+        actorEmail: req.user?.email || "finance@dcs.com",
+        role: req.user?.role || "FINANCE",
+        details: `Updated salary structure for ${employee?.first_name} ${employee?.last_name || ""} (ID: ${req.params.id}): Basic ₹${salary}, Net ₹${(Number(salary) + Number(hra) + Number(allowances) - Number(pfDeduction) - Number(taxDeduction))}.`,
+        status: "SUCCESS",
+      }).catch(() => {});
+
+      return res.status(200).json({
+        success: true,
+        message: "Employee salary structure and banking details updated successfully",
+        data: employee,
+      });
+    } catch (error) {
+      console.error("Update employee compensation error:", error);
+      return res.status(404).json({
+        success: false,
+        message: error.message || "Failed to update compensation",
+      });
+    }
   };
 
 
@@ -564,5 +688,6 @@ module.exports = {
   getById,
   create,
   update,
+  updateCompensation,
   remove,
 };

@@ -139,6 +139,10 @@ const createEmployee =
       : null;
 
     const cleanSalary = salary ? Number(salary) || 0 : 0;
+    const cleanHra = hra ? Number(hra) || 0 : 0;
+    const cleanAllowances = allowances ? Number(allowances) || 0 : 0;
+    const cleanPf = pfDeduction ? Number(pfDeduction) || 0 : 0;
+    const cleanTax = taxDeduction ? Number(taxDeduction) || 0 : 0;
 
     const result =
       await pool.query(
@@ -155,7 +159,14 @@ const createEmployee =
           designation,
           joining_date,
           salary,
+          hra,
+          allowances,
+          pf_deduction,
+          tax_deduction,
           employment_status,
+          bank_name,
+          bank_account,
+          ifsc_code,
           address
         )
         VALUES
@@ -171,7 +182,14 @@ const createEmployee =
           $9,
           $10,
           $11,
-          $12
+          $12,
+          $13,
+          $14,
+          $15,
+          $16,
+          $17,
+          $18,
+          $19
         )
         RETURNING *
         `,
@@ -186,7 +204,14 @@ const createEmployee =
           designation.trim(),
           cleanJoiningDate,
           cleanSalary,
+          cleanHra,
+          cleanAllowances,
+          cleanPf,
+          cleanTax,
           employmentStatus || "ACTIVE",
+          bankName ? bankName.trim() : null,
+          bankAccount ? bankAccount.trim() : null,
+          ifscCode ? ifscCode.trim() : null,
           address ? address.trim() : "",
         ]
       );
@@ -210,27 +235,47 @@ const updateEmployee =
       designation,
       joiningDate,
       salary,
+      hra,
+      allowances,
+      pfDeduction,
+      taxDeduction,
       employmentStatus,
+      bankName,
+      bankAccount,
+      ifscCode,
       address,
     }
   ) => {
+
+    const cleanSalary = salary !== undefined ? Number(salary) || 0 : undefined;
+    const cleanHra = hra !== undefined ? Number(hra) || 0 : undefined;
+    const cleanAllowances = allowances !== undefined ? Number(allowances) || 0 : undefined;
+    const cleanPf = pfDeduction !== undefined ? Number(pfDeduction) || 0 : undefined;
+    const cleanTax = taxDeduction !== undefined ? Number(taxDeduction) || 0 : undefined;
 
     const result =
       await pool.query(
         `
         UPDATE employees
         SET
-          first_name = $1,
-          last_name = $2,
-          phone = $3,
-          department_id = $4,
-          designation = $5,
-          joining_date = $6,
-          salary = $7,
-          employment_status = $8,
-          address = $9,
+          first_name = COALESCE($1, first_name),
+          last_name = COALESCE($2, last_name),
+          phone = COALESCE($3, phone),
+          department_id = COALESCE($4, department_id),
+          designation = COALESCE($5, designation),
+          joining_date = COALESCE($6, joining_date),
+          salary = COALESCE($7, salary),
+          hra = COALESCE($8, hra),
+          allowances = COALESCE($9, allowances),
+          pf_deduction = COALESCE($10, pf_deduction),
+          tax_deduction = COALESCE($11, tax_deduction),
+          employment_status = COALESCE($12, employment_status),
+          bank_name = COALESCE($13, bank_name),
+          bank_account = COALESCE($14, bank_account),
+          ifsc_code = COALESCE($15, ifsc_code),
+          address = COALESCE($16, address),
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $10
+        WHERE id = $17
         RETURNING *
         `,
         [
@@ -240,12 +285,70 @@ const updateEmployee =
           departmentId,
           designation,
           joiningDate,
-          salary,
+          cleanSalary,
+          cleanHra,
+          cleanAllowances,
+          cleanPf,
+          cleanTax,
           employmentStatus,
+          bankName,
+          bankAccount,
+          ifscCode,
           address,
           id,
         ]
       );
+
+    return result.rows[0];
+  };
+
+// ------------------------------------------
+// UPDATE EMPLOYEE COMPENSATION ONLY
+// (FOR FINANCE / ADMIN)
+// ------------------------------------------
+
+const updateEmployeeCompensation =
+  async (
+    id,
+    {
+      salary = 0,
+      hra = 0,
+      allowances = 0,
+      pfDeduction = 0,
+      taxDeduction = 0,
+      bankName = null,
+      bankAccount = null,
+      ifscCode = null,
+    }
+  ) => {
+    const result = await pool.query(
+      `
+      UPDATE employees
+      SET
+        salary = $1,
+        hra = $2,
+        allowances = $3,
+        pf_deduction = $4,
+        tax_deduction = $5,
+        bank_name = $6,
+        bank_account = $7,
+        ifsc_code = $8,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $9
+      RETURNING *
+      `,
+      [
+        Number(salary) || 0,
+        Number(hra) || 0,
+        Number(allowances) || 0,
+        Number(pfDeduction) || 0,
+        Number(taxDeduction) || 0,
+        bankName ? String(bankName).trim() : null,
+        bankAccount ? String(bankAccount).trim() : null,
+        ifscCode ? String(ifscCode).trim() : null,
+        id,
+      ]
+    );
 
     return result.rows[0];
   };
@@ -278,5 +381,6 @@ module.exports = {
   getEmployeeByUserId,
   createEmployee,
   updateEmployee,
+  updateEmployeeCompensation,
   deleteEmployee,
 };

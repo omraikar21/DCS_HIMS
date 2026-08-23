@@ -12,6 +12,7 @@ import {
   Lock,
   Camera,
   Edit3,
+  Pencil,
   X,
   Save,
   AlertCircle,
@@ -31,7 +32,7 @@ import {
 import { useAuth } from "../../hooks/useAuth";
 import { useNotification } from "../../hooks/useNotification";
 import { updateUserProfile, getStoredUser, updateStoredUser } from "../../services/authService";
-import { getEmployees } from "../../services/employeeService";
+import { getEmployees, updateEmployeeCompensation } from "../../services/employeeService";
 import { getPayslips } from "../../services/payslipService";
 import { getLoadedSettings } from "../../services/settingsService";
 
@@ -76,6 +77,20 @@ function Profile() {
   const [payslips, setPayslips] = useState([]);
   const [loadingPayroll, setLoadingPayroll] = useState(true);
 
+  // Compensation Editing Modal State
+  const [isEditSalaryModalOpen, setIsEditSalaryModalOpen] = useState(false);
+  const [salaryForm, setSalaryForm] = useState({
+    salary: 0,
+    hra: 0,
+    allowances: 0,
+    pfDeduction: 0,
+    taxDeduction: 0,
+    bankName: "",
+    bankAccount: "",
+    ifscCode: "",
+  });
+  const [savingSalary, setSavingSalary] = useState(false);
+
   useEffect(() => {
     const handleProfileUpdate = () => {
       const updated = getStoredUser();
@@ -91,95 +106,79 @@ function Profile() {
   const userAvatar = currentUser?.avatar || "";
 
   // Load employee and payslip data for the active profile
-  useEffect(() => {
-    const loadProfilePayroll = async () => {
-      try {
-        setLoadingPayroll(true);
-        const [emps, slips] = await Promise.all([
-          getEmployees().catch(() => []),
-          getPayslips().catch(() => []),
-        ]);
+  const loadProfilePayroll = async () => {
+    try {
+      setLoadingPayroll(true);
+      const [emps, slips] = await Promise.all([
+        getEmployees().catch(() => []),
+        getPayslips().catch(() => []),
+      ]);
 
-        const currentEmp = (emps || []).find(
-          (e) => e.email?.toLowerCase().trim() === userEmail
-        );
-        if (currentEmp) {
-          setEmployeeData(currentEmp);
-        }
+      const currentEmp = (emps || []).find(
+        (e) =>
+          (e.email && e.email.toLowerCase().trim() === userEmail) ||
+          (user?.id && e.user_id === user.id) ||
+          (user?.id && e.id === user.id)
+      );
 
-        const mySlips = (slips || []).filter(
-          (s) =>
-            s.email?.toLowerCase().trim() === userEmail ||
-            (currentEmp && s.employee_id === currentEmp.id)
-        );
-
-        if (mySlips.length > 0) {
-          setPayslips(mySlips);
-        } else if (userEmail === "anandck89@gmail.com") {
-          // Default baseline for Anand if network delays
-          setPayslips([
-            {
-              id: 1,
-              payslip_number: "PS-202608-0002",
-              payroll_month: 8,
-              payroll_year: 2026,
-              basic_salary: "85000.00",
-              allowances: "10000.00",
-              deductions: "6500.00",
-              gross_salary: "95000.00",
-              net_salary: "88500.00",
-              payment_status: "PAID",
-              payment_date: "2026-08-01",
-              bank_name: "HDFC Bank",
-              bank_account: "50100482910482",
-              ifsc_code: "HDFC0001234",
-              transaction_ref: "TXN-HDFC-AUG26-90214",
-            },
-            {
-              id: 2,
-              payslip_number: "PS-202607-0003",
-              payroll_month: 7,
-              payroll_year: 2026,
-              basic_salary: "85000.00",
-              allowances: "10000.00",
-              deductions: "6500.00",
-              gross_salary: "95000.00",
-              net_salary: "88500.00",
-              payment_status: "PAID",
-              payment_date: "2026-07-01",
-              bank_name: "HDFC Bank",
-              bank_account: "50100482910482",
-              ifsc_code: "HDFC0001234",
-              transaction_ref: "TXN-HDFC-JUL26-88102",
-            },
-            {
-              id: 3,
-              payslip_number: "PS-202606-0004",
-              payroll_month: 6,
-              payroll_year: 2026,
-              basic_salary: "85000.00",
-              allowances: "8000.00",
-              deductions: "6500.00",
-              gross_salary: "93000.00",
-              net_salary: "86500.00",
-              payment_status: "PAID",
-              payment_date: "2026-06-01",
-              bank_name: "HDFC Bank",
-              bank_account: "50100482910482",
-              ifsc_code: "HDFC0001234",
-              transaction_ref: "TXN-HDFC-JUN26-76419",
-            },
-          ]);
-        }
-      } catch (err) {
-        console.warn("Failed to load payroll profile details:", err);
-      } finally {
-        setLoadingPayroll(false);
+      if (currentEmp) {
+        setEmployeeData(currentEmp);
+        setSalaryForm({
+          salary: Number(currentEmp.salary || 0),
+          hra: Number(currentEmp.hra || 0),
+          allowances: Number(currentEmp.allowances || 0),
+          pfDeduction: Number(currentEmp.pf_deduction || 0),
+          taxDeduction: Number(currentEmp.tax_deduction || 0),
+          bankName: currentEmp.bank_name || "",
+          bankAccount: currentEmp.bank_account || "",
+          ifscCode: currentEmp.ifsc_code || "",
+        });
       }
-    };
 
+      const mySlips = (slips || []).filter(
+        (s) =>
+          (s.email && s.email.toLowerCase().trim() === userEmail) ||
+          (currentEmp && (s.employee_id === currentEmp.id || s.employee_id === currentEmp.databaseId))
+      );
+
+      setPayslips(mySlips);
+    } catch (err) {
+      console.warn("Failed to load payroll profile details:", err);
+    } finally {
+      setLoadingPayroll(false);
+    }
+  };
+
+  useEffect(() => {
     loadProfilePayroll();
-  }, [userEmail]);
+  }, [userEmail, user?.id]);
+
+  const handleSaveSalary = async (e) => {
+    if (e) e.preventDefault();
+    if (!employeeData?.id && !employeeData?.databaseId) {
+      if (notification?.error) notification.error("Employee profile record not found");
+      return;
+    }
+
+    try {
+      setSavingSalary(true);
+      const empId = employeeData.id || employeeData.databaseId;
+      const updated = await updateEmployeeCompensation(empId, salaryForm);
+      setEmployeeData(updated);
+      setIsEditSalaryModalOpen(false);
+      if (notification?.success) {
+        notification.success("Salary structure & banking details saved in database!");
+      }
+      await loadProfilePayroll();
+    } catch (err) {
+      console.error("Save salary error:", err);
+      if (notification?.error) {
+        notification.error(err.message || "Failed to update compensation");
+      }
+    } finally {
+      setSavingSalary(false);
+    }
+  };
 
 
   const getInitials = (name) => {
@@ -382,11 +381,14 @@ function Profile() {
     const monthText = monthNames[(slip.payroll_month || 8) - 1] || "August";
     const yearText = slip.payroll_year || 2026;
 
-    const basic = Number(slip.basic_salary || 85000);
-    const allowances = Number(slip.allowances || 10000);
-    const gross = Number(slip.gross_salary || (basic + allowances));
-    const deductions = Number(slip.deductions || 6500);
-    const net = Number(slip.net_salary || (gross - deductions));
+    const basic = Number(slip.basic_salary || employeeData?.salary || 0);
+    const hra = Number(slip.hra || employeeData?.hra || (basic * 0.25) || 0);
+    const allowances = Number(slip.allowances || employeeData?.allowances || 0);
+    const gross = Number(slip.gross_salary || (basic + hra + allowances));
+    const pf = Number(slip.pf_deduction || employeeData?.pf_deduction || (Number(slip.deductions || 0) * 0.6) || 0);
+    const tax = Number(slip.tax_deduction || employeeData?.tax_deduction || (Number(slip.deductions || 0) * 0.4) || 0);
+    const deductions = Number(slip.deductions || (pf + tax));
+    const net = Number(slip.net_salary || Math.max(0, gross - deductions));
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -434,15 +436,13 @@ function Profile() {
               </div>
             </div>
 
-
-
             <div class="meta-grid">
               <div class="meta-item"><span>Employee Name:</span> <strong>${userName}</strong></div>
               <div class="meta-item"><span>Employee Code:</span> <strong>${employeeData?.employee_code || "DCS-EMP-001"}</strong></div>
-              <div class="meta-item"><span>Designation:</span> <strong>${employeeData?.designation || "Senior AI Engineer"}</strong></div>
-              <div class="meta-item"><span>Department:</span> <strong>${employeeData?.department_name || "Software Development"}</strong></div>
-              <div class="meta-item"><span>Bank Account:</span> <strong>${slip.bank_name || "HDFC Bank"} (${slip.bank_account || "50100482910482"})</strong></div>
-              <div class="meta-item"><span>Transaction Ref:</span> <strong>${slip.transaction_ref || "TXN-VERIFIED"}</strong></div>
+              <div class="meta-item"><span>Designation:</span> <strong>${employeeData?.designation || "Staff"}</strong></div>
+              <div class="meta-item"><span>Department:</span> <strong>${employeeData?.department_name || "General"}</strong></div>
+              <div class="meta-item"><span>Bank Account:</span> <strong>${slip.bank_name || employeeData?.bank_name || "Direct Deposit"} (${slip.bank_account || employeeData?.bank_account || "Verified"})</strong></div>
+              <div class="meta-item"><span>Transaction Ref:</span> <strong>${slip.transaction_ref || `TXN-${slip.id || 1}-2026`}</strong></div>
             </div>
 
             <table>
@@ -457,17 +457,17 @@ function Profile() {
                   <td>Basic Salary</td>
                   <td style="text-align: right;">${currencySymbol}${basic.toLocaleString("en-IN")}</td>
                   <td>Provident Fund (PF)</td>
-                  <td style="text-align: right;">${currencySymbol}3,500</td>
+                  <td style="text-align: right;">${currencySymbol}${pf.toLocaleString("en-IN")}</td>
                 </tr>
                 <tr>
                   <td>House Rent Allowance (HRA)</td>
-                  <td style="text-align: right;">${currencySymbol}6,000</td>
+                  <td style="text-align: right;">${currencySymbol}${hra.toLocaleString("en-IN")}</td>
                   <td>Tax Deducted at Source (TDS)</td>
-                  <td style="text-align: right;">${currencySymbol}3,000</td>
+                  <td style="text-align: right;">${currencySymbol}${tax.toLocaleString("en-IN")}</td>
                 </tr>
                 <tr>
-                  <td>Special Research Allowance</td>
-                  <td style="text-align: right;">${currencySymbol}4,000</td>
+                  <td>Special Allowances</td>
+                  <td style="text-align: right;">${currencySymbol}${allowances.toLocaleString("en-IN")}</td>
                   <td>Professional Tax (PT)</td>
                   <td style="text-align: right;">${currencySymbol}0</td>
                 </tr>
@@ -787,248 +787,298 @@ function Profile() {
           PAYROLL & COMPENSATION DETAILS FOR EMPLOYEE
       ========================================= */}
       <div style={{ marginTop: "32px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span
+        {/* ========================================================================= */}
+        {/* COMPREHENSIVE COMPENSATION, FINANCIAL & PAYROLL BREAKDOWN                */}
+        {/* ========================================================================= */}
+        {(() => {
+          const basicMonthlySalary = Number(employeeData?.salary || 0);
+          const hraMonthly = Number(employeeData?.hra || 0);
+          const allowancesMonthly = Number(employeeData?.allowances || 0);
+          const pfMonthly = Number(employeeData?.pf_deduction || 0);
+          const taxMonthly = Number(employeeData?.tax_deduction || 0);
+          const grossMonthly = basicMonthlySalary + hraMonthly + allowancesMonthly;
+          const deductionsMonthly = pfMonthly + taxMonthly;
+          const netMonthly = Math.max(0, grossMonthly - deductionsMonthly);
+          const ctcAnnual = grossMonthly * 12;
+          const canManageSalary = ["ADMIN", "FINANCE", "HR"].includes(userRole);
+
+          return (
+            <>
+              <div
                 style={{
-                  padding: "3px 10px",
-                  borderRadius: "12px",
-                  fontSize: "11px",
-                  fontWeight: "800",
-                  backgroundColor: "#f0dced",
-                  color: "#A51D8D",
-                  letterSpacing: "0.8px",
-                  textTransform: "uppercase",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-end",
+                  marginBottom: "16px",
+                  flexWrap: "wrap",
+                  gap: "12px",
                 }}
               >
-                Official Compensation Package
-              </span>
-              <span style={{ fontSize: "12px", color: "#16a34a", fontWeight: "700", display: "flex", alignItems: "center", gap: "4px" }}>
-                <CheckCircle2 size={14} /> Active Direct Deposit
-              </span>
-            </div>
-            <h2 style={{ margin: "6px 0 2px 0", fontSize: "20px", color: "#18243A", fontWeight: "800" }}>
-              Payroll & Financial Breakdown
-            </h2>
-            <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>
-              Comprehensive monthly salary structure, statutory tax withholdings, bank account credentials, and verified payslips.
-            </p>
-          </div>
-        </div>
-
-        {/* 4 FINANCIAL KPI CARDS */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "16px",
-            marginBottom: "24px",
-          }}
-        >
-          {/* Card 1: Gross Salary */}
-          <div
-            className="dashboard-card"
-            style={{
-              padding: "20px",
-              borderTop: "4px solid #9E2682",
-              background: "#FFFFFF",
-              border: "1px solid #EACEE3",
-            }}
-          >
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-              <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Monthly Gross</span>
-              <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#FCF4FA", color: "#9E2682", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <TrendingUp size={16} />
-              </div>
-            </div>
-            <div style={{ fontSize: "22px", fontWeight: "900", color: "#18243A" }}>
-              {currencySymbol}{((employeeData?.salary ? Number(employeeData.salary) + 10000 : (payslips[0]?.gross_salary ? Number(payslips[0].gross_salary) : 95000))).toLocaleString("en-IN")}
-            </div>
-            <span style={{ fontSize: "12px", color: "#64748b", marginTop: "4px", display: "block" }}>
-              Basic Pay + Allowances
-            </span>
-          </div>
-
-          {/* Card 2: Net Take-Home */}
-          <div
-            className="dashboard-card"
-            style={{
-              padding: "20px",
-              borderTop: "4px solid #2E9B67",
-              background: "#FFFFFF",
-              border: "1px solid #EACEE3",
-              boxShadow: "0 4px 16px rgba(46, 155, 103, 0.08)",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-              <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Net Take-Home</span>
-              <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#EDF9F2", color: "#2E9B67", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Wallet size={16} />
-              </div>
-            </div>
-            <div style={{ fontSize: "22px", fontWeight: "900", color: "#2E9B67" }}>
-              {currencySymbol}{(payslips[0]?.net_salary ? Number(payslips[0].net_salary) : 88500).toLocaleString("en-IN")}
-            </div>
-            <span style={{ fontSize: "12px", color: "#2E9B67", marginTop: "4px", display: "block", fontWeight: "600" }}>
-              Direct HDFC Bank Credit
-            </span>
-          </div>
-
-          {/* Card 3: Deductions */}
-          <div
-            className="dashboard-card"
-            style={{
-              padding: "20px",
-              borderTop: "4px solid #D64545",
-              background: "#FFFFFF",
-              border: "1px solid #EACEE3",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-              <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Total Deductions</span>
-              <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#FDF2F2", color: "#D64545", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Receipt size={16} />
-              </div>
-            </div>
-            <div style={{ fontSize: "22px", fontWeight: "900", color: "#D64545" }}>
-              {currencySymbol}{(payslips[0]?.deductions ? Number(payslips[0].deductions) : 6500).toLocaleString("en-IN")}
-            </div>
-            <span style={{ fontSize: "12px", color: "#64748b", marginTop: "4px", display: "block" }}>
-              Statutory PF + Tax (TDS)
-            </span>
-          </div>
-
-          {/* Card 4: Annual CTC */}
-          <div
-            className="dashboard-card"
-            style={{
-              padding: "20px",
-              borderTop: "4px solid #751460",
-              background: "#FFFFFF",
-              border: "1px solid #EACEE3",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-              <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Annual CTC Package</span>
-              <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#FCF4FA", color: "#751460", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <DollarSign size={16} />
-              </div>
-            </div>
-            <div style={{ fontSize: "22px", fontWeight: "900", color: "#751460" }}>
-              {currencySymbol}{((employeeData?.salary ? (Number(employeeData.salary) + 10000) * 12 : 1140000)).toLocaleString("en-IN")}
-            </div>
-            <span style={{ fontSize: "12px", color: "#64748b", marginTop: "4px", display: "block" }}>
-              Per Annum Total Cost
-            </span>
-          </div>
-        </div>
-
-        {/* TWO-COLUMN DETAILS: SALARY STRUCTURE & BANK DETAILS */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "24px", marginBottom: "24px" }}>
-          
-          {/* COLUMN 1: MONTHLY SALARY STRUCTURE */}
-          <div className="dashboard-card" style={{ background: "#FFFFFF", border: "1px solid #EACEE3" }}>
-            <div className="card-header" style={{ marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid #EACEE3" }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: "16px", color: "#18243A", fontWeight: "800" }}>Monthly Salary Component Breakdown</h3>
-                <p style={{ margin: "3px 0 0", fontSize: "12.5px", color: "#64748b" }}>Detailed itemization of base pay, benefits, and statutory deductions.</p>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#FCF4FA", borderRadius: "6px" }}>
-                <span style={{ fontSize: "13px", color: "#18243A", fontWeight: "600" }}>Basic Monthly Salary</span>
-                <strong style={{ fontSize: "13.5px", color: "#18243A" }}>{currencySymbol}{(employeeData?.salary ? Number(employeeData.salary) : 85000).toLocaleString("en-IN")}</strong>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#FCF4FA", borderRadius: "6px" }}>
-                <span style={{ fontSize: "13px", color: "#18243A", fontWeight: "600" }}>House Rent Allowance (HRA)</span>
-                <strong style={{ fontSize: "13.5px", color: "#2E9B67" }}>+{currencySymbol}6,000</strong>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#FCF4FA", borderRadius: "6px" }}>
-                <span style={{ fontSize: "13px", color: "#18243A", fontWeight: "600" }}>Special AI & Travel Allowance</span>
-                <strong style={{ fontSize: "13.5px", color: "#2E9B67" }}>+{currencySymbol}4,000</strong>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#FDF2F2", borderRadius: "6px" }}>
-                <span style={{ fontSize: "13px", color: "#D64545", fontWeight: "600" }}>Provident Fund Contribution (PF)</span>
-                <strong style={{ fontSize: "13.5px", color: "#D64545" }}>-{currencySymbol}3,500</strong>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#FDF2F2", borderRadius: "6px" }}>
-                <span style={{ fontSize: "13px", color: "#D64545", fontWeight: "600" }}>Income Tax / TDS Withholding</span>
-                <strong style={{ fontSize: "13.5px", color: "#D64545" }}>-{currencySymbol}3,000</strong>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "12px", background: "linear-gradient(135deg, rgba(158, 38, 130, 0.08) 0%, rgba(117, 20, 96, 0.05) 100%)", borderRadius: "8px", border: "1px solid #EACEE3", marginTop: "4px" }}>
                 <div>
-                  <strong style={{ fontSize: "14px", color: "#9E2682", display: "block", fontWeight: "800" }}>Net Disbursed Take-Home</strong>
-                  <span style={{ fontSize: "11.5px", color: "#64748b" }}>Monthly transfer to bank</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: "800",
+                        color: "#A51D8D",
+                        letterSpacing: "0.8px",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Official Compensation Package
+                    </span>
+                    <span style={{ fontSize: "12px", color: employeeData?.bank_account ? "#16a34a" : "#ca8a04", fontWeight: "700", display: "flex", alignItems: "center", gap: "4px" }}>
+                      <CheckCircle2 size={14} /> {employeeData?.bank_account ? "Active Direct Deposit" : "Pending Bank Setup"}
+                    </span>
+                  </div>
+                  <h2 style={{ margin: "6px 0 2px 0", fontSize: "20px", color: "#18243A", fontWeight: "800" }}>
+                    Payroll & Financial Breakdown
+                  </h2>
+                  <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>
+                    Comprehensive monthly salary structure, statutory tax withholdings, bank account credentials, and verified payslips.
+                  </p>
                 </div>
-                <div style={{ fontSize: "18px", fontWeight: "900", color: "#9E2682" }}>
-                  {currencySymbol}{(payslips[0]?.net_salary ? Number(payslips[0].net_salary) : 88500).toLocaleString("en-IN")}
+
+                {canManageSalary && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditSalaryModalOpen(true)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "7px",
+                      padding: "9px 16px",
+                      backgroundColor: "#9E2682",
+                      color: "#FFFFFF",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "13px",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      boxShadow: "0 2px 8px rgba(158, 38, 130, 0.25)",
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    <Pencil size={15} />
+                    Edit Salary & Bank Details
+                  </button>
+                )}
+              </div>
+
+              {/* 4 FINANCIAL KPI CARDS */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: "16px",
+                  marginBottom: "24px",
+                }}
+              >
+                {/* Card 1: Gross Salary */}
+                <div
+                  className="dashboard-card"
+                  style={{
+                    padding: "20px",
+                    borderTop: "4px solid #9E2682",
+                    background: "#FFFFFF",
+                    border: "1px solid #EACEE3",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                    <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Monthly Gross</span>
+                    <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#FCF4FA", color: "#9E2682", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <TrendingUp size={16} />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: "22px", fontWeight: "900", color: "#18243A" }}>
+                    {currencySymbol}{grossMonthly.toLocaleString("en-IN")}
+                  </div>
+                  <span style={{ fontSize: "12px", color: "#64748b", marginTop: "4px", display: "block" }}>
+                    Basic Pay + Allowances
+                  </span>
+                </div>
+
+                {/* Card 2: Net Take-Home */}
+                <div
+                  className="dashboard-card"
+                  style={{
+                    padding: "20px",
+                    borderTop: "4px solid #2E9B67",
+                    background: "#FFFFFF",
+                    border: "1px solid #EACEE3",
+                    boxShadow: "0 4px 16px rgba(46, 155, 103, 0.08)",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                    <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Net Take-Home</span>
+                    <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#EDF9F2", color: "#2E9B67", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Wallet size={16} />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: "22px", fontWeight: "900", color: "#2E9B67" }}>
+                    {currencySymbol}{netMonthly.toLocaleString("en-IN")}
+                  </div>
+                  <span style={{ fontSize: "12px", color: "#2E9B67", marginTop: "4px", display: "block", fontWeight: "600" }}>
+                    {employeeData?.bank_name ? `Direct ${employeeData.bank_name} Credit` : "Direct Bank Credit"}
+                  </span>
+                </div>
+
+                {/* Card 3: Deductions */}
+                <div
+                  className="dashboard-card"
+                  style={{
+                    padding: "20px",
+                    borderTop: "4px solid #D64545",
+                    background: "#FFFFFF",
+                    border: "1px solid #EACEE3",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                    <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Total Deductions</span>
+                    <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#FDF2F2", color: "#D64545", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Receipt size={16} />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: "22px", fontWeight: "900", color: "#D64545" }}>
+                    {currencySymbol}{deductionsMonthly.toLocaleString("en-IN")}
+                  </div>
+                  <span style={{ fontSize: "12px", color: "#64748b", marginTop: "4px", display: "block" }}>
+                    Statutory PF + Tax (TDS)
+                  </span>
+                </div>
+
+                {/* Card 4: Annual CTC */}
+                <div
+                  className="dashboard-card"
+                  style={{
+                    padding: "20px",
+                    borderTop: "4px solid #751460",
+                    background: "#FFFFFF",
+                    border: "1px solid #EACEE3",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                    <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Annual CTC Package</span>
+                    <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#FCF4FA", color: "#751460", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <DollarSign size={16} />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: "22px", fontWeight: "900", color: "#751460" }}>
+                    {currencySymbol}{ctcAnnual.toLocaleString("en-IN")}
+                  </div>
+                  <span style={{ fontSize: "12px", color: "#64748b", marginTop: "4px", display: "block" }}>
+                    Per Annum Total Cost
+                  </span>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* COLUMN 2: BANK & DIRECT DEPOSIT INFO */}
-          <div className="dashboard-card" style={{ background: "#FFFFFF", border: "1px solid #EACEE3" }}>
-            <div className="card-header" style={{ marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid #EACEE3" }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: "16px", color: "#18243A", fontWeight: "800" }}>Bank Account & Direct Deposit</h3>
-                <p style={{ margin: "3px 0 0", fontSize: "12.5px", color: "#64748b" }}>Official banking gateway registered with DCS Corporate Payroll.</p>
-              </div>
-            </div>
+              {/* TWO-COLUMN DETAILS: SALARY STRUCTURE & BANK DETAILS */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "24px", marginBottom: "24px" }}>
+                
+                {/* COLUMN 1: MONTHLY SALARY STRUCTURE */}
+                <div className="dashboard-card" style={{ background: "#FFFFFF", border: "1px solid #EACEE3" }}>
+                  <div className="card-header" style={{ marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid #EACEE3" }}>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: "16px", color: "#18243A", fontWeight: "800" }}>Monthly Salary Component Breakdown</h3>
+                      <p style={{ margin: "3px 0 0", fontSize: "12.5px", color: "#64748b" }}>Detailed itemization of base pay, benefits, and statutory deductions.</p>
+                    </div>
+                  </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <div style={{ padding: "12px 14px", background: "#FCF4FA", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Registered Bank</span>
-                  <div style={{ fontSize: "14px", color: "#18243A", fontWeight: "700", marginTop: "2px", display: "flex", alignItems: "center", gap: "6px" }}>
-                    <Building size={15} color="#9E2682" />
-                    {employeeData?.bank_name || payslips[0]?.bank_name || "HDFC Bank"}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#FCF4FA", borderRadius: "6px" }}>
+                      <span style={{ fontSize: "13px", color: "#18243A", fontWeight: "600" }}>Basic Monthly Salary</span>
+                      <strong style={{ fontSize: "13.5px", color: "#18243A" }}>{currencySymbol}{basicMonthlySalary.toLocaleString("en-IN")}</strong>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#FCF4FA", borderRadius: "6px" }}>
+                      <span style={{ fontSize: "13px", color: "#18243A", fontWeight: "600" }}>House Rent Allowance (HRA)</span>
+                      <strong style={{ fontSize: "13.5px", color: "#2E9B67" }}>+{currencySymbol}{hraMonthly.toLocaleString("en-IN")}</strong>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#FCF4FA", borderRadius: "6px" }}>
+                      <span style={{ fontSize: "13px", color: "#18243A", fontWeight: "600" }}>Special & Travel Allowances</span>
+                      <strong style={{ fontSize: "13.5px", color: "#2E9B67" }}>+{currencySymbol}{allowancesMonthly.toLocaleString("en-IN")}</strong>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#FDF2F2", borderRadius: "6px" }}>
+                      <span style={{ fontSize: "13px", color: "#D64545", fontWeight: "600" }}>Provident Fund Contribution (PF)</span>
+                      <strong style={{ fontSize: "13.5px", color: "#D64545" }}>-{currencySymbol}{pfMonthly.toLocaleString("en-IN")}</strong>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#FDF2F2", borderRadius: "6px" }}>
+                      <span style={{ fontSize: "13px", color: "#D64545", fontWeight: "600" }}>Income Tax / TDS Withholding</span>
+                      <strong style={{ fontSize: "13.5px", color: "#D64545" }}>-{currencySymbol}{taxMonthly.toLocaleString("en-IN")}</strong>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "12px", background: "linear-gradient(135deg, rgba(158, 38, 130, 0.08) 0%, rgba(117, 20, 96, 0.05) 100%)", borderRadius: "8px", border: "1px solid #EACEE3", marginTop: "4px" }}>
+                      <div>
+                        <strong style={{ fontSize: "14px", color: "#9E2682", display: "block", fontWeight: "800" }}>Net Disbursed Take-Home</strong>
+                        <span style={{ fontSize: "11.5px", color: "#64748b" }}>Monthly transfer to bank</span>
+                      </div>
+                      <div style={{ fontSize: "18px", fontWeight: "900", color: "#9E2682" }}>
+                        {currencySymbol}{netMonthly.toLocaleString("en-IN")}
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <span style={{ fontSize: "11.5px", color: "#2E9B67", fontWeight: "700", background: "#EDF9F2", padding: "3px 8px", borderRadius: "6px", border: "1px solid #A3E4C3" }}>
-                  Verified
-                </span>
-              </div>
 
-              <div style={{ padding: "12px 14px", background: "#FCF4FA", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Bank Account Number</span>
-                  <div style={{ fontSize: "14px", color: "#18243A", fontWeight: "700", marginTop: "2px", display: "flex", alignItems: "center", gap: "6px" }}>
-                    <CreditCard size={15} color="#9E2682" />
-                    {employeeData?.bank_account || payslips[0]?.bank_account || "50100482910482"}
+                {/* COLUMN 2: BANK & DIRECT DEPOSIT INFO */}
+                <div className="dashboard-card" style={{ background: "#FFFFFF", border: "1px solid #EACEE3" }}>
+                  <div className="card-header" style={{ marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid #EACEE3" }}>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: "16px", color: "#18243A", fontWeight: "800" }}>Bank Account & Direct Deposit</h3>
+                      <p style={{ margin: "3px 0 0", fontSize: "12.5px", color: "#64748b" }}>Official banking gateway registered with DCS Corporate Payroll.</p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    <div style={{ padding: "12px 14px", background: "#FCF4FA", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Registered Bank</span>
+                        <div style={{ fontSize: "14px", color: "#18243A", fontWeight: "700", marginTop: "2px", display: "flex", alignItems: "center", gap: "6px" }}>
+                          <Building size={15} color="#9E2682" />
+                          {employeeData?.bank_name || "Pending Setup"}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: "11.5px", color: employeeData?.bank_account ? "#2E9B67" : "#b45309", fontWeight: "700", background: employeeData?.bank_account ? "#EDF9F2" : "#fef9c3", padding: "3px 8px", borderRadius: "6px", border: employeeData?.bank_account ? "1px solid #A3E4C3" : "1px solid #fde047" }}>
+                        {employeeData?.bank_account ? "Verified" : "Pending Setup"}
+                      </span>
+                    </div>
+
+                    <div style={{ padding: "12px 14px", background: "#FCF4FA", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Bank Account Number</span>
+                        <div style={{ fontSize: "14px", color: "#18243A", fontWeight: "700", marginTop: "2px", display: "flex", alignItems: "center", gap: "6px" }}>
+                          <CreditCard size={15} color="#9E2682" />
+                          {employeeData?.bank_account || "Pending Registration"}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "600" }}>Direct Payout</span>
+                    </div>
+
+                    <div style={{ padding: "12px 14px", background: "#FCF4FA", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>IFSC Routing Code</span>
+                        <div style={{ fontSize: "14px", color: "#18243A", fontWeight: "700", marginTop: "2px" }}>
+                          {employeeData?.ifsc_code || "Pending Registration"}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "600" }}>RTGS / NEFT Active</span>
+                    </div>
+
+                    <div style={{ padding: "12px 14px", background: "#EDF9F2", borderRadius: "8px", border: "1px solid #A3E4C3", display: "flex", alignItems: "center", gap: "10px" }}>
+                      <BadgeCheck size={20} color="#2E9B67" style={{ flexShrink: 0 }} />
+                      <div style={{ fontSize: "12.5px", color: "#2E9B67", lineHeight: "1.4" }}>
+                        <strong>Automated Salary Disbursement:</strong> Payroll is processed on the 1st of every month and credited directly into your verified bank account.
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "600" }}>Direct Payout</span>
-              </div>
 
-              <div style={{ padding: "12px 14px", background: "#FCF4FA", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>IFSC Routing Code</span>
-                  <div style={{ fontSize: "14px", color: "#18243A", fontWeight: "700", marginTop: "2px" }}>
-                    {employeeData?.ifsc_code || payslips[0]?.ifsc_code || "HDFC0001234"}
-                  </div>
-                </div>
-                <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "600" }}>RTGS / NEFT Active</span>
               </div>
-
-              <div style={{ padding: "12px 14px", background: "#EDF9F2", borderRadius: "8px", border: "1px solid #A3E4C3", display: "flex", alignItems: "center", gap: "10px" }}>
-                <BadgeCheck size={20} color="#2E9B67" style={{ flexShrink: 0 }} />
-                <div style={{ fontSize: "12.5px", color: "#2E9B67", lineHeight: "1.4" }}>
-                  <strong>Automated Salary Disbursement:</strong> Payroll is processed on the 1st of every month and credited directly into your verified bank account.
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
+            </>
+          );
+        })()}
 
         {/* PAYSLIPS HISTORY TABLE */}
         <section className="dashboard-card" style={{ background: "#FFFFFF", border: "1px solid #EACEE3", marginBottom: "28px" }}>
@@ -1084,13 +1134,13 @@ function Profile() {
                           </span>
                         </td>
                         <td>
-                          <span style={{ fontSize: "13px", color: "#18243A" }}>{currencySymbol}{Number(slip.gross_salary || 95000).toLocaleString("en-IN")}</span>
+                          <span style={{ fontSize: "13px", color: "#18243A" }}>{currencySymbol}{Number(slip.gross_salary || 0).toLocaleString("en-IN")}</span>
                         </td>
                         <td>
-                          <span style={{ fontSize: "13px", color: "#D64545" }}>-{currencySymbol}{Number(slip.deductions || 6500).toLocaleString("en-IN")}</span>
+                          <span style={{ fontSize: "13px", color: "#D64545" }}>-{currencySymbol}{Number(slip.deductions || 0).toLocaleString("en-IN")}</span>
                         </td>
                         <td>
-                          <strong style={{ fontSize: "13.5px", color: "#2E9B67" }}>{currencySymbol}{Number(slip.net_salary || 88500).toLocaleString("en-IN")}</strong>
+                          <strong style={{ fontSize: "13.5px", color: "#2E9B67" }}>{currencySymbol}{Number(slip.net_salary || 0).toLocaleString("en-IN")}</strong>
                         </td>
                         <td>
                           <span style={{ fontSize: "12px", color: "#64748b", fontFamily: "monospace" }}>{slip.transaction_ref || "TXN-VERIFIED"}</span>
@@ -1364,6 +1414,179 @@ function Profile() {
                   className="primary-button"
                 >
                   Update Password
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* EDIT COMPENSATION & BANK DETAILS MODAL (FINANCE / ADMIN)                  */}
+      {/* ========================================================================= */}
+      {isEditSalaryModalOpen && (
+        <div className="modal-overlay">
+          <div className="payroll-modal" style={{ maxWidth: "620px", background: "#FFFFFF", borderRadius: "14px", overflow: "hidden", border: "1px solid #EACEE3" }}>
+            <div className="modal-header" style={{ borderBottom: "1px solid #EACEE3", padding: "18px 24px" }}>
+              <div>
+                <p className="section-label" style={{ color: "#9E2682", fontWeight: "800", fontSize: "11px" }}>COMPENSATION MANAGEMENT</p>
+                <h2 style={{ fontSize: "18px", color: "#18243A", fontWeight: "800", margin: "2px 0 0" }}>Edit Salary & Bank Credentials</h2>
+              </div>
+              <button className="modal-close" onClick={() => setIsEditSalaryModalOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveSalary}>
+              <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px", maxHeight: "70vh", overflowY: "auto" }}>
+                
+                {/* COMPENSATION INPUTS */}
+                <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
+                  <h4 style={{ margin: "0 0 12px", fontSize: "13.5px", color: "#18243A", fontWeight: "700" }}>
+                    Monthly Salary Components
+                  </h4>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <div className="form-field">
+                      <label>Basic Monthly Salary ({currencySymbol})</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 85000"
+                        value={salaryForm.salary || ""}
+                        onChange={(e) => setSalaryForm({ ...salaryForm, salary: Number(e.target.value) || 0 })}
+                        required
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label>HRA ({currencySymbol})</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 6000"
+                        value={salaryForm.hra || ""}
+                        onChange={(e) => setSalaryForm({ ...salaryForm, hra: Number(e.target.value) || 0 })}
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label>Special & Travel Allowances ({currencySymbol})</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 4000"
+                        value={salaryForm.allowances || ""}
+                        onChange={(e) => setSalaryForm({ ...salaryForm, allowances: Number(e.target.value) || 0 })}
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label>PF Deduction ({currencySymbol})</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 3500"
+                        value={salaryForm.pfDeduction || ""}
+                        onChange={(e) => setSalaryForm({ ...salaryForm, pfDeduction: Number(e.target.value) || 0 })}
+                      />
+                    </div>
+
+                    <div className="form-field" style={{ gridColumn: "span 2" }}>
+                      <label>Income Tax / TDS Withholding ({currencySymbol})</label>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 3000"
+                        value={salaryForm.taxDeduction || ""}
+                        onChange={(e) => setSalaryForm({ ...salaryForm, taxDeduction: Number(e.target.value) || 0 })}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* LIVE CALCULATED PREVIEW */}
+                {(() => {
+                  const sBasic = Number(salaryForm.salary || 0);
+                  const sHra = Number(salaryForm.hra || 0);
+                  const sAllow = Number(salaryForm.allowances || 0);
+                  const sPf = Number(salaryForm.pfDeduction || 0);
+                  const sTax = Number(salaryForm.taxDeduction || 0);
+                  const sGross = sBasic + sHra + sAllow;
+                  const sDed = sPf + sTax;
+                  const sNet = Math.max(0, sGross - sDed);
+                  const sCtc = sGross * 12;
+
+                  return (
+                    <div style={{ padding: "14px", background: "#FCF4FA", borderRadius: "8px", border: "1px solid #EACEE3" }}>
+                      <span style={{ fontSize: "11px", color: "#9E2682", fontWeight: "800", textTransform: "uppercase", display: "block", marginBottom: "8px" }}>
+                        Live Calculation Preview
+                      </span>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "13px" }}>
+                        <div>Monthly Gross: <strong>{currencySymbol}{sGross.toLocaleString("en-IN")}</strong></div>
+                        <div>Total Deductions: <strong style={{ color: "#D64545" }}>-{currencySymbol}{sDed.toLocaleString("en-IN")}</strong></div>
+                        <div>Net Take-Home: <strong style={{ color: "#2E9B67" }}>{currencySymbol}{sNet.toLocaleString("en-IN")}</strong></div>
+                        <div>Annual CTC: <strong style={{ color: "#751460" }}>{currencySymbol}{sCtc.toLocaleString("en-IN")}</strong></div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* BANK DETAILS INPUTS */}
+                <div>
+                  <h4 style={{ margin: "0 0 12px", fontSize: "13.5px", color: "#18243A", fontWeight: "700" }}>
+                    Banking & Direct Deposit Credentials
+                  </h4>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <div className="form-field" style={{ gridColumn: "span 2" }}>
+                      <label>Beneficiary Bank Name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. State Bank of India / HDFC Bank"
+                        value={salaryForm.bankName || ""}
+                        onChange={(e) => setSalaryForm({ ...salaryForm, bankName: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label>Bank Account Number</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 50100482910482"
+                        value={salaryForm.bankAccount || ""}
+                        onChange={(e) => setSalaryForm({ ...salaryForm, bankAccount: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="form-field">
+                      <label>IFSC Code</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. SBIN0001234"
+                        value={salaryForm.ifscCode || ""}
+                        onChange={(e) => setSalaryForm({ ...salaryForm, ifscCode: e.target.value.toUpperCase() })}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <div className="modal-footer" style={{ borderTop: "1px solid #EACEE3", padding: "14px 24px", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setIsEditSalaryModalOpen(false)}
+                  disabled={savingSalary}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="primary-button"
+                  disabled={savingSalary}
+                  style={{ background: "#9E2682", borderColor: "#9E2682" }}
+                >
+                  {savingSalary ? "Saving to Database..." : "Save Salary & Bank"}
                 </button>
               </div>
             </form>

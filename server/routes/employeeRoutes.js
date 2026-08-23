@@ -21,6 +21,7 @@ const {
   getById,
   create,
   update,
+  updateCompensation,
   remove,
 } = require("../controllers/employeeController");
 
@@ -55,7 +56,7 @@ router.get(
 
 // ------------------------------------------
 // CREATE EMPLOYEE
-// ADMIN + HR
+// ADMIN + HR + FINANCE
 // ------------------------------------------
 
 router.post(
@@ -63,7 +64,8 @@ router.post(
   authenticateToken,
   authorizeRoles(
     "ADMIN",
-    "HR"
+    "HR",
+    "FINANCE"
   ),
   create
 );
@@ -71,7 +73,7 @@ router.post(
 
 // ------------------------------------------
 // UPDATE EMPLOYEE
-// ADMIN + HR
+// ADMIN + HR + FINANCE
 // ------------------------------------------
 
 router.put(
@@ -79,9 +81,26 @@ router.put(
   authenticateToken,
   authorizeRoles(
     "ADMIN",
-    "HR"
+    "HR",
+    "FINANCE"
   ),
   update
+);
+
+// ------------------------------------------
+// UPDATE EMPLOYEE COMPENSATION ONLY
+// ADMIN + FINANCE + HR
+// ------------------------------------------
+
+router.put(
+  "/:id/compensation",
+  authenticateToken,
+  authorizeRoles(
+    "ADMIN",
+    "FINANCE",
+    "HR"
+  ),
+  updateCompensation
 );
 
 

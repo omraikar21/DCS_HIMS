@@ -1,13 +1,9 @@
-// ==========================================
-// EMPLOYEE SERVICE
-// B9
-// ==========================================
-
 const {
   getAllEmployees,
   getEmployeeById,
   createEmployee,
   updateEmployee,
+  updateEmployeeCompensation,
   deleteEmployee,
 } = require("../models/employeeModel");
 
@@ -101,6 +97,34 @@ const editEmployee =
 
   };
 
+// ------------------------------------------
+// UPDATE EMPLOYEE COMPENSATION (FINANCE & ADMIN)
+// ------------------------------------------
+
+const editEmployeeCompensation =
+  async (
+    id,
+    compensationData
+  ) => {
+
+    const existing =
+      await getEmployeeById(id);
+
+    if (!existing) {
+      throw new Error(
+        "Employee not found"
+      );
+    }
+
+    const employee =
+      await updateEmployeeCompensation(
+        id,
+        compensationData
+      );
+
+    return employee;
+  };
+
 
 // ------------------------------------------
 // DELETE EMPLOYEE
@@ -136,5 +160,6 @@ module.exports = {
   getEmployee,
   addEmployee,
   editEmployee,
+  editEmployeeCompensation,
   removeEmployee,
 };

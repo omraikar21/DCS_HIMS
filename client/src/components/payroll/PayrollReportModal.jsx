@@ -78,9 +78,9 @@ function PayrollReportModal({
 
             <div class="section-title">2. Verified Bank Disbursement Details</div>
             <div class="info-grid" style="background: #f0fdf4; border: 1px solid #dcfce7;">
-              <div><strong>Beneficiary Bank:</strong> ${record.bankName || "HDFC Bank"}</div>
-              <div><strong>Account Number:</strong> ${record.bankAccount || "50100482910482"}</div>
-              <div><strong>IFSC Code:</strong> ${record.ifscCode || "HDFC0001234"}</div>
+              <div><strong>Beneficiary Bank:</strong> ${record.bankName || "Pending Setup"}</div>
+              <div><strong>Account Number:</strong> ${record.bankAccount || "Pending Setup"}</div>
+              <div><strong>IFSC Code:</strong> ${record.ifscCode || "Pending Setup"}</div>
               <div><strong>Transfer Mode:</strong> Direct Corporate Bank Transfer (NEFT/IMPS)</div>
               <div><strong>Payment Status:</strong> ${isPaid ? "DISBURSED / PAID" : "PENDING DISBURSEMENT"}</div>
               <div><strong>Txn Reference:</strong> ${record.transactionRef || `TXN-${record.id}-2026`}</div>
@@ -178,15 +178,15 @@ function PayrollReportModal({
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "13px", color: "#1e293b" }}>
               <div>
                 <span style={{ color: "#64748b", fontSize: "11px", display: "block" }}>Bank Name</span>
-                <strong>{record.bankName || "HDFC Bank"}</strong>
+                <strong>{record.bankName || "Pending Setup"}</strong>
               </div>
               <div>
                 <span style={{ color: "#64748b", fontSize: "11px", display: "block" }}>Account Number</span>
-                <strong>{record.bankAccount || "50100482910482"}</strong>
+                <strong>{record.bankAccount || "Pending Setup"}</strong>
               </div>
               <div>
                 <span style={{ color: "#64748b", fontSize: "11px", display: "block" }}>IFSC Code</span>
-                <strong>{record.ifscCode || "HDFC0001234"}</strong>
+                <strong>{record.ifscCode || "Pending Setup"}</strong>
               </div>
               <div>
                 <span style={{ color: "#64748b", fontSize: "11px", display: "block" }}>Transaction Mode</span>

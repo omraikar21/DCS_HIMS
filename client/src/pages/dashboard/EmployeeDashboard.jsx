@@ -89,10 +89,10 @@ function EmployeeDashboard() {
       ) || payrolls[0];
 
       if (myRecord) {
-        const net = Number(myRecord.netSalary || myRecord.net_salary || myRecord.basicSalary || 85000);
+        const net = Number(myRecord.netSalary || myRecord.net_salary || myRecord.basicSalary || 0);
         return {
           formatted: `₹${(net / 1000).toFixed(0)}K`,
-          month: myRecord.month || "August 2026",
+          month: myRecord.month || "Current Period",
         };
       }
     }

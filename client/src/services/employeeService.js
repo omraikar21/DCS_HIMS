@@ -88,6 +88,22 @@ export const updateEmployee = async (
 
 };
 
+// ------------------------------------------
+// UPDATE COMPENSATION ONLY (FINANCE & ADMIN)
+// ------------------------------------------
+
+export const updateEmployeeCompensation = async (
+  id,
+  compensationData
+) => {
+  const response = await put(
+    `${API_ENDPOINTS.employees}/${id}/compensation`,
+    compensationData
+  );
+
+  return response.data;
+};
+
 
 // ------------------------------------------
 // DELETE

@@ -53,22 +53,40 @@ const initDatabase = async () => {
         department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
         designation VARCHAR(100),
         joining_date DATE,
-        salary NUMERIC(12,2),
+        salary NUMERIC(12,2) DEFAULT 0,
+        hra NUMERIC(12,2) DEFAULT 0,
+        allowances NUMERIC(12,2) DEFAULT 0,
+        pf_deduction NUMERIC(12,2) DEFAULT 0,
+        tax_deduction NUMERIC(12,2) DEFAULT 0,
         employment_status VARCHAR(30) DEFAULT 'ACTIVE',
-        bank_name VARCHAR(100) DEFAULT 'HDFC Bank',
-        bank_account VARCHAR(100) DEFAULT '50100482910482',
-        ifsc_code VARCHAR(50) DEFAULT 'HDFC0001234',
+        bank_name VARCHAR(100),
+        bank_account VARCHAR(100),
+        ifsc_code VARCHAR(50),
         address TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
-    // Ensure columns exist on existing databases
+    // Ensure compensation columns exist on existing databases
     await pool.query(`
-      ALTER TABLE employees ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100) DEFAULT 'HDFC Bank';
-      ALTER TABLE employees ADD COLUMN IF NOT EXISTS bank_account VARCHAR(100) DEFAULT '50100482910482';
-      ALTER TABLE employees ADD COLUMN IF NOT EXISTS ifsc_code VARCHAR(50) DEFAULT 'HDFC0001234';
+      ALTER TABLE employees ADD COLUMN IF NOT EXISTS hra NUMERIC(12,2) DEFAULT 0;
+      ALTER TABLE employees ADD COLUMN IF NOT EXISTS allowances NUMERIC(12,2) DEFAULT 0;
+      ALTER TABLE employees ADD COLUMN IF NOT EXISTS pf_deduction NUMERIC(12,2) DEFAULT 0;
+      ALTER TABLE employees ADD COLUMN IF NOT EXISTS tax_deduction NUMERIC(12,2) DEFAULT 0;
+      ALTER TABLE employees ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100);
+      ALTER TABLE employees ADD COLUMN IF NOT EXISTS bank_account VARCHAR(100);
+      ALTER TABLE employees ADD COLUMN IF NOT EXISTS ifsc_code VARCHAR(50);
+      ALTER TABLE employees ALTER COLUMN bank_name DROP DEFAULT;
+      ALTER TABLE employees ALTER COLUMN bank_account DROP DEFAULT;
+      ALTER TABLE employees ALTER COLUMN ifsc_code DROP DEFAULT;
+    `);
+
+    // Clean any hardcoded placeholder bank accounts
+    await pool.query(`
+      UPDATE employees 
+      SET bank_name = NULL, bank_account = NULL, ifsc_code = NULL 
+      WHERE bank_account = '50100482910482';
     `);
 
     // 4. ATTENDANCE TABLE
@@ -302,6 +320,33 @@ const initDatabase = async () => {
         "UPDATE users SET is_super_admin = TRUE, role = 'ADMIN' WHERE email = $1",
         [adminEmail]
       );
+    }
+
+    // Ensure Admin has an employee record so Finance/Admin can view & manage their salary
+    try {
+      const adminUser = await pool.query("SELECT id, name, email FROM users WHERE email = $1", [adminEmail]);
+      if (adminUser.rows.length > 0) {
+        const uId = adminUser.rows[0].id;
+        const empCheck = await pool.query("SELECT id FROM employees WHERE email = $1 OR user_id = $2", [adminEmail, uId]);
+        if (empCheck.rows.length === 0) {
+          const dRes = await pool.query("SELECT id FROM departments LIMIT 1");
+          const deptId = dRes.rows.length > 0 ? dRes.rows[0].id : null;
+          await pool.query(`
+            INSERT INTO employees (
+              user_id, employee_code, first_name, last_name, email, phone,
+              department_id, designation, joining_date, salary, hra, allowances,
+              pf_deduction, tax_deduction, employment_status
+            ) VALUES (
+              $1, 'DCS-ADM-001', 'Om', 'Raikar', $2, '9876543210',
+              $3, 'Chief Executive / Administrator', CURRENT_DATE, 0, 0, 0, 0, 0, 'ACTIVE'
+            )
+            ON CONFLICT (email) DO UPDATE SET user_id = $1;
+          `, [uId, adminEmail, deptId]);
+          console.log(`[DB INIT] Admin employee profile linked for ${adminEmail}.`);
+        }
+      }
+    } catch (adminEmpErr) {
+      console.warn("[DB INIT] Admin employee linking notice:", adminEmpErr.message);
     }
 
     // 16. ENSURE NO EMPLOYEE IS UNASSIGNED
