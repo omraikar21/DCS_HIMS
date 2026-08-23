@@ -76,17 +76,38 @@ function EmployeeDashboard() {
   }, []);
 
   const userName = user?.name ? user.name.split(" ")[0] : "Employee";
-  const userEmail = (user?.email || "").toLowerCase();
+  const userEmail = (user?.email || "").toLowerCase().trim();
 
-  // Dynamic Latest Payslip
+  // Strictly isolate current employee's leaves
+  const myLeaves = useMemo(() => {
+    return leaves.filter((l) =>
+      (l.employee_email && l.employee_email.toLowerCase().trim() === userEmail) ||
+      (l.email && l.email.toLowerCase().trim() === userEmail) ||
+      (l.employee_code && user?.employee_code && l.employee_code === user.employee_code) ||
+      (l.employee_id && user?.id && (l.employee_id === user.id || l.employee_id === user.employee_id)) ||
+      (l.user_id && user?.id && l.user_id === user.id)
+    );
+  }, [leaves, userEmail, user]);
+
+  // Strictly isolate current employee's attendance
+  const myAttendance = useMemo(() => {
+    return attendance.filter((a) =>
+      (a.email && a.email.toLowerCase().trim() === userEmail) ||
+      (a.employee_code && user?.employee_code && a.employee_code === user.employee_code) ||
+      (a.employee_id && user?.id && (a.employee_id === user.id || a.employee_id === user.employee_id))
+    );
+  }, [attendance, userEmail, user]);
+
+  // Strictly isolate current employee's latest payslip
   const myLatestPayslip = useMemo(() => {
     if (payrolls.length > 0) {
       const myRecord = payrolls.find(
         (p) =>
-          p.employeeId === user?.employee_code ||
-          p.employee_id === user?.employee_id ||
-          (p.employeeName && user?.name && p.employeeName.toLowerCase().includes(user.name.toLowerCase()))
-      ) || payrolls[0];
+          (p.email && p.email.toLowerCase().trim() === userEmail) ||
+          (p.employeeId && user?.employee_code && p.employeeId === user.employee_code) ||
+          (p.employee_id && user?.id && (p.employee_id === user.id || p.employee_id === user.employee_id)) ||
+          (p.employeeName && user?.name && p.employeeName.toLowerCase().trim() === user.name.toLowerCase().trim())
+      );
 
       if (myRecord) {
         const net = Number(myRecord.netSalary || myRecord.net_salary || myRecord.basicSalary || 0);
@@ -97,15 +118,15 @@ function EmployeeDashboard() {
       }
     }
     return { formatted: "₹0K", month: "No records" };
-  }, [payrolls, user]);
+  }, [payrolls, userEmail, user]);
 
-  // Dynamic Leave Balance
+  // Dynamic Leave Balance for logged-in employee only
   const myLeaveBalance = useMemo(() => {
-    const approvedCount = leaves.filter((l) => l.status === "APPROVED").length;
+    const approvedCount = myLeaves.filter((l) => l.status === "APPROVED").length;
     return Math.max(0, 18 - approvedCount);
-  }, [leaves]);
+  }, [myLeaves]);
 
-  // Dynamic Attendance Hours
+  // Dynamic Attendance Hours for logged-in employee only
   const computedAttendanceData = useMemo(() => {
     const defaultDays = [
       { day: "Mon", hours: 8.5 },
@@ -115,7 +136,7 @@ function EmployeeDashboard() {
       { day: "Fri", hours: 8.5 },
     ];
     return defaultDays;
-  }, [attendance]);
+  }, [myAttendance]);
 
   return (
     <div className="admin-dashboard">

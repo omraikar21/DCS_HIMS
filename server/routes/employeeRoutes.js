@@ -89,7 +89,7 @@ router.put(
 
 // ------------------------------------------
 // UPDATE EMPLOYEE COMPENSATION ONLY
-// ADMIN + FINANCE + HR
+// ADMIN + FINANCE ONLY (FINANCE TEAM SOLE AUTHORITY)
 // ------------------------------------------
 
 router.put(
@@ -97,8 +97,7 @@ router.put(
   authenticateToken,
   authorizeRoles(
     "ADMIN",
-    "FINANCE",
-    "HR"
+    "FINANCE"
   ),
   updateCompensation
 );

@@ -155,6 +155,10 @@ function Profile() {
 
   const handleSaveSalary = async (e) => {
     if (e) e.preventDefault();
+    if (!["ADMIN", "FINANCE"].includes(userRole)) {
+      if (notification?.error) notification.error("Only Finance Department or Administrator can update compensation & bank credentials");
+      return;
+    }
     if (!employeeData?.id && !employeeData?.databaseId) {
       if (notification?.error) notification.error("Employee profile record not found");
       return;
@@ -319,7 +323,7 @@ function Profile() {
     try {
       setSaving(true);
       const res = await updateUserProfile(editName.trim(), editAvatar);
-      
+
       setEditSuccess("Profile updated and permanently saved!");
       if (notification?.success) {
         notification.success("Profile updated successfully!");
@@ -681,7 +685,7 @@ function Profile() {
 
       {/* DETAILS GRID */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "24px" }}>
-        
+
         {/* CARD 1: ACCOUNT DETAILS */}
         <div className="dashboard-card">
           <div className="card-header" style={{ marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -800,7 +804,7 @@ function Profile() {
           const deductionsMonthly = pfMonthly + taxMonthly;
           const netMonthly = Math.max(0, grossMonthly - deductionsMonthly);
           const ctcAnnual = grossMonthly * 12;
-          const canManageSalary = ["ADMIN", "FINANCE", "HR"].includes(userRole);
+          const canManageSalary = ["ADMIN", "FINANCE"].includes(userRole);
 
           return (
             <>
@@ -974,7 +978,7 @@ function Profile() {
 
               {/* TWO-COLUMN DETAILS: SALARY STRUCTURE & BANK DETAILS */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "24px", marginBottom: "24px" }}>
-                
+
                 {/* COLUMN 1: MONTHLY SALARY STRUCTURE */}
                 <div className="dashboard-card" style={{ background: "#FFFFFF", border: "1px solid #EACEE3" }}>
                   <div className="card-header" style={{ marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid #EACEE3" }}>
@@ -1221,13 +1225,13 @@ function Profile() {
 
             <form onSubmit={handleSaveProfile}>
               <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "18px" }}>
-                
+
                 {/* PHOTO PICKER */}
                 <div>
                   <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "8px" }}>
                     Profile Picture
                   </label>
-                  
+
                   <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
                     {editAvatar ? (
                       <img
@@ -1439,7 +1443,7 @@ function Profile() {
 
             <form onSubmit={handleSaveSalary}>
               <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px", maxHeight: "70vh", overflowY: "auto" }}>
-                
+
                 {/* COMPENSATION INPUTS */}
                 <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
                   <h4 style={{ margin: "0 0 12px", fontSize: "13.5px", color: "#18243A", fontWeight: "700" }}>
