@@ -80,6 +80,84 @@ const getEmployeeByUserId =
 
 
 // ------------------------------------------
+// GENERATE DEPARTMENT-SPECIFIC EMPLOYEE CODE
+// e.g. Admin -> DCS-ADM-001, HR -> DCS-HR-001, Finance -> DCS-FIN-001, AI ML -> DCS-AIML-001
+// ------------------------------------------
+const generateDepartmentEmployeeCode = async (departmentId, designation = "", fallbackDeptName = "") => {
+  let deptName = fallbackDeptName;
+  if (departmentId && !deptName) {
+    try {
+      const deptRes = await pool.query("SELECT name FROM departments WHERE id = $1", [departmentId]);
+      if (deptRes.rows[0]) {
+        deptName = deptRes.rows[0].name;
+      }
+    } catch {
+      deptName = "";
+    }
+  }
+
+  const clean = `${deptName || ""} ${designation || ""}`.trim().toUpperCase();
+
+  let prefix = "EMP";
+  if (clean.includes("ADMIN")) prefix = "ADM";
+  else if (clean.includes("HUMAN") || clean.includes("HR") || clean === "HR") prefix = "HR";
+  else if (clean.includes("FINANCE") || clean.includes("ACCOUNT")) prefix = "FIN";
+  else if (clean.includes("AI") && clean.includes("ML")) prefix = "AIML";
+  else if (clean.includes("ARTIFICIAL") || clean === "AI") prefix = "AI";
+  else if (clean.includes("DEV") || clean.includes("SOFTWARE") || clean.includes("ENGINEER")) prefix = "DEV";
+  else if (clean.includes("TEST") || clean.includes("QA") || clean.includes("QUALITY")) prefix = "QA";
+  else if (clean.includes("MARKET")) prefix = "MKT";
+  else if (clean.includes("SALES")) prefix = "SLS";
+  else if (clean.includes("OPERAT")) prefix = "OPS";
+  else if (clean.includes("SUPPORT") || clean.includes("HELP")) prefix = "SUP";
+  else if (clean.includes("DESIGN") || clean.includes("UI") || clean.includes("UX")) prefix = "DSG";
+  else if (clean.includes("LEGAL")) prefix = "LGL";
+  else if (clean.includes("SECURITY")) prefix = "SEC";
+  else if (deptName) {
+    const words = deptName.trim().toUpperCase().split(/\s+/).filter(Boolean);
+    if (words.length > 1) {
+      prefix = words.map((w) => w[0]).join("").slice(0, 4);
+    } else {
+      prefix = deptName.replace(/[^A-Z0-9]/gi, "").slice(0, 4).toUpperCase() || "EMP";
+    }
+  }
+
+  // Count existing employees matching this prefix
+  const codeResult = await pool.query(`
+    SELECT COALESCE(
+      MAX(
+        CASE 
+          WHEN employee_code ~ ('^DCS-' || $1 || '-[0-9]+$') 
+          THEN CAST(SUBSTRING(employee_code FROM (LENGTH('DCS-' || $1 || '-') + 1)) AS INTEGER)
+          WHEN employee_code ~ ('^' || $1 || '-[0-9]+$') 
+          THEN CAST(SUBSTRING(employee_code FROM (LENGTH($1 || '-') + 1)) AS INTEGER)
+          ELSE 0 
+        END
+      ), 
+      0
+    ) + 1 AS next_number
+    FROM employees
+  `, [prefix]);
+
+  let nextNumber = parseInt(codeResult.rows[0]?.next_number, 10) || 1;
+  let candidateCode = `DCS-${prefix}-${String(nextNumber).padStart(3, "0")}`;
+
+  while (true) {
+    const check = await pool.query(
+      "SELECT id FROM employees WHERE employee_code = $1 LIMIT 1",
+      [candidateCode]
+    );
+    if (check.rows.length === 0) {
+      break;
+    }
+    nextNumber++;
+    candidateCode = `DCS-${prefix}-${String(nextNumber).padStart(3, "0")}`;
+  }
+
+  return candidateCode;
+};
+
+// ------------------------------------------
 // CREATE EMPLOYEE
 // ------------------------------------------
 
@@ -107,38 +185,7 @@ const createEmployee =
   }) => {
 
     if (!employeeCode) {
-      // Find the highest existing DCS-EMP-XXX number or max(id)
-      const codeResult = await pool.query(`
-        SELECT COALESCE(
-          MAX(
-            CASE 
-              WHEN employee_code ~ '^DCS-EMP-[0-9]+$' 
-              THEN CAST(SUBSTRING(employee_code FROM 9) AS INTEGER)
-              ELSE id 
-            END
-          ), 
-          0
-        ) + 1 AS next_number
-        FROM employees
-      `);
-
-      let nextNumber = parseInt(codeResult.rows[0]?.next_number, 10) || 1;
-      let candidateCode = `DCS-EMP-${String(nextNumber).padStart(3, "0")}`;
-
-      // Check if candidate code exists, increment until free
-      while (true) {
-        const check = await pool.query(
-          "SELECT id FROM employees WHERE employee_code = $1 LIMIT 1",
-          [candidateCode]
-        );
-        if (check.rows.length === 0) {
-          break;
-        }
-        nextNumber++;
-        candidateCode = `DCS-EMP-${String(nextNumber).padStart(3, "0")}`;
-      }
-
-      employeeCode = candidateCode;
+      employeeCode = await generateDepartmentEmployeeCode(departmentId, designation);
     }
 
     let cleanJoiningDate = null;
@@ -403,6 +450,7 @@ module.exports = {
   getEmployeeById,
   getEmployeeByUserId,
   createEmployee,
+  generateDepartmentEmployeeCode,
   updateEmployee,
   updateEmployeeCompensation,
   deleteEmployee,

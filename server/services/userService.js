@@ -18,6 +18,7 @@ const {
 
 const { createAuditLog } = require("../models/auditModel");
 const { getOrCreateDepartmentService } = require("./departmentService");
+const { generateDepartmentEmployeeCode } = require("../models/employeeModel");
 
 // ------------------------------------------
 // GET USERS DIRECTORY & TELEMETRY
@@ -161,9 +162,7 @@ const createNewUser = async ({ name, email, role, password }, requester) => {
 
     const empCheck = await pool.query(`SELECT id FROM employees WHERE email = $1`, [cleanEmail]);
     if (empCheck.rows.length === 0) {
-      const codeRes = await pool.query(`SELECT COUNT(*)::INTEGER AS count FROM employees`);
-      const empNum = (codeRes.rows[0]?.count || 0) + 1;
-      const empCode = `EMP-${String(empNum).padStart(4, "0")}`;
+      const empCode = await generateDepartmentEmployeeCode(deptId, designation, targetDeptName);
 
       await pool.query(
         `INSERT INTO employees 
