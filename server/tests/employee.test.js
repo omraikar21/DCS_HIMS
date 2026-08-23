@@ -56,5 +56,9 @@ test("Employee Account Provisioning Service", async (t) => {
       autoCreateUser: true,
     });
     assert.equal(empCheck.userRole, "EMPLOYEE");
+
+    // Clean up created mock test users
+    const { pool } = require("../config/database");
+    await pool.query("DELETE FROM users WHERE email LIKE '%@mocktest.local'");
   });
 });
