@@ -61,20 +61,20 @@ export const validEmail = (
 
 
 /*
- * Phone number
+ * Phone number (Strictly 10 digits)
  */
 
 export const validPhone = (
   value
 ) => {
   if (!value || String(value).trim() === "") {
-    return "";
+    return "Phone number is required";
   }
 
   const cleanPhone = String(value).replace(/[\s\-()+]/g, "");
 
-  if (cleanPhone.length < 7 || cleanPhone.length > 15 || !/^\d+$/.test(cleanPhone)) {
-    return "Enter a valid phone number (e.g. +91 9876543210)";
+  if (cleanPhone.length !== 10 || !/^\d{10}$/.test(cleanPhone)) {
+    return "Phone number must be exactly 10 digits";
   }
 
   return "";

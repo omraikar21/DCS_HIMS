@@ -415,6 +415,14 @@ function Employees() {
       newErrors.department = "Department is required";
     }
 
+    /*
+     * Designation
+     */
+    const desigError = required(formData.designation, "Designation");
+    if (desigError) {
+      newErrors.designation = desigError;
+    }
+
     setErrors(
       newErrors
     );
@@ -504,7 +512,7 @@ function Employees() {
       employmentStatus,
 
       address:
-        formData.location.trim(),
+        (formData.address || formData.officeLocation || formData.location || "").trim(),
 
     };
 

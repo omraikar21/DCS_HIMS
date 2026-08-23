@@ -53,11 +53,19 @@ const isPositiveNumber =
       Number(value) >= 0
     );
 
+const isValidPhone =
+  (phone) => {
+    if (!phone) {
+      return false;
+    }
+    const cleanPhone = String(phone).replace(/[\s\-()+]/g, "");
+    return cleanPhone.length === 10 && /^\d{10}$/.test(cleanPhone);
   };
 
 
 module.exports = {
   isRequired,
   isValidEmail,
+  isValidPhone,
   isPositiveNumber,
 };
