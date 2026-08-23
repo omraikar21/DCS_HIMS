@@ -322,45 +322,36 @@ const initDatabase = async () => {
       );
     }
 
-    // Ensure Admin has an employee record so Finance/Admin can view & manage their salary
-    try {
-      const adminUser = await pool.query("SELECT id, name, email FROM users WHERE email = $1", [adminEmail]);
-      if (adminUser.rows.length > 0) {
-        const uId = adminUser.rows[0].id;
-        const empCheck = await pool.query("SELECT id FROM employees WHERE email = $1 OR user_id = $2", [adminEmail, uId]);
-        if (empCheck.rows.length === 0) {
-          const dRes = await pool.query("SELECT id FROM departments LIMIT 1");
-          const deptId = dRes.rows.length > 0 ? dRes.rows[0].id : null;
-          await pool.query(`
-            INSERT INTO employees (
-              user_id, employee_code, first_name, last_name, email, phone,
-              department_id, designation, joining_date, salary, hra, allowances,
-              pf_deduction, tax_deduction, employment_status
-            ) VALUES (
-              $1, 'DCS-ADM-001', 'Om', 'Raikar', $2, '9876543210',
-              $3, 'Chief Executive / Administrator', CURRENT_DATE, 0, 0, 0, 0, 0, 'ACTIVE'
-            )
-            ON CONFLICT (email) DO UPDATE SET user_id = $1;
-          `, [uId, adminEmail, deptId]);
-          console.log(`[DB INIT] Admin employee profile linked for ${adminEmail}.`);
-        }
-      }
-    } catch (adminEmpErr) {
-      console.warn("[DB INIT] Admin employee linking notice:", adminEmpErr.message);
+    // 16. SEED CORE DEPARTMENTS (Administration, HR, Finance, Software, AI/ML, IoT, Operations, Sales)
+    const coreDepts = [
+      { name: "Administration", desc: "Executive Administration and Corporate Management" },
+      { name: "Human Resources", desc: "HR, Talent Acquisition, People Operations and Onboarding" },
+      { name: "Finance & Accounts", desc: "Financial Planning, Corporate Accounts and Payroll Management" },
+      { name: "Software Development", desc: "Enterprise Full-Stack, Cloud and Mobile Software Engineering" },
+      { name: "AI & Machine Learning", desc: "Artificial Intelligence, Deep Learning and Cognitive Systems" },
+      { name: "IoT & Embedded Systems", desc: "Smart Hardware, Microcontrollers and IoT Architecture" },
+      { name: "Consultancy & Operations", desc: "Strategic Business Consulting and Enterprise Operations" },
+      { name: "Sales & Marketing", desc: "Corporate Sales, Client Relationships and Brand Marketing" },
+    ];
+
+    for (const d of coreDepts) {
+      await pool.query(
+        `INSERT INTO departments (name, description, is_active)
+         VALUES ($1, $2, TRUE)
+         ON CONFLICT (name) DO UPDATE SET description = $2, is_active = TRUE;`,
+        [d.name, d.desc]
+      );
     }
 
-    // 16. ENSURE NO EMPLOYEE IS UNASSIGNED
+    // 17. ENSURE NO EMPLOYEE IS UNASSIGNED
     try {
       const unassigned = await pool.query("SELECT id FROM employees WHERE department_id IS NULL");
       if (unassigned.rows.length > 0) {
-        const defDept = await pool.query(`
-          INSERT INTO departments (name, description, is_active)
-          VALUES ('General', 'General organizational operations and engineering', TRUE)
-          ON CONFLICT (name) DO UPDATE SET is_active = TRUE
-          RETURNING id;
-        `);
-        const targetDeptId = defDept.rows[0].id;
-        await pool.query("UPDATE employees SET department_id = $1 WHERE department_id IS NULL", [targetDeptId]);
+        const defDept = await pool.query(`SELECT id FROM departments WHERE name = 'Software Development' OR name = 'General' LIMIT 1`);
+        if (defDept.rows.length > 0) {
+          const targetDeptId = defDept.rows[0].id;
+          await pool.query("UPDATE employees SET department_id = $1 WHERE department_id IS NULL", [targetDeptId]);
+        }
       }
     } catch (unassignedErr) {
       console.warn("[DB INIT] Department reassignment notice:", unassignedErr.message);

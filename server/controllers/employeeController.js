@@ -581,6 +581,33 @@ const update =
 const updateCompensation =
   async (req, res) => {
     try {
+      const requesterRole = (req.user?.role || "").toUpperCase();
+      const requesterEmail = (req.user?.email || "").toLowerCase().trim();
+
+      // Check target employee
+      const targetEmp = await getEmployee(req.params.id);
+      if (!targetEmp) {
+        return res.status(404).json({
+          success: false,
+          message: "Employee not found",
+        });
+      }
+
+      const targetEmail = (targetEmp.email || "").toLowerCase().trim();
+      const isTargetAdmin =
+        targetEmail === "omraikar2128@gmail.com" ||
+        (targetEmp.designation && targetEmp.designation.toLowerCase().includes("admin")) ||
+        (targetEmp.designation && targetEmp.designation.toLowerCase().includes("executive")) ||
+        (targetEmp.role && targetEmp.role.toUpperCase() === "ADMIN");
+
+      // Finance can only edit HR and Employee salaries (NOT Admin)
+      if (requesterRole === "FINANCE" && isTargetAdmin) {
+        return res.status(403).json({
+          success: false,
+          message: "Finance team can only update salary structures for HR and Employees. Administrator compensation is managed solely by the Administrator.",
+        });
+      }
+
       const {
         salary = 0,
         hra = 0,

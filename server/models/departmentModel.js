@@ -16,9 +16,13 @@ const getAllDepartments =
 
     const result =
       await pool.query(`
-        SELECT *
-        FROM departments
-        ORDER BY id ASC
+        SELECT 
+          d.*,
+          COALESCE(COUNT(e.id), 0)::INTEGER AS employee_count
+        FROM departments d
+        LEFT JOIN employees e ON e.department_id = d.id
+        GROUP BY d.id
+        ORDER BY d.id ASC
       `);
 
     return result.rows;
@@ -35,9 +39,13 @@ const getDepartmentById =
     const result =
       await pool.query(
         `
-        SELECT *
-        FROM departments
-        WHERE id = $1
+        SELECT 
+          d.*,
+          COALESCE(COUNT(e.id), 0)::INTEGER AS employee_count
+        FROM departments d
+        LEFT JOIN employees e ON e.department_id = d.id
+        WHERE d.id = $1
+        GROUP BY d.id
         `,
         [id]
       );

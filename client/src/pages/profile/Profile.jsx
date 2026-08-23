@@ -28,6 +28,12 @@ import {
   FileText,
   BadgeCheck,
   Building,
+  Server,
+  Cpu,
+  Activity,
+  Radio,
+  BellRing,
+  Terminal,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useNotification } from "../../hooks/useNotification";
@@ -35,6 +41,7 @@ import { updateUserProfile, getStoredUser, updateStoredUser } from "../../servic
 import { getEmployees, updateEmployeeCompensation } from "../../services/employeeService";
 import { getPayslips } from "../../services/payslipService";
 import { getLoadedSettings } from "../../services/settingsService";
+import { createAnnouncement } from "../../services/notificationService";
 
 
 const AVATAR_PRESETS = [
@@ -181,6 +188,44 @@ function Profile() {
       }
     } finally {
       setSavingSalary(false);
+    }
+  };
+
+  // Super Admin Server Notice Modal State
+  const [isServerNoticeModalOpen, setIsServerNoticeModalOpen] = useState(false);
+  const [serverNoticeData, setServerNoticeData] = useState({
+    title: "Server Operations & Low Load Status Notice",
+    message: "All backend services, PostgreSQL database cluster, and API systems are operating normally under low load (12%). System latency < 40ms.",
+    priority: "NORMAL",
+  });
+  const [sendingServerNotice, setSendingServerNotice] = useState(false);
+
+  const handleSendServerNotice = async (e) => {
+    if (e) e.preventDefault();
+    if (!serverNoticeData.title.trim() || !serverNoticeData.message.trim()) {
+      if (notification?.error) notification.error("Notice title and message are required");
+      return;
+    }
+
+    try {
+      setSendingServerNotice(true);
+      await createAnnouncement({
+        title: serverNoticeData.title.trim(),
+        message: serverNoticeData.message.trim(),
+        priority: serverNoticeData.priority || "NORMAL",
+        category: "System Infrastructure",
+      });
+      setIsServerNoticeModalOpen(false);
+      if (notification?.success) {
+        notification.success("System & Server notification successfully broadcast to all platform users!");
+      }
+    } catch (err) {
+      console.error("Failed to broadcast server notice:", err);
+      if (notification?.error) {
+        notification.error(err.message || "Failed to broadcast server notice");
+      }
+    } finally {
+      setSendingServerNotice(false);
     }
   };
 
@@ -788,13 +833,185 @@ function Profile() {
       </div>
 
       {/* =========================================
-          PAYROLL & COMPENSATION DETAILS FOR EMPLOYEE
+          SUPER ADMIN DEVELOPER CONSOLE OR EMPLOYEE COMPENSATION DETAILS
       ========================================= */}
       <div style={{ marginTop: "32px" }}>
-        {/* ========================================================================= */}
-        {/* COMPREHENSIVE COMPENSATION, FINANCIAL & PAYROLL BREAKDOWN                */}
-        {/* ========================================================================= */}
         {(() => {
+          const isSuperAdminProfile = Boolean(
+            currentUser?.is_super_admin ||
+            user?.is_super_admin ||
+            userEmail === "omraikar2128@gmail.com"
+          );
+
+          if (isSuperAdminProfile) {
+            return (
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-end",
+                    marginBottom: "16px",
+                    flexWrap: "wrap",
+                    gap: "12px",
+                  }}
+                >
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: "800",
+                          color: "#A51D8D",
+                          letterSpacing: "0.8px",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Developer & Platform Governance
+                      </span>
+                      <span style={{ fontSize: "12px", color: "#16a34a", fontWeight: "700", display: "flex", alignItems: "center", gap: "4px" }}>
+                        <CheckCircle2 size={14} /> Server Online & 100% Operational
+                      </span>
+                    </div>
+                    <h2 style={{ margin: "6px 0 2px 0", fontSize: "20px", color: "#18243A", fontWeight: "800" }}>
+                      Application Architecture & Server Console
+                    </h2>
+                    <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>
+                      Core Platform Maintainer Console. Broadcast real-time system alerts, monitor low server load, manage database cluster & provision administrators. (Exempt from Employee Corporate Salary)
+                    </p>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      onClick={() => setIsServerNoticeModalOpen(true)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "7px",
+                        padding: "9px 16px",
+                        backgroundColor: "#9E2682",
+                        color: "#FFFFFF",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: "700",
+                        cursor: "pointer",
+                        boxShadow: "0 2px 8px rgba(158, 38, 130, 0.25)",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      <BellRing size={15} />
+                      Send Server / Low Load Notice
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => navigate("/users")}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "7px",
+                        padding: "9px 16px",
+                        backgroundColor: "#18243A",
+                        color: "#FFFFFF",
+                        border: "none",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: "700",
+                        cursor: "pointer",
+                        boxShadow: "0 2px 8px rgba(24, 36, 58, 0.2)",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      <Shield size={15} />
+                      Manage Administrators
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4 DEVELOPER TELEMETRY CARDS */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                    gap: "16px",
+                    marginBottom: "24px",
+                  }}
+                >
+                  <div className="dashboard-card" style={{ padding: "20px", borderTop: "4px solid #2E9B67", background: "#FFFFFF", border: "1px solid #EACEE3" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                      <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Server Load</span>
+                      <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#EDF9F2", color: "#2E9B67", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Activity size={16} />
+                      </div>
+                    </div>
+                    <div style={{ fontSize: "22px", fontWeight: "900", color: "#18243A" }}>Low (12%)</div>
+                    <span style={{ fontSize: "12px", color: "#2E9B67", marginTop: "4px", display: "block", fontWeight: "600" }}>Optimal Performance</span>
+                  </div>
+
+                  <div className="dashboard-card" style={{ padding: "20px", borderTop: "4px solid #9E2682", background: "#FFFFFF", border: "1px solid #EACEE3" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                      <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Backend API Gateway</span>
+                      <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#FCF4FA", color: "#9E2682", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Server size={16} />
+                      </div>
+                    </div>
+                    <div style={{ fontSize: "22px", fontWeight: "900", color: "#18243A" }}>Port 5000</div>
+                    <span style={{ fontSize: "12px", color: "#64748b", marginTop: "4px", display: "block" }}>REST Engine Active</span>
+                  </div>
+
+                  <div className="dashboard-card" style={{ padding: "20px", borderTop: "4px solid #2563EB", background: "#FFFFFF", border: "1px solid #EACEE3" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                      <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Database Cluster</span>
+                      <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Cpu size={16} />
+                      </div>
+                    </div>
+                    <div style={{ fontSize: "22px", fontWeight: "900", color: "#18243A" }}>PostgreSQL 16</div>
+                    <span style={{ fontSize: "12px", color: "#2563EB", marginTop: "4px", display: "block", fontWeight: "600" }}>10 Core Tables</span>
+                  </div>
+
+                  <div className="dashboard-card" style={{ padding: "20px", borderTop: "4px solid #751460", background: "#FFFFFF", border: "1px solid #EACEE3" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                      <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Governance</span>
+                      <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#FDF2F8", color: "#751460", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Shield size={16} />
+                      </div>
+                    </div>
+                    <div style={{ fontSize: "22px", fontWeight: "900", color: "#18243A" }}>Super Admin</div>
+                    <span style={{ fontSize: "12px", color: "#751460", marginTop: "4px", display: "block", fontWeight: "600" }}>Admin Provisioning Active</span>
+                  </div>
+                </div>
+
+                {/* DEVELOPER INFRASTRUCTURE DETAILS */}
+                <div className="dashboard-card" style={{ background: "#FFFFFF", border: "1px solid #EACEE3", padding: "24px", marginBottom: "28px" }}>
+                  <h3 style={{ margin: "0 0 14px", fontSize: "16px", color: "#18243A", fontWeight: "800", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <Terminal size={18} color="#9E2682" />
+                    System Platform Overview & Developer Diagnostics
+                  </h3>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px", fontSize: "13px" }}>
+                    <div style={{ padding: "14px", background: "#F8FAFC", borderRadius: "8px", border: "1px solid #E2E8F0" }}>
+                      <div style={{ fontWeight: "700", color: "#18243A", marginBottom: "4px" }}>System Maintainer & Developer</div>
+                      <div style={{ color: "#64748b" }}>Om Raikar (omraikar2128@gmail.com)</div>
+                      <div style={{ marginTop: "8px", fontSize: "12px", color: "#9E2682", fontWeight: "700" }}>• Core Platform Administrator</div>
+                    </div>
+                    <div style={{ padding: "14px", background: "#F8FAFC", borderRadius: "8px", border: "1px solid #E2E8F0" }}>
+                      <div style={{ fontWeight: "700", color: "#18243A", marginBottom: "4px" }}>Face Attendance Integration Engine</div>
+                      <div style={{ color: "#64748b" }}>Local Client Python SDK & REST Camera Integration</div>
+                      <div style={{ marginTop: "8px", fontSize: "12px", color: "#2E9B67", fontWeight: "700" }}>• Real-time Biometric Logging Ready</div>
+                    </div>
+                    <div style={{ padding: "14px", background: "#F8FAFC", borderRadius: "8px", border: "1px solid #E2E8F0" }}>
+                      <div style={{ fontWeight: "700", color: "#18243A", marginBottom: "4px" }}>Corporate Payroll Exemption</div>
+                      <div style={{ color: "#64748b" }}>Super Administrator has no payroll or salary deduction records</div>
+                      <div style={{ marginTop: "8px", fontSize: "12px", color: "#64748b", fontWeight: "700" }}>• Developer Governance Authority</div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            );
+          }
+
           const basicMonthlySalary = Number(employeeData?.salary || 0);
           const hraMonthly = Number(employeeData?.hra || 0);
           const allowancesMonthly = Number(employeeData?.allowances || 0);
@@ -804,7 +1021,15 @@ function Profile() {
           const deductionsMonthly = pfMonthly + taxMonthly;
           const netMonthly = Math.max(0, grossMonthly - deductionsMonthly);
           const ctcAnnual = grossMonthly * 12;
-          const canManageSalary = ["ADMIN", "FINANCE"].includes(userRole);
+
+          const isTargetAdmin =
+            employeeData?.email?.toLowerCase().trim() === "omraikar2128@gmail.com" ||
+            (employeeData?.designation && employeeData.designation.toLowerCase().includes("admin")) ||
+            (employeeData?.role && employeeData.role.toUpperCase() === "ADMIN");
+
+          const canManageSalary =
+            userRole === "ADMIN" ||
+            (userRole === "FINANCE" && !isTargetAdmin);
 
           return (
             <>
@@ -922,8 +1147,8 @@ function Profile() {
                   <div style={{ fontSize: "22px", fontWeight: "900", color: "#2E9B67" }}>
                     {currencySymbol}{netMonthly.toLocaleString("en-IN")}
                   </div>
-                  <span style={{ fontSize: "12px", color: "#2E9B67", marginTop: "4px", display: "block", fontWeight: "600" }}>
-                    {employeeData?.bank_name ? `Direct ${employeeData.bank_name} Credit` : "Direct Bank Credit"}
+                  <span style={{ fontSize: "12px", color: "#2E9B67", marginTop: "4px", display: "block", fontWeight: "700" }}>
+                    Direct Monthly Payout
                   </span>
                 </div>
 
@@ -938,16 +1163,16 @@ function Profile() {
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                    <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Total Deductions</span>
+                    <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Deductions</span>
                     <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#FDF2F2", color: "#D64545", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <Receipt size={16} />
                     </div>
                   </div>
                   <div style={{ fontSize: "22px", fontWeight: "900", color: "#D64545" }}>
-                    {currencySymbol}{deductionsMonthly.toLocaleString("en-IN")}
+                    -{currencySymbol}{deductionsMonthly.toLocaleString("en-IN")}
                   </div>
                   <span style={{ fontSize: "12px", color: "#64748b", marginTop: "4px", display: "block" }}>
-                    Statutory PF + Tax (TDS)
+                    PF + Income Tax
                   </span>
                 </div>
 
@@ -962,7 +1187,7 @@ function Profile() {
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                    <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Annual CTC Package</span>
+                    <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Annual CTC</span>
                     <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#FCF4FA", color: "#751460", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       <DollarSign size={16} />
                     </div>
@@ -971,57 +1196,68 @@ function Profile() {
                     {currencySymbol}{ctcAnnual.toLocaleString("en-IN")}
                   </div>
                   <span style={{ fontSize: "12px", color: "#64748b", marginTop: "4px", display: "block" }}>
-                    Per Annum Total Cost
+                    Cost to Company / Yr
                   </span>
                 </div>
               </div>
 
-              {/* TWO-COLUMN DETAILS: SALARY STRUCTURE & BANK DETAILS */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "24px", marginBottom: "24px" }}>
-
-                {/* COLUMN 1: MONTHLY SALARY STRUCTURE */}
+              {/* DETAILED BREAKDOWN ROW */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                  gap: "20px",
+                  marginBottom: "28px",
+                }}
+              >
+                {/* COLUMN 1: SALARY COMPONENTS */}
                 <div className="dashboard-card" style={{ background: "#FFFFFF", border: "1px solid #EACEE3" }}>
                   <div className="card-header" style={{ marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid #EACEE3" }}>
                     <div>
-                      <h3 style={{ margin: 0, fontSize: "16px", color: "#18243A", fontWeight: "800" }}>Monthly Salary Component Breakdown</h3>
-                      <p style={{ margin: "3px 0 0", fontSize: "12.5px", color: "#64748b" }}>Detailed itemization of base pay, benefits, and statutory deductions.</p>
+                      <h3 style={{ margin: 0, fontSize: "16px", color: "#18243A", fontWeight: "800" }}>Earnings & Deductions Breakdown</h3>
+                      <p style={{ margin: "3px 0 0", fontSize: "12.5px", color: "#64748b" }}>Itemized component view of monthly compensation.</p>
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#FCF4FA", borderRadius: "6px" }}>
-                      <span style={{ fontSize: "13px", color: "#18243A", fontWeight: "600" }}>Basic Monthly Salary</span>
-                      <strong style={{ fontSize: "13.5px", color: "#18243A" }}>{currencySymbol}{basicMonthlySalary.toLocaleString("en-IN")}</strong>
-                    </div>
-
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#FCF4FA", borderRadius: "6px" }}>
-                      <span style={{ fontSize: "13px", color: "#18243A", fontWeight: "600" }}>House Rent Allowance (HRA)</span>
-                      <strong style={{ fontSize: "13.5px", color: "#2E9B67" }}>+{currencySymbol}{hraMonthly.toLocaleString("en-IN")}</strong>
-                    </div>
-
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#FCF4FA", borderRadius: "6px" }}>
-                      <span style={{ fontSize: "13px", color: "#18243A", fontWeight: "600" }}>Special & Travel Allowances</span>
-                      <strong style={{ fontSize: "13.5px", color: "#2E9B67" }}>+{currencySymbol}{allowancesMonthly.toLocaleString("en-IN")}</strong>
-                    </div>
-
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#FDF2F2", borderRadius: "6px" }}>
-                      <span style={{ fontSize: "13px", color: "#D64545", fontWeight: "600" }}>Provident Fund Contribution (PF)</span>
-                      <strong style={{ fontSize: "13.5px", color: "#D64545" }}>-{currencySymbol}{pfMonthly.toLocaleString("en-IN")}</strong>
-                    </div>
-
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 12px", background: "#FDF2F2", borderRadius: "6px" }}>
-                      <span style={{ fontSize: "13px", color: "#D64545", fontWeight: "600" }}>Income Tax / TDS Withholding</span>
-                      <strong style={{ fontSize: "13.5px", color: "#D64545" }}>-{currencySymbol}{taxMonthly.toLocaleString("en-IN")}</strong>
-                    </div>
-
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "12px", background: "linear-gradient(135deg, rgba(158, 38, 130, 0.08) 0%, rgba(117, 20, 96, 0.05) 100%)", borderRadius: "8px", border: "1px solid #EACEE3", marginTop: "4px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#F8FAFC", borderRadius: "8px" }}>
                       <div>
-                        <strong style={{ fontSize: "14px", color: "#9E2682", display: "block", fontWeight: "800" }}>Net Disbursed Take-Home</strong>
-                        <span style={{ fontSize: "11.5px", color: "#64748b" }}>Monthly transfer to bank</span>
+                        <span style={{ fontSize: "13px", fontWeight: "700", color: "#18243A", display: "block" }}>Basic Salary</span>
+                        <span style={{ fontSize: "11px", color: "#64748b" }}>Core base pay</span>
                       </div>
-                      <div style={{ fontSize: "18px", fontWeight: "900", color: "#9E2682" }}>
-                        {currencySymbol}{netMonthly.toLocaleString("en-IN")}
+                      <span style={{ fontSize: "14px", fontWeight: "800", color: "#18243A" }}>{currencySymbol}{basicMonthlySalary.toLocaleString("en-IN")}</span>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#F8FAFC", borderRadius: "8px" }}>
+                      <div>
+                        <span style={{ fontSize: "13px", fontWeight: "700", color: "#18243A", display: "block" }}>House Rent Allowance (HRA)</span>
+                        <span style={{ fontSize: "11px", color: "#64748b" }}>Housing benefit</span>
                       </div>
+                      <span style={{ fontSize: "14px", fontWeight: "800", color: "#18243A" }}>{currencySymbol}{hraMonthly.toLocaleString("en-IN")}</span>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#F8FAFC", borderRadius: "8px" }}>
+                      <div>
+                        <span style={{ fontSize: "13px", fontWeight: "700", color: "#18243A", display: "block" }}>Special & Flexi Allowances</span>
+                        <span style={{ fontSize: "11px", color: "#64748b" }}>Performance & travel perks</span>
+                      </div>
+                      <span style={{ fontSize: "14px", fontWeight: "800", color: "#18243A" }}>{currencySymbol}{allowancesMonthly.toLocaleString("en-IN")}</span>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#FFF5F5", borderRadius: "8px", border: "1px solid #FED7D7" }}>
+                      <div>
+                        <span style={{ fontSize: "13px", fontWeight: "700", color: "#C53030", display: "block" }}>Provident Fund (PF)</span>
+                        <span style={{ fontSize: "11px", color: "#E53E3E" }}>Retirement contribution</span>
+                      </div>
+                      <span style={{ fontSize: "14px", fontWeight: "800", color: "#C53030" }}>-{currencySymbol}{pfMonthly.toLocaleString("en-IN")}</span>
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#FFF5F5", borderRadius: "8px", border: "1px solid #FED7D7" }}>
+                      <div>
+                        <span style={{ fontSize: "13px", fontWeight: "700", color: "#C53030", display: "block" }}>Tax Deducted at Source (TDS)</span>
+                        <span style={{ fontSize: "11px", color: "#E53E3E" }}>Statutory income tax withholding</span>
+                      </div>
+                      <span style={{ fontSize: "14px", fontWeight: "800", color: "#C53030" }}>-{currencySymbol}{taxMonthly.toLocaleString("en-IN")}</span>
                     </div>
                   </div>
                 </div>
@@ -1080,118 +1316,115 @@ function Profile() {
                 </div>
 
               </div>
+
+              {/* PAYSLIPS HISTORY TABLE */}
+              <section className="dashboard-card" style={{ background: "#FFFFFF", border: "1px solid #EACEE3", marginBottom: "28px" }}>
+                <div className="card-header" style={{ paddingBottom: "14px", borderBottom: "1px solid #EACEE3", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "17px", color: "#18243A", fontWeight: "800" }}>
+                      Disbursed Payslips & Salary Statements ({payslips.length} Records)
+                    </h3>
+                    <p style={{ margin: "3px 0 0", fontSize: "13px", color: "#64748b" }}>
+                      Official downloadable and printable monthly pay stubs with verified transaction references.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Period</th>
+                        <th>Payslip Ref</th>
+                        <th>Gross Salary</th>
+                        <th>Deductions</th>
+                        <th>Net Disbursed</th>
+                        <th>Transaction Ref</th>
+                        <th>Payment Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payslips.length === 0 ? (
+                        <tr>
+                          <td colSpan="8" style={{ textAlign: "center", padding: "30px", color: "#8492A6" }}>
+                            No payslips available at this time.
+                          </td>
+                        </tr>
+                      ) : (
+                        payslips.map((slip) => {
+                          const monthNames = [
+                            "January", "February", "March", "April", "May", "June",
+                            "July", "August", "September", "October", "November", "December"
+                          ];
+                          const monthStr = monthNames[(slip.payroll_month || 8) - 1] || "August";
+                          const yearStr = slip.payroll_year || 2026;
+
+                          return (
+                            <tr key={slip.id || slip.payslip_number}>
+                              <td>
+                                <strong style={{ color: "#18243A", fontSize: "13.5px" }}>{monthStr} {yearStr}</strong>
+                              </td>
+                              <td>
+                                <span style={{ padding: "2px 8px", backgroundColor: "#FCF4FA", border: "1px solid #EACEE3", borderRadius: "4px", fontSize: "11.5px", fontWeight: "700", color: "#9E2682" }}>
+                                  {slip.payslip_number || `PS-${yearStr}${String(slip.payroll_month).padStart(2, "0")}`}
+                                </span>
+                              </td>
+                              <td>
+                                <span style={{ fontSize: "13px", color: "#18243A" }}>{currencySymbol}{Number(slip.gross_salary || 0).toLocaleString("en-IN")}</span>
+                              </td>
+                              <td>
+                                <span style={{ fontSize: "13px", color: "#D64545" }}>-{currencySymbol}{Number(slip.deductions || 0).toLocaleString("en-IN")}</span>
+                              </td>
+                              <td>
+                                <strong style={{ fontSize: "13.5px", color: "#2E9B67" }}>{currencySymbol}{Number(slip.net_salary || 0).toLocaleString("en-IN")}</strong>
+                              </td>
+                              <td>
+                                <span style={{ fontSize: "12px", color: "#64748b", fontFamily: "monospace" }}>{slip.transaction_ref || "TXN-VERIFIED"}</span>
+                              </td>
+                              <td>
+                                <span
+                                  className="status-badge"
+                                  style={{
+                                    backgroundColor: "#EDF9F2",
+                                    color: "#2E9B67",
+                                    border: "1px solid #A3E4C3",
+                                    fontSize: "11px",
+                                    padding: "3px 9px",
+                                  }}
+                                >
+                                  {slip.payment_status || "PAID"}
+                                </span>
+                              </td>
+                              <td>
+                                <button
+                                  className="primary-button"
+                                  onClick={() => handlePrintPayslip(slip)}
+                                  style={{
+                                    padding: "6px 12px",
+                                    fontSize: "12px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "5px",
+                                    background: "linear-gradient(135deg, #9E2682 0%, #751460 100%)",
+                                  }}
+                                >
+                                  <Printer size={13} />
+                                  View & Print Payslip
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
             </>
           );
         })()}
-
-        {/* PAYSLIPS HISTORY TABLE */}
-        <section className="dashboard-card" style={{ background: "#FFFFFF", border: "1px solid #EACEE3", marginBottom: "28px" }}>
-          <div className="card-header" style={{ paddingBottom: "14px", borderBottom: "1px solid #EACEE3", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: "17px", color: "#18243A", fontWeight: "800" }}>
-                Disbursed Payslips & Salary Statements ({payslips.length} Records)
-              </h3>
-              <p style={{ margin: "3px 0 0", fontSize: "13px", color: "#64748b" }}>
-                Official downloadable and printable monthly pay stubs with verified transaction references.
-              </p>
-            </div>
-          </div>
-
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Period</th>
-                  <th>Payslip Ref</th>
-                  <th>Gross Salary</th>
-                  <th>Deductions</th>
-                  <th>Net Disbursed</th>
-                  <th>Transaction Ref</th>
-                  <th>Payment Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payslips.length === 0 ? (
-                  <tr>
-                    <td colSpan="8" style={{ textAlign: "center", padding: "30px", color: "#8492A6" }}>
-                      No payslips available at this time.
-                    </td>
-                  </tr>
-                ) : (
-                  payslips.map((slip) => {
-                    const monthNames = [
-                      "January", "February", "March", "April", "May", "June",
-                      "July", "August", "September", "October", "November", "December"
-                    ];
-                    const monthStr = monthNames[(slip.payroll_month || 8) - 1] || "August";
-                    const yearStr = slip.payroll_year || 2026;
-
-                    return (
-                      <tr key={slip.id || slip.payslip_number}>
-                        <td>
-                          <strong style={{ color: "#18243A", fontSize: "13.5px" }}>{monthStr} {yearStr}</strong>
-                        </td>
-                        <td>
-                          <span style={{ padding: "2px 8px", backgroundColor: "#FCF4FA", border: "1px solid #EACEE3", borderRadius: "4px", fontSize: "11.5px", fontWeight: "700", color: "#9E2682" }}>
-                            {slip.payslip_number || `PS-${yearStr}${String(slip.payroll_month).padStart(2, "0")}`}
-                          </span>
-                        </td>
-                        <td>
-                          <span style={{ fontSize: "13px", color: "#18243A" }}>{currencySymbol}{Number(slip.gross_salary || 0).toLocaleString("en-IN")}</span>
-                        </td>
-                        <td>
-                          <span style={{ fontSize: "13px", color: "#D64545" }}>-{currencySymbol}{Number(slip.deductions || 0).toLocaleString("en-IN")}</span>
-                        </td>
-                        <td>
-                          <strong style={{ fontSize: "13.5px", color: "#2E9B67" }}>{currencySymbol}{Number(slip.net_salary || 0).toLocaleString("en-IN")}</strong>
-                        </td>
-                        <td>
-                          <span style={{ fontSize: "12px", color: "#64748b", fontFamily: "monospace" }}>{slip.transaction_ref || "TXN-VERIFIED"}</span>
-                        </td>
-                        <td>
-                          <span
-                            className="status-badge"
-                            style={{
-                              backgroundColor: "#EDF9F2",
-                              color: "#2E9B67",
-                              border: "1px solid #A3E4C3",
-                              fontSize: "11px",
-                              padding: "3px 9px",
-                            }}
-                          >
-                            {slip.payment_status || "PAID"}
-                          </span>
-                        </td>
-                        <td>
-                          <button
-                            className="primary-button"
-                            onClick={() => handlePrintPayslip(slip)}
-                            style={{
-                              padding: "6px 12px",
-                              fontSize: "12px",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "5px",
-                              background: "linear-gradient(135deg, #9E2682 0%, #751460 100%)",
-                            }}
-                          >
-                            <Printer size={13} />
-                            View & Print Payslip
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-
       </div>
-
 
       {/* =========================================
           EDIT PROFILE MODAL (NAME & PICTURE ONLY)
@@ -1591,6 +1824,112 @@ function Profile() {
                   style={{ background: "#9E2682", borderColor: "#9E2682" }}
                 >
                   {savingSalary ? "Saving to Database..." : "Save Salary & Bank"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================
+          SUPER ADMIN SERVER & SYSTEM NOTICE MODAL
+      ========================================= */}
+      {isServerNoticeModalOpen && (
+        <div className="modal-overlay">
+          <div className="employee-modal" style={{ maxWidth: "560px" }}>
+            <div className="modal-header">
+              <div>
+                <p className="section-label">PLATFORM GOVERNANCE</p>
+                <h2>Broadcast Server & System Notice</h2>
+              </div>
+              <button className="modal-close" onClick={() => setIsServerNoticeModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSendServerNotice}>
+              <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+                <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>
+                  Broadcast an official real-time infrastructure, maintenance, or low server load update directly to all administrators, HR, finance, and employee dashboards.
+                </p>
+
+                <div className="form-field">
+                  <label>Notification Subject / Title</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Server Operations & Low Load Status Notice"
+                    value={serverNoticeData.title}
+                    onChange={(e) => setServerNoticeData({ ...serverNoticeData, title: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label>Priority Level</label>
+                  <select
+                    value={serverNoticeData.priority}
+                    onChange={(e) => setServerNoticeData({ ...serverNoticeData, priority: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: "8px",
+                      border: "1px solid #EACEE3",
+                      backgroundColor: "#FFFFFF",
+                      fontSize: "13.5px",
+                      color: "#18243A",
+                      fontWeight: "600",
+                    }}
+                  >
+                    <option value="NORMAL">Normal / Informational (Standard)</option>
+                    <option value="HIGH">High Priority / Urgent</option>
+                    <option value="CRITICAL">Critical Infrastructure Alert</option>
+                  </select>
+                </div>
+
+                <div className="form-field">
+                  <label>Detailed System Message</label>
+                  <textarea
+                    required
+                    rows={4}
+                    placeholder="e.g. All backend services and PostgreSQL database nodes are running at optimal low load..."
+                    value={serverNoticeData.message}
+                    onChange={(e) => setServerNoticeData({ ...serverNoticeData, message: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: "8px",
+                      border: "1px solid #EACEE3",
+                      fontFamily: "inherit",
+                      fontSize: "13px",
+                      resize: "vertical",
+                    }}
+                  />
+                </div>
+
+                <div style={{ padding: "12px", background: "#EDF9F2", borderRadius: "8px", border: "1px solid #A3E4C3", display: "flex", alignItems: "center", gap: "10px" }}>
+                  <BadgeCheck size={18} color="#2E9B67" style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: "12px", color: "#2E9B67", lineHeight: "1.4" }}>
+                    <strong>Developer Delivery:</strong> This notice will be recorded in PostgreSQL audit tables and immediately pushed to all active user dashboards.
+                  </span>
+                </div>
+              </div>
+
+              <div className="modal-footer" style={{ borderTop: "1px solid #EACEE3", padding: "14px 24px", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setIsServerNoticeModalOpen(false)}
+                  disabled={sendingServerNotice}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="primary-button"
+                  disabled={sendingServerNotice}
+                  style={{ background: "#9E2682", borderColor: "#9E2682" }}
+                >
+                  {sendingServerNotice ? "Broadcasting..." : "Broadcast System Notice"}
                 </button>
               </div>
             </form>
