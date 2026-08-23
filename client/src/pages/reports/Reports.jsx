@@ -30,7 +30,18 @@ import { getEmployees } from "../../services/employeeService";
 import { recordAuditEvent } from "../../services/auditService";
 import { sendFinanceNotification } from "../../services/notificationService";
 
-
+const getReportIcon = (report) => {
+  if (typeof report?.icon === "function" || (typeof report?.icon === "object" && report?.icon?.$$typeof)) {
+    return report.icon;
+  }
+  if (report?.category?.includes("HR") || report?.title?.includes("Headcount")) {
+    return Users;
+  }
+  if (report?.category?.includes("Audit") || report?.title?.includes("Audit")) {
+    return ScrollText;
+  }
+  return Receipt;
+};
 
 function Reports() {
   const [searchParams] = useSearchParams();
@@ -525,8 +536,8 @@ function Reports() {
           </div>
         ) : (
           visibleReports.map((report) => {
-            const Icon = report.icon || Receipt;
-          const isPersonalToMe =
+            const Icon = getReportIcon(report);
+            const isPersonalToMe =
             isEmployee &&
             report.targetEmployeeEmail &&
             report.targetEmployeeEmail.trim().toLowerCase() === userEmail;
