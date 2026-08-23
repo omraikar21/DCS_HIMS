@@ -22,21 +22,6 @@ const ensureAuditTable = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-
-    // Check if seeded, if not add initial corporate baseline logs
-    const count = await pool.query("SELECT COUNT(*) FROM audit_logs");
-    if (parseInt(count.rows[0].count, 10) === 0) {
-      await pool.query(`
-        INSERT INTO audit_logs (log_code, event_action, category, actor_name, actor_email, role, details, status, created_at)
-        VALUES
-        ('LOG-2026-0001', 'System Security Audit Initialized', 'SECURITY', 'System Sentinel', 'system@dcshims.internal', 'SYSTEM', 'PostgreSQL cryptographic integrity and schema verified.', 'SUCCESS', NOW() - INTERVAL '2 days'),
-        ('LOG-2026-0002', 'User Authentication Success', 'AUTH', 'Om Raikar', 'omraikar2128@gmail.com', 'ADMIN', 'JWT Session token signed with 24h expiration.', 'SUCCESS', NOW() - INTERVAL '1 day'),
-        ('LOG-2026-0003', 'Employee Profile Provisioned', 'EMPLOYEE', 'Om Raikar (HR)', 'raikarom9@gmail.com', 'HR', 'Provisioned Anand (DCS-EMP-001) as Senior AI Engineer.', 'SUCCESS', NOW() - INTERVAL '18 hours'),
-        ('LOG-2026-0004', 'Password Updated & Encrypted', 'SECURITY', 'Anand', 'anandck89@gmail.com', 'EMPLOYEE', 'Bcrypt salt hash re-generated; must_change_password set to false.', 'SUCCESS', NOW() - INTERVAL '12 hours'),
-        ('LOG-2026-0005', 'Finance Report Generated & Sent', 'FINANCE', 'Om Raikar (Finance)', 'omraikar14@gmail.com', 'FINANCE', 'Issued August 2026 Salary Breakup to Anand (anandck89@gmail.com).', 'SUCCESS', NOW() - INTERVAL '4 hours')
-      `);
-      console.log("[AUDIT] Initial audit trail baseline seeded.");
-    }
   } catch (err) {
     console.warn("Audit table initialization error:", err.message);
   }

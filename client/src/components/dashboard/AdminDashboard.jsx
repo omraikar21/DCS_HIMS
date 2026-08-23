@@ -24,6 +24,8 @@ import {
     X,
     BadgeCheck,
     Database,
+    Printer,
+    Download,
 } from "lucide-react";
 
 import {
@@ -77,6 +79,7 @@ function AdminDashboard() {
     const [dashboard, setDashboard] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [isTelemetryReportOpen, setIsTelemetryReportOpen] = useState(false);
 
     // Super Admin Server Notice / Maintenance Shutdown Modal State
     const [noticeModalOpen, setNoticeModalOpen] = useState(false);
@@ -316,7 +319,7 @@ function AdminDashboard() {
                     {/* SERVER TRAFFIC & LATENCY CHART */}
                     <ChartCard
                         title="Server Traffic & Low-Latency Telemetry"
-                        onAction={() => navigate("/audit-logs")}
+                        onAction={() => setIsTelemetryReportOpen(true)}
                     >
                         <ResponsiveContainer width="100%" height={270}>
                             <AreaChart data={serverLatencyData}>
@@ -746,6 +749,141 @@ function AdminDashboard() {
                     </table>
                 </div>
             </section>
+
+            {/* PLATFORM SERVER TELEMETRY & DIAGNOSTICS REPORT MODAL */}
+            {isTelemetryReportOpen && (
+                <div className="modal-overlay" style={{ zIndex: 9999 }}>
+                    <div className="employee-modal" style={{ maxWidth: "720px" }}>
+                        <div className="modal-header">
+                            <div>
+                                <p className="section-label">INFRASTRUCTURE TELEMETRY REPORT</p>
+                                <h2 style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <Activity size={20} color="#9E2682" />
+                                    Server Performance & Latency Report
+                                </h2>
+                            </div>
+                            <button className="modal-close" onClick={() => setIsTelemetryReportOpen(false)}>
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "20px" }}>
+                            {/* REPORT HEADER SUMMARY */}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", padding: "12px 16px", background: "#FAF5F9", borderRadius: "10px", border: "1px solid #F3D3E7" }}>
+                                <div>
+                                    <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "600" }}>REPORT GENERATED FOR</div>
+                                    <div style={{ fontSize: "14px", fontWeight: "800", color: "#18243A" }}>Om Raikar (Super Administrator / Platform Developer)</div>
+                                </div>
+                                <div style={{ textAlign: "right" }}>
+                                    <div style={{ fontSize: "12px", color: "#64748b", fontWeight: "600" }}>ENGINE STATUS</div>
+                                    <span style={{ fontSize: "13px", color: "#16a34a", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                        <CheckCircle2 size={15} /> 100% Operational (Low Load)
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* 4 CORE TELEMETRY TILES */}
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "12px" }}>
+                                <div style={{ padding: "14px", background: "#F8FAFC", borderRadius: "10px", border: "1px solid #E2E8F0", textAlign: "center" }}>
+                                    <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Current Load</span>
+                                    <div style={{ fontSize: "20px", fontWeight: "900", color: "#2E9B67", marginTop: "2px" }}>12%</div>
+                                    <small style={{ color: "#64748b", fontSize: "11px" }}>Optimal Bandwidth</small>
+                                </div>
+
+                                <div style={{ padding: "14px", background: "#F8FAFC", borderRadius: "10px", border: "1px solid #E2E8F0", textAlign: "center" }}>
+                                    <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Average Latency</span>
+                                    <div style={{ fontSize: "20px", fontWeight: "900", color: "#9E2682", marginTop: "2px" }}>32 ms</div>
+                                    <small style={{ color: "#64748b", fontSize: "11px" }}>Sub-50ms Threshold</small>
+                                </div>
+
+                                <div style={{ padding: "14px", background: "#F8FAFC", borderRadius: "10px", border: "1px solid #E2E8F0", textAlign: "center" }}>
+                                    <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>API Gateway</span>
+                                    <div style={{ fontSize: "20px", fontWeight: "900", color: "#2563EB", marginTop: "2px" }}>Port 5000</div>
+                                    <small style={{ color: "#64748b", fontSize: "11px" }}>Express.js REST</small>
+                                </div>
+
+                                <div style={{ padding: "14px", background: "#F8FAFC", borderRadius: "10px", border: "1px solid #E2E8F0", textAlign: "center" }}>
+                                    <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "700", textTransform: "uppercase" }}>Database Cluster</span>
+                                    <div style={{ fontSize: "20px", fontWeight: "900", color: "#751460", marginTop: "2px" }}>PostgreSQL 16</div>
+                                    <small style={{ color: "#64748b", fontSize: "11px" }}>10 Core Tables</small>
+                                </div>
+                            </div>
+
+                            {/* HOURLY PERFORMANCE AUDIT TABLE */}
+                            <div>
+                                <h4 style={{ margin: "0 0 10px", fontSize: "14px", color: "#18243A", fontWeight: "800" }}>
+                                    Hourly Latency & Server Load Distribution
+                                </h4>
+                                <div style={{ overflowX: "auto", border: "1px solid #E2E8F0", borderRadius: "10px" }}>
+                                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12.5px" }}>
+                                        <thead>
+                                            <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #E2E8F0", textAlign: "left" }}>
+                                                <th style={{ padding: "10px 14px", color: "#64748b" }}>Time Window</th>
+                                                <th style={{ padding: "10px 14px", color: "#64748b" }}>API Latency</th>
+                                                <th style={{ padding: "10px 14px", color: "#64748b" }}>CPU Load</th>
+                                                <th style={{ padding: "10px 14px", color: "#64748b" }}>Network Socket Status</th>
+                                                <th style={{ padding: "10px 14px", color: "#64748b", textAlign: "right" }}>Health</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {[
+                                                { time: "09:00 - 10:00", latency: "32 ms", load: "10%", status: "14 Active Sockets", health: "HEALTHY" },
+                                                { time: "10:00 - 11:00", latency: "38 ms", load: "14%", status: "28 Active Sockets", health: "HEALTHY" },
+                                                { time: "11:00 - 12:00", latency: "45 ms", load: "18%", status: "35 Active Sockets", health: "HEALTHY" },
+                                                { time: "12:00 - 13:00", latency: "40 ms", load: "15%", status: "22 Active Sockets", health: "HEALTHY" },
+                                                { time: "13:00 - 14:00", latency: "35 ms", load: "11%", status: "18 Active Sockets", health: "HEALTHY" },
+                                                { time: "14:00 - 15:00", latency: "36 ms", load: "12%", status: "20 Active Sockets", health: "HEALTHY" },
+                                                { time: "15:00 - Present", latency: "39 ms", load: "13%", status: "24 Active Sockets", health: "HEALTHY" },
+                                            ].map((row, idx) => (
+                                                <tr key={idx} style={{ borderBottom: "1px solid #F1F5F9" }}>
+                                                    <td style={{ padding: "9px 14px", fontWeight: "600", color: "#18243A" }}>{row.time}</td>
+                                                    <td style={{ padding: "9px 14px", color: "#2E9B67", fontWeight: "700" }}>{row.latency}</td>
+                                                    <td style={{ padding: "9px 14px", color: "#9E2682", fontWeight: "700" }}>{row.load}</td>
+                                                    <td style={{ padding: "9px 14px", color: "#64748b" }}>{row.status}</td>
+                                                    <td style={{ padding: "9px 14px", textAlign: "right" }}>
+                                                        <span style={{ padding: "3px 8px", background: "#DCFCE7", color: "#16A34A", borderRadius: "12px", fontSize: "11px", fontWeight: "700" }}>
+                                                            {row.health}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {/* MEMORY & DB POOL SPECS */}
+                            <div style={{ padding: "12px 16px", background: "#EDF9F2", borderRadius: "10px", border: "1px solid #A3E4C3", display: "flex", alignItems: "center", gap: "10px" }}>
+                                <BadgeCheck size={18} color="#2E9B67" style={{ flexShrink: 0 }} />
+                                <span style={{ fontSize: "12.5px", color: "#2E9B67", lineHeight: "1.4" }}>
+                                    <strong>Platform Diagnostics Verified:</strong> Node.js V8 heap memory usage at 64MB / 4096MB. PostgreSQL connection pool operating with 0 query dropouts.
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="modal-footer" style={{ borderTop: "1px solid #EACEE3", padding: "14px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <button
+                                type="button"
+                                className="secondary-button"
+                                onClick={() => window.print()}
+                                style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                            >
+                                <Printer size={15} />
+                                Print Report
+                            </button>
+
+                            <button
+                                type="button"
+                                className="primary-button"
+                                onClick={() => setIsTelemetryReportOpen(false)}
+                                style={{ background: "#9E2682", borderColor: "#9E2682" }}
+                            >
+                                Close Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

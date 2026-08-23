@@ -37,63 +37,10 @@ function AuditLogs() {
     try {
       setLoading(true);
       const data = await getAuditLogs();
-      if (Array.isArray(data) && data.length > 0) {
-        setLogs(data);
-      } else {
-        // Fallback baseline enterprise logs
-        setLogs([
-          {
-            id: 1,
-            logCode: "LOG-2026-0801",
-            eventAction: "User Authentication Success",
-            category: "AUTH",
-            actorName: "Om Raikar (Admin)",
-            actorEmail: "omraikar2128@gmail.com",
-            role: "ADMIN",
-            details: "JWT Session token signed with 24h expiration.",
-            status: "SUCCESS",
-            formattedTimestamp: "2026-08-21 12:45:10 IST",
-          },
-          {
-            id: 2,
-            logCode: "LOG-2026-0802",
-            eventAction: "Finance Report Generated & Sent",
-            category: "FINANCE",
-            actorName: "Om Raikar (Finance)",
-            actorEmail: "omraikar14@gmail.com",
-            role: "FINANCE",
-            details: "Issued August 2026 Salary Breakup to Anand (anandck89@gmail.com).",
-            status: "SUCCESS",
-            formattedTimestamp: "2026-08-21 11:30:22 IST",
-          },
-          {
-            id: 3,
-            logCode: "LOG-2026-0803",
-            eventAction: "Employee Profile Provisioned",
-            category: "EMPLOYEE",
-            actorName: "Om Raikar (HR)",
-            actorEmail: "raikarom9@gmail.com",
-            role: "HR",
-            details: "Provisioned Anand (DCS-EMP-001) in Software Development.",
-            status: "SUCCESS",
-            formattedTimestamp: "2026-08-21 10:15:00 IST",
-          },
-          {
-            id: 4,
-            logCode: "LOG-2026-0804",
-            eventAction: "Password Updated & Encrypted",
-            category: "SECURITY",
-            actorName: "Anand",
-            actorEmail: "anandck89@gmail.com",
-            role: "EMPLOYEE",
-            details: "Bcrypt salt hash re-generated; must_change_password set to false.",
-            status: "SUCCESS",
-            formattedTimestamp: "2026-08-21 09:20:18 IST",
-          },
-        ]);
-      }
+      setLogs(Array.isArray(data) ? data : []);
     } catch (err) {
       console.warn("Failed to load audit logs:", err);
+      setLogs([]);
     } finally {
       setLoading(false);
     }

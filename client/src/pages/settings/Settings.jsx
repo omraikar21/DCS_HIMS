@@ -451,17 +451,6 @@ function Settings() {
             </div>
           </div>
         )}
-
-        <div style={{ marginTop: "24px", display: "flex", justifyContent: "flex-end", gap: "12px" }}>
-          <button
-            type="submit"
-            className="primary-button"
-            disabled={saving || loading}
-          >
-            <Save size={16} />
-            {saving ? "Saving..." : "Save Settings"}
-          </button>
-        </div>
       </form>
     </div>
   );
