@@ -367,9 +367,15 @@ function Sidebar({
 
     return (
         <>
+            {/* MOBILE BACKDROP OVERLAY */}
+            <div
+                className={`sidebar-backdrop ${isOpen ? "active" : ""}`}
+                onClick={onClose}
+                aria-hidden="true"
+            />
+
             <aside
-                className={`sidebar ${isOpen ? "sidebar-open" : ""
-                    }`}
+                className={`sidebar ${isOpen ? "sidebar-open" : ""}`}
             >
 
                 {/* SIDEBAR HEADER */}
