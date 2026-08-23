@@ -17,6 +17,7 @@ const {
 } = require("../models/userModel");
 
 const { createAuditLog } = require("../models/auditModel");
+const { getOrCreateDepartmentService } = require("./departmentService");
 
 // ------------------------------------------
 // GET USERS DIRECTORY & TELEMETRY
@@ -50,17 +51,17 @@ const fetchUsersList = async (requester) => {
 };
 
 // ------------------------------------------
-// CREATE USER (ADMIN -> Co-Admin/HR/Finance | HR -> Finance)
+// PROVISION USER ACCOUNT WITH ROLE
 // ------------------------------------------
-const createNewUser = async ({ name, email, password, role, requester }) => {
-  if (!name || !email) {
-    throw new Error("Name and email are required.");
-  }
-
-  const cleanName = name.trim();
-  const cleanEmail = email.trim().toLowerCase();
-  const targetRole = (role || "EMPLOYEE").toUpperCase();
+const createUserWithRole = async ({ name, email, role, password }, requester) => {
+  const cleanName = (name || "").trim();
+  const cleanEmail = (email || "").trim().toLowerCase();
+  const targetRole = (role || "").trim().toUpperCase();
   const requesterRole = (requester?.role || "EMPLOYEE").toUpperCase();
+
+  if (!cleanName || !cleanEmail || !targetRole) {
+    throw new Error("Full name, email address, and role are required.");
+  }
 
   // 1. Check existing user in `users` table
   const existing = await getUserByEmail(cleanEmail);
@@ -125,11 +126,11 @@ const createNewUser = async ({ name, email, password, role, requester }) => {
     mustChangePassword: false,
   });
 
-  // 5. Ensure synchronized Employee Record in `employees` table
+  // 5. Ensure synchronized Employee Record in `employees` table with dedicated department
   try {
     const nameParts = cleanName.split(" ");
     const firstName = nameParts[0] || cleanName;
-    const lastName = nameParts.slice(1).join(" ") || "Staff";
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
     const designation =
       targetRole === "ADMIN"
         ? "System Administrator"
@@ -139,6 +140,25 @@ const createNewUser = async ({ name, email, password, role, requester }) => {
         ? "Finance Executive"
         : "Software Engineer";
 
+    const targetDeptName =
+      targetRole === "ADMIN"
+        ? "Administration"
+        : targetRole === "HR"
+        ? "Human Resources"
+        : targetRole === "FINANCE"
+        ? "Finance"
+        : "General";
+
+    let deptId = null;
+    try {
+      const deptRecord = await getOrCreateDepartmentService(targetDeptName);
+      if (deptRecord) {
+        deptId = deptRecord.id;
+      }
+    } catch (dErr) {
+      console.warn("Auto-department provisioning notice:", dErr.message);
+    }
+
     const empCheck = await pool.query(`SELECT id FROM employees WHERE email = $1`, [cleanEmail]);
     if (empCheck.rows.length === 0) {
       const codeRes = await pool.query(`SELECT COUNT(*)::INTEGER AS count FROM employees`);
@@ -147,14 +167,14 @@ const createNewUser = async ({ name, email, password, role, requester }) => {
 
       await pool.query(
         `INSERT INTO employees 
-        (user_id, employee_code, first_name, last_name, email, designation, joining_date, salary, employment_status)
-        VALUES ($1, $2, $3, $4, $5, $6, CURRENT_DATE, 75000, 'ACTIVE')`,
-        [newUser.id, empCode, firstName, lastName, cleanEmail, designation]
+        (user_id, employee_code, first_name, last_name, email, department_id, designation, joining_date, salary, employment_status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE, 75000, 'ACTIVE')`,
+        [newUser.id, empCode, firstName, lastName, cleanEmail, deptId, designation]
       );
     } else {
       await pool.query(
-        `UPDATE employees SET user_id = $1, designation = $2 WHERE email = $3`,
-        [newUser.id, designation, cleanEmail]
+        `UPDATE employees SET user_id = $1, department_id = COALESCE($2, department_id), designation = $3, first_name = $4, last_name = $5 WHERE email = $6`,
+        [newUser.id, deptId, designation, firstName, lastName, cleanEmail]
       );
     }
   } catch (empSyncErr) {
@@ -249,16 +269,36 @@ const modifyUser = async (id, { name, role, isActive }, requester) => {
           ? "Finance Executive"
           : "Software Engineer";
 
+      const targetDeptName =
+        newRole === "ADMIN"
+          ? "Administration"
+          : newRole === "HR"
+          ? "Human Resources"
+          : newRole === "FINANCE"
+          ? "Finance"
+          : "General";
+
+      let deptId = null;
+      try {
+        const deptRecord = await getOrCreateDepartmentService(targetDeptName);
+        if (deptRecord) {
+          deptId = deptRecord.id;
+        }
+      } catch (dErr) {
+        console.warn("Department sync notice:", dErr.message);
+      }
+
       await pool.query(
         `UPDATE employees 
          SET first_name = COALESCE($1, first_name),
              last_name = COALESCE($2, last_name),
-             designation = COALESCE($3, designation)
-         WHERE user_id = $4 OR email = $5`,
-        [firstName, lastName, designation, id, targetUser.email]
+             designation = COALESCE($3, designation),
+             department_id = COALESCE($4, department_id)
+         WHERE user_id = $5 OR email = $6`,
+        [firstName, lastName, designation, deptId, id, targetUser.email]
       );
     } catch (empSyncErr) {
-      console.warn("Employee update sync notice:", empSyncErr.message);
+      console.warn("Employee profile sync notice:", empSyncErr.message);
     }
   }
 
