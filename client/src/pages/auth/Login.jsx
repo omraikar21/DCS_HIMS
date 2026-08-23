@@ -640,7 +640,7 @@ function Login() {
                       <Mail size={16} />
                       <input
                         type="email"
-                        placeholder="e.g. employee@dcshims.com"
+                        placeholder="e.g. employee@example.com"
                         value={forgotEmail}
                         onChange={(e) => setForgotEmail(e.target.value)}
                         required

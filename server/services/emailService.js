@@ -31,7 +31,7 @@ const sendPasswordResetOtp = async (toEmail, otpCode, userName = "Employee") => 
   const transporter = getTransporter();
 
   const mailOptions = {
-    from: `"DCS-HIMS Security" <${process.env.EMAIL_USER || "security@dcshims.com"}>`,
+    from: `"DCS-HIMS Security" <${process.env.EMAIL_USER || "omraikar2128@gmail.com"}>`,
     to: toEmail,
     subject: "🔐 DCS-HIMS: Password Reset Verification Code",
     html: `
@@ -183,7 +183,7 @@ const sendEmployeeWelcomeEmail = async (
   const portalUrl = process.env.CLIENT_URL || "http://localhost:5173/login";
 
   const mailOptions = {
-    from: `"DCS-HIMS People Operations" <${process.env.EMAIL_USER || "welcome@dcshims.com"}>`,
+    from: `"DCS-HIMS People Operations" <${process.env.EMAIL_USER || "omraikar2128@gmail.com"}>`,
     to: toEmail,
     subject: `🎉 Welcome to Dharam Consultancy Services — Your Account Credentials (${employeeCode || "DCS"})`,
     html: `

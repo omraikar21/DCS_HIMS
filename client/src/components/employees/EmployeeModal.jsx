@@ -151,7 +151,7 @@ function EmployeeModal({
                 name="email"
                 value={form.email}
                 onChange={handleChange}
-                placeholder="employee@dcshims.com"
+                placeholder="employee@example.com"
                 required
               />
 

@@ -153,7 +153,8 @@ function UserManagement() {
 
   // Open Delete Confirmation Modal
   const handleOpenDelete = (target) => {
-    if (target.is_super_admin || target.id === 1) {
+    const isTargetSuper = Boolean(target.is_super_admin) || (target.email || "").toLowerCase() === "omraikar2128@gmail.com";
+    if (isTargetSuper) {
       notification.error("The Primary Administrator is permanent and cannot be deleted.");
       return;
     }
@@ -736,7 +737,7 @@ function UserManagement() {
                 </tr>
               ) : (
                 filteredUsers.map((u) => {
-                  const isSuper = u.is_super_admin || u.id === 1;
+                  const isSuper = Boolean(u.is_super_admin) || (u.email || "").toLowerCase() === "omraikar2128@gmail.com";
                   const isSelf = u.id === currentUserId;
 
                   const canEditThisUser =
@@ -1064,7 +1065,7 @@ function UserManagement() {
                 </label>
                 <input
                   type="email"
-                  placeholder="e.g. sarah.jenkins@dcshims.com"
+                  placeholder="e.g. employee@example.com"
                   value={formData.email}
                   disabled={!!editUser}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}

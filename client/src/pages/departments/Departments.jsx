@@ -62,7 +62,7 @@ function Departments() {
         name: dept.name || "",
         code: dept.name ? dept.name.slice(0, 4).toUpperCase() : "DEPT",
         employees: Number(dept.employee_count || 0),
-        location: "Hubballi",
+        location: dept.location || "Main Office",
         description: dept.description || "",
         status: dept.is_active !== false ? "Active" : "Inactive",
     });

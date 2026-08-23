@@ -11,7 +11,7 @@ const initialForm = {
     name: "",
     code: "",
     employees: 0,
-    location: "Hubballi",
+    location: "",
     description: "",
     status: "Active",
 };
@@ -161,23 +161,12 @@ function DepartmentModal({
                                 Location
                             </label>
 
-                            <select
+                            <input
                                 name="location"
-                                value={form.location}
+                                value={form.location || ""}
                                 onChange={handleChange}
-                            >
-                                <option>
-                                    Hubballi
-                                </option>
-
-                                <option>
-                                    Belagavi
-                                </option>
-
-                                <option>
-                                    Dharwad
-                                </option>
-                            </select>
+                                placeholder="e.g. Main Office / Bangalore"
+                            />
 
                         </div>
 

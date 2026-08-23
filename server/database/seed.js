@@ -108,70 +108,10 @@ const runSeed =
     try {
 
       await createSeedUser({
-
-        name:
-          "System Administrator",
-
-        email:
-          "admin@dcshims.com",
-
-        password:
-          "Admin@123",
-
-        role:
-          "ADMIN",
-
-      });
-
-
-      await createSeedUser({
-
-        name:
-          "HR Manager",
-
-        email:
-          "hr@dcshims.com",
-
-        password:
-          "HR@123",
-
-        role:
-          "HR",
-
-      });
-
-
-      await createSeedUser({
-
-        name:
-          "Finance Manager",
-
-        email:
-          "finance@dcshims.com",
-
-        password:
-          "Finance@123",
-
-        role:
-          "FINANCE",
-
-      });
-
-
-      await createSeedUser({
-
-        name:
-          "Test Employee",
-
-        email:
-          "employee@dcshims.com",
-
-        password:
-          "Employee@123",
-
-        role:
-          "EMPLOYEE",
-
+        name: "Om Raikar",
+        email: "omraikar2128@gmail.com",
+        password: "Admin@123",
+        role: "ADMIN",
       });
 
 

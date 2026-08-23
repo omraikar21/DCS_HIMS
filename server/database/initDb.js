@@ -251,7 +251,37 @@ const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_recruitment_status ON recruitment(status);
     `);
 
-    // 14. SEED SUPER ADMIN (omraikar2128@gmail.com / Admin@123)
+    // 14. PURGE ALL LEGACY DUMMY USERS & DUMMY SEED DEPARTMENTS
+    try {
+      await pool.query(`
+        DELETE FROM users 
+        WHERE email LIKE '%@dcshims.com' 
+           OR email IN ('admin@dcshims.com', 'hr@dcshims.com', 'finance@dcshims.com', 'employee@dcshims.com');
+      `);
+
+      await pool.query(`
+        DELETE FROM departments 
+        WHERE description IN (
+          'Core web architecture, backend APIs, and microservices',
+          'LLM pipelines, agentic workflows, and predictive modeling',
+          'Kubernetes infrastructure, CI/CD, and multi-cloud reliability',
+          'Smart sensors, edge telemetry, and firmware development',
+          'Talent management, employee relations, and HR policies',
+          'Financial planning, statutory tax compliance, and payroll',
+          'Design systems, prototyping, and modern user experiences',
+          'Automated testing, load testing, and release certification',
+          'Handles employee management and HR operations',
+          'Handles software and technology operations',
+          'Handles payroll and financial operations',
+          'Handles administrative activities',
+          'Handles daily organizational operations'
+        );
+      `);
+    } catch (cleanupErr) {
+      console.warn("[DB INIT] Cleanup notice:", cleanupErr.message);
+    }
+
+    // 15. SEED SUPER ADMIN (omraikar2128@gmail.com / Admin@123)
     const adminEmail = "omraikar2128@gmail.com";
     const adminCheck = await pool.query(
       "SELECT id FROM users WHERE email = $1",
@@ -266,6 +296,12 @@ const initDatabase = async () => {
         ON CONFLICT (email) DO NOTHING;
       `, [adminEmail, adminPass]);
       console.log(`[DB INIT] Primary Super Admin created (${adminEmail} / Admin@123).`);
+    } else {
+      // Ensure Om Raikar is set as super admin
+      await pool.query(
+        "UPDATE users SET is_super_admin = TRUE, role = 'ADMIN' WHERE email = $1",
+        [adminEmail]
+      );
     }
 
     console.log("[DB INIT] Database initialization completed successfully.");

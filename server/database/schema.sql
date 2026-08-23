@@ -493,73 +493,7 @@ LEFT JOIN departments d
     ON e.department_id = d.id
 ORDER BY e.id;*/
 
-/*INSERT INTO employees
-(
-    employee_code,
-    first_name,
-    last_name,
-    email,
-    phone,
-    department_id,
-    designation,
-    joining_date,
-    salary,
-    employment_status,
-    address
-)
-VALUES
-(
-    'EMP-1001',
-    'Arjun',
-    'Joshi',
-    'arjun.joshi@dcshims.com',
-    '9876543210',
-    2,
-    'Software Engineer',
-    '2025-07-15',
-    55000,
-    'ACTIVE',
-    'Hubballi'
-),
-(
-    'EMP-1002',
-    'Priya',
-    'Sharma',
-    'priya.sharma@dcshims.com',
-    '9876543211',
-    1,
-    'HR Executive',
-    '2025-06-10',
-    48000,
-    'ACTIVE',
-    'Dharwad'
-),
-(
-    'EMP-1003',
-    'Rahul',
-    'Patil',
-    'rahul.patil@dcshims.com',
-    '9876543212',
-    3,
-    'Finance Executive',
-    '2025-08-01',
-    52000,
-    'ACTIVE',
-    'Belagavi'
-),
-(
-    'EMP-1004',
-    'Sneha',
-    'Kulkarni',
-    'sneha.kulkarni@dcshims.com',
-    '9876543213',
-    2,
-    'UI Developer',
-    '2025-09-05',
-    50000,
-    'ACTIVE',
-    'Hubballi'
-);*/
+-- Employee records managed dynamically via API
 
 /*SELECT
     e.id,

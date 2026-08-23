@@ -35,26 +35,49 @@ function DocumentModal({ isOpen, onClose, onSave, employees = [] }) {
     });
   };
 
-  const handleEmployeeSelect = (e) => {
+  const handleEmployeeIdChange = (e) => {
     const val = e.target.value;
     const selected = employees.find(
       (emp) =>
         emp.employee_code === val ||
+        `DCS-EMP-${String(emp.id).padStart(3, "0")}` === val ||
         `EMP-${emp.id}` === val ||
         String(emp.id) === String(val)
     );
     if (selected) {
-      setForm({
-        ...form,
-        employeeId: selected.employee_code || `EMP-${selected.id}`,
+      setForm((prev) => ({
+        ...prev,
+        employeeId: selected.employee_code || `DCS-EMP-${String(selected.id).padStart(3, "0")}`,
         employeeName: `${selected.first_name || ""} ${selected.last_name || ""}`.trim(),
-        department: selected.department_name || form.department,
-      });
+        department: selected.department_name || prev.department,
+      }));
     } else {
-      setForm({
-        ...form,
+      setForm((prev) => ({
+        ...prev,
         employeeId: val,
-      });
+      }));
+    }
+  };
+
+  const handleEmployeeNameChange = (e) => {
+    const val = e.target.value;
+    const selected = employees.find(
+      (emp) =>
+        `${emp.first_name || ""} ${emp.last_name || ""}`.trim().toLowerCase() === val.trim().toLowerCase() ||
+        String(emp.id) === String(val)
+    );
+    if (selected) {
+      setForm((prev) => ({
+        ...prev,
+        employeeId: selected.employee_code || `DCS-EMP-${String(selected.id).padStart(3, "0")}`,
+        employeeName: `${selected.first_name || ""} ${selected.last_name || ""}`.trim(),
+        department: selected.department_name || prev.department,
+      }));
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        employeeName: val,
+      }));
     }
   };
 
@@ -93,8 +116,16 @@ function DocumentModal({ isOpen, onClose, onSave, employees = [] }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!form.employeeId.trim()) {
+      setError("Employee ID is required.");
+      return;
+    }
+    if (!form.employeeName.trim()) {
+      setError("Employee Name is required.");
+      return;
+    }
     if (!form.documentName.trim()) {
-      setError("Document name is required.");
+      setError("Document title is required.");
       return;
     }
     if (!form.fileData) {
@@ -115,7 +146,7 @@ function DocumentModal({ isOpen, onClose, onSave, employees = [] }) {
 
   return (
     <div className="modal-overlay">
-      <div className="document-modal" style={{ maxWidth: "520px" }}>
+      <div className="document-modal" style={{ maxWidth: "640px", width: "100%" }}>
         <div className="modal-header">
           <div>
             <p className="section-label">DOCUMENT DEPLOYMENT</p>
@@ -147,46 +178,70 @@ function DocumentModal({ isOpen, onClose, onSave, employees = [] }) {
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="form-grid" style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "14px" }}>
-            {/* EMPLOYEE ID REFERENCE */}
+          <div className="form-grid" style={{ padding: "20px 24px" }}>
+            {/* ROW 1: INDIVIDUAL EMPLOYEE ID SELECTION */}
             <div className="form-field">
-              <label>Employee ID (Main Reference)</label>
+              <label>Employee ID</label>
               {employees.length > 0 ? (
                 <select
+                  name="employeeId"
                   value={form.employeeId}
-                  onChange={handleEmployeeSelect}
+                  onChange={handleEmployeeIdChange}
                   required
                 >
                   <option value="">-- Select Employee ID --</option>
                   {employees.map((emp) => {
-                    const code = emp.employee_code || `EMP-${emp.id}`;
+                    const code = emp.employee_code || `DCS-EMP-${String(emp.id).padStart(3, "0")}`;
                     return (
                       <option key={emp.id} value={code}>
-                        {code} · {emp.first_name} {emp.last_name} ({emp.department_name || "General"})
+                        {code}
                       </option>
                     );
                   })}
                 </select>
               ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                  <input
-                    name="employeeId"
-                    value={form.employeeId}
-                    onChange={handleChange}
-                    placeholder="Employee ID (e.g. EMP-1001)"
-                    required
-                  />
-                  <input
-                    name="employeeName"
-                    value={form.employeeName}
-                    onChange={handleChange}
-                    placeholder="Employee Full Name"
-                    required
-                  />
-                </div>
+                <input
+                  name="employeeId"
+                  value={form.employeeId}
+                  onChange={handleChange}
+                  placeholder="e.g. DCS-EMP-001"
+                  required
+                />
               )}
             </div>
 
+            {/* ROW 1: INDIVIDUAL EMPLOYEE NAME SELECTION */}
+            <div className="form-field">
+              <label>Employee Name</label>
+              {employees.length > 0 ? (
+                <select
+                  name="employeeName"
+                  value={form.employeeName}
+                  onChange={handleEmployeeNameChange}
+                  required
+                >
+                  <option value="">-- Select Employee Name --</option>
+                  {employees.map((emp) => {
+                    const fullName = `${emp.first_name || ""} ${emp.last_name || ""}`.trim() || "Employee";
+                    return (
+                      <option key={emp.id} value={fullName}>
+                        {fullName}
+                      </option>
+                    );
+                  })}
+                </select>
+              ) : (
+                <input
+                  name="employeeName"
+                  value={form.employeeName}
+                  onChange={handleChange}
+                  placeholder="e.g. John Doe"
+                  required
+                />
+              )}
+            </div>
+
+            {/* ROW 2: DOCUMENT CATEGORY */}
             <div className="form-field">
               <label>Document Category</label>
               <select
@@ -202,6 +257,7 @@ function DocumentModal({ isOpen, onClose, onSave, employees = [] }) {
               </select>
             </div>
 
+            {/* ROW 2: DOCUMENT TITLE */}
             <div className="form-field">
               <label>Document Title</label>
               <input
@@ -213,8 +269,8 @@ function DocumentModal({ isOpen, onClose, onSave, employees = [] }) {
               />
             </div>
 
-            {/* PDF FILE PICKER */}
-            <div className="form-field">
+            {/* ROW 3: ATTACH PDF FILE (SPAN FULL WIDTH) */}
+            <div className="form-field full-width" style={{ gridColumn: "1 / -1" }}>
               <label>Attach PDF File (Max 5MB)</label>
               <input
                 type="file"
@@ -229,7 +285,7 @@ function DocumentModal({ isOpen, onClose, onSave, employees = [] }) {
                 style={{
                   border: "2px dashed #cbd5e1",
                   borderRadius: "8px",
-                  padding: "16px",
+                  padding: "18px 16px",
                   textAlign: "center",
                   cursor: "pointer",
                   backgroundColor: "#f8fafc",
@@ -238,11 +294,11 @@ function DocumentModal({ isOpen, onClose, onSave, employees = [] }) {
                 onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#A1238E")}
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#cbd5e1")}
               >
-                <Upload size={22} color="#A1238E" style={{ margin: "0 auto 6px" }} />
-                <p style={{ margin: 0, fontSize: "13.5px", fontWeight: "600", color: "#334155" }}>
+                <Upload size={24} color="#A1238E" style={{ margin: "0 auto 8px" }} />
+                <p style={{ margin: 0, fontSize: "14px", fontWeight: "600", color: "#334155" }}>
                   Click to select PDF document
                 </p>
-                <span style={{ fontSize: "11.5px", color: "#64748b" }}>
+                <span style={{ fontSize: "12px", color: "#64748b", marginTop: "2px", display: "inline-block" }}>
                   PDF format only · Maximum file size 5MB
                 </span>
               </div>
@@ -254,19 +310,20 @@ function DocumentModal({ isOpen, onClose, onSave, employees = [] }) {
                     alignItems: "center",
                     gap: "10px",
                     marginTop: "10px",
-                    padding: "8px 12px",
-                    backgroundColor: "#f0dced",
+                    padding: "10px 14px",
+                    backgroundColor: "#fdf2f8",
+                    border: "1px solid #fbcfe8",
                     borderRadius: "6px",
-                    fontSize: "12.5px",
+                    fontSize: "13px",
                     color: "#A1238E",
                     fontWeight: "600",
                   }}
                 >
-                  <FileText size={16} />
+                  <FileText size={18} />
                   <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {form.fileName}
                   </span>
-                  <span style={{ fontSize: "11px", color: "#64748b" }}>
+                  <span style={{ fontSize: "11.5px", color: "#64748b" }}>
                     {formatFileSize(form.fileSize)}
                   </span>
                 </div>

@@ -53,8 +53,8 @@ const recordAuditEvent = async (req, res) => {
     const newLog = await createAuditLog({
       eventAction,
       category,
-      actorName: actorName || req.user?.name || "System User",
-      actorEmail: actorEmail || req.user?.email || "user@dcshims.com",
+      actorName: actorName || req.user?.name || "Om Raikar",
+      actorEmail: actorEmail || req.user?.email || "omraikar2128@gmail.com",
       role: role || req.user?.role || "EMPLOYEE",
       details: details || "",
       status,

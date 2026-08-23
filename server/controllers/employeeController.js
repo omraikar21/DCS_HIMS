@@ -295,8 +295,8 @@ const create =
       createAuditLog({
         eventAction: "Employee Profile Provisioned",
         category: "EMPLOYEE",
-        actorName: req.user?.name || "HR Manager",
-        actorEmail: req.user?.email || "hr@dcshims.com",
+        actorName: req.user?.name || "Om Raikar",
+        actorEmail: req.user?.email || "omraikar2128@gmail.com",
         role: req.user?.role || "HR",
         details: `Provisioned ${firstName} ${lastName || ""} (${employee.employee_code || "Code Generated"}) as ${designation}.`,
         status: "SUCCESS",
@@ -467,8 +467,8 @@ const update =
       createAuditLog({
         eventAction: "Employee Profile Updated",
         category: "EMPLOYEE",
-        actorName: req.user?.name || "HR Manager",
-        actorEmail: req.user?.email || "hr@dcshims.com",
+        actorName: req.user?.name || "Om Raikar",
+        actorEmail: req.user?.email || "omraikar2128@gmail.com",
         role: req.user?.role || "HR",
         details: `Updated profile details for employee ${employee?.first_name || ""} ${employee?.last_name || ""} (ID: ${req.params.id}).`,
         status: "SUCCESS",
@@ -515,8 +515,8 @@ const remove =
       createAuditLog({
         eventAction: "Employee Record Removed",
         category: "EMPLOYEE",
-        actorName: req.user?.name || "Administrator",
-        actorEmail: req.user?.email || "admin@dcshims.com",
+        actorName: req.user?.name || "Om Raikar",
+        actorEmail: req.user?.email || "omraikar2128@gmail.com",
         role: req.user?.role || "ADMIN",
         details: `Archived/Deleted employee ID ${req.params.id}.`,
         status: "SUCCESS",

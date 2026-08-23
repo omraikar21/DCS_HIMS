@@ -157,7 +157,7 @@ const createNewUser = async ({ name, email, password, role, requester }) => {
     await createAuditLog({
       action: "PROVISION_USER_ACCOUNT",
       user_id: requester?.id || null,
-      user_email: requester?.email || "system@dcshims.com",
+      user_email: requester?.email || "omraikar2128@gmail.com",
       user_role: requesterRole,
       ip_address: "127.0.0.1",
       details: {
@@ -288,7 +288,7 @@ const removeUser = async (id, requester) => {
   const targetEmail = (targetUser.email || "").toLowerCase();
 
   // 1. Strict Primary Admin Protection (CANNOT BE DELETED)
-  if (targetUser.is_super_admin || targetUser.id === 1 || targetEmail === "omraikar2128@gmail.com") {
+  if (targetUser.is_super_admin || targetEmail === "omraikar2128@gmail.com") {
     throw new Error("The Primary Administrator account is permanent and cannot be deleted.");
   }
 
@@ -321,7 +321,7 @@ const removeUser = async (id, requester) => {
     await createAuditLog({
       action: "DELETE_USER_ACCOUNT",
       user_id: requester?.id || null,
-      user_email: requester?.email || "admin@dcshims.com",
+      user_email: requester?.email || "omraikar2128@gmail.com",
       user_role: requesterRole,
       ip_address: "127.0.0.1",
       details: {
