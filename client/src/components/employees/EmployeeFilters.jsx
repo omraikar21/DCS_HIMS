@@ -1,9 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Search,
-  SlidersHorizontal,
-  X,
-} from "lucide-react";
+import { Search, X } from "lucide-react";
 import { getDepartments } from "../../services/departmentService";
 
 const employeeStatuses = [
@@ -49,74 +45,46 @@ function EmployeeFilters({
 
   return (
     <div className="employee-filters">
-
       <div className="employee-search">
-
         <Search size={17} />
-
         <input
           type="text"
           placeholder="Search by name, ID or email..."
           value={search}
-          onChange={(e) =>
-            setSearch(e.target.value)
-          }
+          onChange={(e) => setSearch(e.target.value)}
         />
-
       </div>
-
-
-      <div className="filter-select">
-
-        <SlidersHorizontal size={16} />
-
-        <select
-          value={department}
-          onChange={(e) =>
-            setDepartment(e.target.value)
-          }
-        >
-          {departmentsList.map((item) => (
-            <option
-              key={item}
-              value={item}
-            >
-              {item}
-            </option>
-          ))}
-        </select>
-
-      </div>
-
 
       <select
         className="filter-dropdown"
-        value={status}
-        onChange={(e) =>
-          setStatus(e.target.value)
-        }
+        value={department}
+        onChange={(e) => setDepartment(e.target.value)}
       >
-        {employeeStatuses.map((item) => (
-          <option
-            key={item}
-            value={item}
-          >
+        {departmentsList.map((item) => (
+          <option key={item} value={item}>
             {item}
           </option>
         ))}
       </select>
 
+      <select
+        className="filter-dropdown"
+        value={status}
+        onChange={(e) => setStatus(e.target.value)}
+      >
+        {employeeStatuses.map((item) => (
+          <option key={item} value={item}>
+            {item}
+          </option>
+        ))}
+      </select>
 
       {hasFilters && (
-        <button
-          className="clear-filter-button"
-          onClick={clearFilters}
-        >
+        <button className="clear-filter-button" onClick={clearFilters}>
           <X size={14} />
           Clear
         </button>
       )}
-
     </div>
   );
 }
