@@ -37,6 +37,10 @@ function UserManagement() {
 
   const isAdmin = userRole === "ADMIN";
   const isHR = userRole === "HR";
+  const isSuperAdmin = Boolean(
+    user?.is_super_admin ||
+    (user?.email && user.email.toLowerCase().trim() === "omraikar2128@gmail.com")
+  );
 
   const [data, setData] = useState({
     users: [],
@@ -347,9 +351,9 @@ function UserManagement() {
   const getModalRoleMeta = () => {
     if (modalTargetRole === "ADMIN") {
       return {
-        title: editUser ? "Edit Administrator Account" : "Provision Administrator Account",
+        title: editUser ? "Edit Administrator Account" : (isSuperAdmin ? "Provision Secondary Administrator Account" : "Provision Administrator Account"),
         subtitle: "Assign secondary administrative access (up to 4 co-admins)",
-        roleLabel: "ADMINISTRATOR (Co-Admin)",
+        roleLabel: isSuperAdmin ? "SECONDARY ADMINISTRATOR (Co-Admin)" : "ADMINISTRATOR (Co-Admin)",
         icon: ShieldCheck,
         badgeBg: "#FFF0F7",
         badgeBorder: "#FCE7F3",
@@ -400,105 +404,147 @@ function UserManagement() {
 
         {/* UNIFIED EXECUTIVE ACTION BUTTONS */}
         <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
-          {isAdmin && (
+          {isSuperAdmin ? (
+            /* SUPER ADMIN: EXCLUSIVELY CAN PROVISION SECONDARY ADMINISTRATORS */
+            <button
+              type="button"
+              onClick={() => handleOpenCreateForRole("ADMIN")}
+              disabled={!canAddAdmin}
+              onMouseEnter={() => setHoveredBtn("ADMIN")}
+              onMouseLeave={() => setHoveredBtn(null)}
+              style={{
+                height: "38px",
+                padding: "0 18px",
+                borderRadius: "10px",
+                border: "1.5px solid #F3D3E7",
+                backgroundColor: !canAddAdmin
+                  ? "#F8FAFC"
+                  : hoveredBtn === "ADMIN"
+                  ? "#BE185D"
+                  : "#FFF0F7",
+                color: !canAddAdmin
+                  ? "#94A3B8"
+                  : hoveredBtn === "ADMIN"
+                  ? "#FFFFFF"
+                  : "#BE185D",
+                fontSize: "13px",
+                fontWeight: "700",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "7px",
+                cursor: canAddAdmin ? "pointer" : "not-allowed",
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                boxShadow: canAddAdmin && hoveredBtn === "ADMIN" ? "0 4px 12px rgba(190, 24, 93, 0.25)" : "none",
+                transform: canAddAdmin && hoveredBtn === "ADMIN" ? "translateY(-1px)" : "none",
+              }}
+              title={canAddAdmin ? "Provision Secondary Administrator Account (up to 4 co-admins)" : "Administrator Capacity Reached (4/4)"}
+            >
+              <ShieldCheck size={16} color={!canAddAdmin ? "#94A3B8" : hoveredBtn === "ADMIN" ? "#FFFFFF" : "#BE185D"} />
+              <span>+ Add Secondary Admin ({coAdminCount}/4)</span>
+            </button>
+          ) : (
+            /* SECONDARY ADMIN / HR: CAN ADD HR AND FINANCE (OR CO-ADMIN IF QUOTA PERMITS) */
             <>
-              {/* BUTTON 1: ADD ADMINISTRATOR */}
-              <button
-                type="button"
-                onClick={() => handleOpenCreateForRole("ADMIN")}
-                disabled={!canAddAdmin}
-                onMouseEnter={() => setHoveredBtn("ADMIN")}
-                onMouseLeave={() => setHoveredBtn(null)}
-                style={{
-                  height: "38px",
-                  padding: "0 18px",
-                  borderRadius: "10px",
-                  border: "1.5px solid #F3D3E7",
-                  backgroundColor: !canAddAdmin
-                    ? "#F8FAFC"
-                    : hoveredBtn === "ADMIN"
-                    ? "#BE185D"
-                    : "#FFF0F7",
-                  color: !canAddAdmin
-                    ? "#94A3B8"
-                    : hoveredBtn === "ADMIN"
-                    ? "#FFFFFF"
-                    : "#BE185D",
-                  fontSize: "13px",
-                  fontWeight: "700",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "7px",
-                  cursor: canAddAdmin ? "pointer" : "not-allowed",
-                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                  boxShadow: canAddAdmin && hoveredBtn === "ADMIN" ? "0 4px 12px rgba(190, 24, 93, 0.25)" : "none",
-                  transform: canAddAdmin && hoveredBtn === "ADMIN" ? "translateY(-1px)" : "none",
-                }}
-                title={canAddAdmin ? "Provision Administrator Account (up to 4 co-admins)" : "Administrator Capacity Reached (4/4)"}
-              >
-                <ShieldCheck size={16} color={!canAddAdmin ? "#94A3B8" : hoveredBtn === "ADMIN" ? "#FFFFFF" : "#BE185D"} />
-                <span>+ Add Administrator ({coAdminCount}/4)</span>
-              </button>
+              {isAdmin && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCreateForRole("ADMIN")}
+                    disabled={!canAddAdmin}
+                    onMouseEnter={() => setHoveredBtn("ADMIN")}
+                    onMouseLeave={() => setHoveredBtn(null)}
+                    style={{
+                      height: "38px",
+                      padding: "0 18px",
+                      borderRadius: "10px",
+                      border: "1.5px solid #F3D3E7",
+                      backgroundColor: !canAddAdmin
+                        ? "#F8FAFC"
+                        : hoveredBtn === "ADMIN"
+                        ? "#BE185D"
+                        : "#FFF0F7",
+                      color: !canAddAdmin
+                        ? "#94A3B8"
+                        : hoveredBtn === "ADMIN"
+                        ? "#FFFFFF"
+                        : "#BE185D",
+                      fontSize: "13px",
+                      fontWeight: "700",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "7px",
+                      cursor: canAddAdmin ? "pointer" : "not-allowed",
+                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                      boxShadow: canAddAdmin && hoveredBtn === "ADMIN" ? "0 4px 12px rgba(190, 24, 93, 0.25)" : "none",
+                      transform: canAddAdmin && hoveredBtn === "ADMIN" ? "translateY(-1px)" : "none",
+                    }}
+                    title={canAddAdmin ? "Provision Administrator Account (up to 4 co-admins)" : "Administrator Capacity Reached (4/4)"}
+                  >
+                    <ShieldCheck size={16} color={!canAddAdmin ? "#94A3B8" : hoveredBtn === "ADMIN" ? "#FFFFFF" : "#BE185D"} />
+                    <span>+ Add Administrator ({coAdminCount}/4)</span>
+                  </button>
 
-              {/* BUTTON 2: ADD HR MEMBER */}
-              <button
-                type="button"
-                onClick={() => handleOpenCreateForRole("HR")}
-                onMouseEnter={() => setHoveredBtn("HR")}
-                onMouseLeave={() => setHoveredBtn(null)}
-                style={{
-                  height: "38px",
-                  padding: "0 18px",
-                  borderRadius: "10px",
-                  border: "1.5px solid #DBEAFE",
-                  backgroundColor: hoveredBtn === "HR" ? "#1D4ED8" : "#EFF6FF",
-                  color: hoveredBtn === "HR" ? "#FFFFFF" : "#1D4ED8",
-                  fontSize: "13px",
-                  fontWeight: "700",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "7px",
-                  cursor: "pointer",
-                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                  boxShadow: hoveredBtn === "HR" ? "0 4px 12px rgba(29, 78, 216, 0.25)" : "none",
-                  transform: hoveredBtn === "HR" ? "translateY(-1px)" : "none",
-                }}
-                title="Provision HR Manager Account"
-              >
-                <Building size={16} color={hoveredBtn === "HR" ? "#FFFFFF" : "#1D4ED8"} />
-                <span>+ Add HR Member</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCreateForRole("HR")}
+                    onMouseEnter={() => setHoveredBtn("HR")}
+                    onMouseLeave={() => setHoveredBtn(null)}
+                    style={{
+                      height: "38px",
+                      padding: "0 18px",
+                      borderRadius: "10px",
+                      border: "1.5px solid #DBEAFE",
+                      backgroundColor: hoveredBtn === "HR" ? "#1D4ED8" : "#EFF6FF",
+                      color: hoveredBtn === "HR" ? "#FFFFFF" : "#1D4ED8",
+                      fontSize: "13px",
+                      fontWeight: "700",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "7px",
+                      cursor: "pointer",
+                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                      boxShadow: hoveredBtn === "HR" ? "0 4px 12px rgba(29, 78, 216, 0.25)" : "none",
+                      transform: hoveredBtn === "HR" ? "translateY(-1px)" : "none",
+                    }}
+                    title="Provision HR Manager Account"
+                  >
+                    <Building size={16} color={hoveredBtn === "HR" ? "#FFFFFF" : "#1D4ED8"} />
+                    <span>+ Add HR Member</span>
+                  </button>
+                </>
+              )}
+
+              {(isAdmin || isHR) && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenCreateForRole("FINANCE")}
+                  onMouseEnter={() => setHoveredBtn("FINANCE")}
+                  onMouseLeave={() => setHoveredBtn(null)}
+                  style={{
+                    height: "38px",
+                    padding: "0 18px",
+                    borderRadius: "10px",
+                    border: "1.5px solid #A7F3D0",
+                    backgroundColor: hoveredBtn === "FINANCE" ? "#047857" : "#ECFDF5",
+                    color: hoveredBtn === "FINANCE" ? "#FFFFFF" : "#047857",
+                    fontSize: "13px",
+                    fontWeight: "700",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "7px",
+                    cursor: "pointer",
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    boxShadow: hoveredBtn === "FINANCE" ? "0 4px 12px rgba(4, 120, 87, 0.25)" : "none",
+                    transform: hoveredBtn === "FINANCE" ? "translateY(-1px)" : "none",
+                  }}
+                  title="Provision Finance Team Member Account"
+                >
+                  <WalletCards size={16} color={hoveredBtn === "FINANCE" ? "#FFFFFF" : "#047857"} />
+                  <span>+ Add Finance Member</span>
+                </button>
+              )}
             </>
           )}
-
-          {/* BUTTON 3: ADD FINANCE MEMBER */}
-          <button
-            type="button"
-            onClick={() => handleOpenCreateForRole("FINANCE")}
-            onMouseEnter={() => setHoveredBtn("FINANCE")}
-            onMouseLeave={() => setHoveredBtn(null)}
-            style={{
-              height: "38px",
-              padding: "0 18px",
-              borderRadius: "10px",
-              border: "1.5px solid #A7F3D0",
-              backgroundColor: hoveredBtn === "FINANCE" ? "#047857" : "#ECFDF5",
-              color: hoveredBtn === "FINANCE" ? "#FFFFFF" : "#047857",
-              fontSize: "13px",
-              fontWeight: "700",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "7px",
-              cursor: "pointer",
-              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-              boxShadow: hoveredBtn === "FINANCE" ? "0 4px 12px rgba(4, 120, 87, 0.25)" : "none",
-              transform: hoveredBtn === "FINANCE" ? "translateY(-1px)" : "none",
-            }}
-            title="Provision Finance Team Member Account"
-          >
-            <WalletCards size={16} color={hoveredBtn === "FINANCE" ? "#FFFFFF" : "#047857"} />
-            <span>+ Add Finance Member</span>
-          </button>
         </div>
       </div>
 
@@ -560,8 +606,8 @@ function UserManagement() {
           </div>
           <p style={{ margin: 0, fontSize: "12.5px", color: "#64748B" }}>
             {remainingSlots > 0
-              ? `${remainingSlots} administrator slot(s) available for delegation.`
-              : "Maximum capacity reached (4 co-admins assigned)."}
+              ? `${remainingSlots} secondary administrator slot(s) available for delegation.`
+              : "Maximum capacity reached (4 secondary admins assigned)."}
           </p>
         </div>
 
@@ -581,7 +627,7 @@ function UserManagement() {
                 GOVERNANCE & SECURITY
               </span>
               <h3 style={{ margin: "4px 0 0 0", fontSize: "18px", color: "#0F172A", fontWeight: "800" }}>
-                Primary Admin Protected
+                Super Admin Protected
               </h3>
             </div>
             <div
@@ -600,11 +646,11 @@ function UserManagement() {
             </div>
           </div>
           <p style={{ margin: 0, fontSize: "12.5px", color: "#64748B", lineHeight: "1.45" }}>
-            The root enterprise administrator account is permanent and cannot be deleted or demoted.
+            The root developer administrator account is permanent and cannot be deleted or demoted.
           </p>
         </div>
 
-        {/* HR & FINANCE CAPABILITY */}
+        {/* CARD 3: ROLE AUTHORITY & PROVISIONING DELEGATION */}
         <div
           className="dashboard-card"
           style={{
@@ -617,10 +663,10 @@ function UserManagement() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
             <div>
               <span style={{ fontSize: "11px", fontWeight: "800", color: "#2563EB", letterSpacing: "0.5px" }}>
-                DEPARTMENT DELEGATION
+                {isSuperAdmin ? "ADMINISTRATIVE PRIVILEGES" : "DEPARTMENT DELEGATION"}
               </span>
               <h3 style={{ margin: "4px 0 0 0", fontSize: "18px", color: "#0F172A", fontWeight: "800" }}>
-                HR & Finance Provisioning
+                {isSuperAdmin ? "Total Office Management" : "HR & Finance Provisioning"}
               </h3>
             </div>
             <div
@@ -635,11 +681,13 @@ function UserManagement() {
                 justifyContent: "center",
               }}
             >
-              <Users size={20} />
+              {isSuperAdmin ? <ShieldCheck size={20} /> : <Users size={20} />}
             </div>
           </div>
           <p style={{ margin: 0, fontSize: "12.5px", color: "#64748B", lineHeight: "1.45" }}>
-            HR managers have dedicated authority to provision, update, and manage Finance team members.
+            {isSuperAdmin
+              ? "Provisioned Secondary Administrators manage all employees, departments, HR & Finance teams, payroll, and corporate operations."
+              : "HR managers have dedicated authority to provision, update, and manage Finance team members."}
           </p>
         </div>
       </div>

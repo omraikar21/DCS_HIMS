@@ -69,6 +69,15 @@ const createNewUser = async ({ name, email, password, role, requester }) => {
   }
 
   // 2. Enforce Role Creation Hierarchy
+  const isRequesterSuperAdmin = Boolean(
+    requester?.is_super_admin ||
+    (requester?.email && requester.email.toLowerCase().trim() === "omraikar2128@gmail.com")
+  );
+
+  if (isRequesterSuperAdmin && targetRole !== "ADMIN") {
+    throw new Error("Super Administrator can only provision Secondary Administrators.");
+  }
+
   if (targetRole === "ADMIN") {
     if (requesterRole !== "ADMIN") {
       throw new Error("Unauthorized. Only administrators can create administrator accounts.");

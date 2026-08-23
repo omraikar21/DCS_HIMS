@@ -76,6 +76,11 @@ function CompanyAnnouncementsCard({ limit = 3 }) {
     }
   };
 
+  const isSuperAdmin = Boolean(
+    user?.is_super_admin ||
+    (user?.email && user.email.toLowerCase().trim() === "omraikar2128@gmail.com")
+  );
+
   const displayList = announcements.slice(0, limit);
 
   return (
@@ -87,58 +92,62 @@ function CompanyAnnouncementsCard({ limit = 3 }) {
             Company Notices & Announcements
           </h3>
           <p style={{ margin: "4px 0 0 0", color: "#64748b", fontSize: "13px" }}>
-            Live circulars, policy updates, and executive broadcasts
+            {isSuperAdmin
+              ? "Read-only view of internal company announcements posted by Secondary Administrators and HR managers."
+              : "Live circulars, policy updates, and executive broadcasts"}
           </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          {canPublish && (
-            <button
-              type="button"
-              onClick={() => setModalOpen(true)}
+        {!isSuperAdmin && (
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            {canPublish && (
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid #F3D3E7",
+                  background: "#FFF0F7",
+                  color: "#DB2777",
+                  fontSize: "12px",
+                  fontWeight: "700",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#DB2777";
+                  e.currentTarget.style.color = "#FFFFFF";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "#FFF0F7";
+                  e.currentTarget.style.color = "#DB2777";
+                }}
+              >
+                <PlusCircle size={14} />
+                <span>Post Announcement</span>
+              </button>
+            )}
+
+            <Link
+              to="/reports"
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "6px 12px",
-                borderRadius: "8px",
-                border: "1px solid #F3D3E7",
-                background: "#FFF0F7",
                 color: "#DB2777",
-                fontSize: "12px",
+                fontSize: "13px",
                 fontWeight: "700",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#DB2777";
-                e.currentTarget.style.color = "#FFFFFF";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#FFF0F7";
-                e.currentTarget.style.color = "#DB2777";
+                textDecoration: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
               }}
             >
-              <PlusCircle size={14} />
-              <span>Post Announcement</span>
-            </button>
-          )}
-
-          <Link
-            to="/reports"
-            style={{
-              color: "#DB2777",
-              fontSize: "13px",
-              fontWeight: "700",
-              textDecoration: "none",
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-            }}
-          >
-            View Reports <ArrowRight size={14} />
-          </Link>
-        </div>
+              View Reports <ArrowRight size={14} />
+            </Link>
+          </div>
+        )}
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px", flex: 1 }}>
