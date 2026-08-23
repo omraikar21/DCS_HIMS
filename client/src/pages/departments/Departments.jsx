@@ -5,6 +5,10 @@ import {
 } from "react";
 
 import {
+    useNavigate,
+} from "react-router-dom";
+
+import {
     Plus,
     Building2,
 } from "lucide-react";
@@ -29,6 +33,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useNotification } from "../../hooks/useNotification";
 
 function Departments() {
+    const navigate = useNavigate();
     const { role } = useAuth();
     const notification = useNotification();
     const canManageDepartments = ["ADMIN", "HR"].includes((role || "").toUpperCase());
@@ -162,13 +167,8 @@ function Departments() {
     };
 
 
-    const handleView = (
-        department
-    ) => {
-
-        window.location.href =
-            `/departments/${department.databaseId || department.id}`;
-
+    const handleView = (department) => {
+        navigate(`/departments/${department.databaseId || department.id}`);
     };
 
 

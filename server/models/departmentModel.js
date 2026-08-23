@@ -30,7 +30,7 @@ const getAllDepartments =
 
 
 // ------------------------------------------
-// GET DEPARTMENT BY ID
+// GET DEPARTMENT BY ID (WITH EMPLOYEES)
 // ------------------------------------------
 
 const getDepartmentById =
@@ -50,7 +50,38 @@ const getDepartmentById =
         [id]
       );
 
-    return result.rows[0];
+    if (!result.rows[0]) {
+      return null;
+    }
+
+    const empResult = await pool.query(
+      `
+      SELECT 
+        e.id,
+        e.employee_code,
+        e.first_name,
+        e.last_name,
+        e.email,
+        e.phone,
+        e.designation,
+        e.employment_status,
+        e.joining_date,
+        e.salary,
+        e.address,
+        e.avatar,
+        u.role AS user_role
+      FROM employees e
+      LEFT JOIN users u ON u.id = e.user_id
+      WHERE e.department_id = $1
+      ORDER BY e.id ASC
+      `,
+      [id]
+    );
+
+    return {
+      ...result.rows[0],
+      employees_list: empResult.rows,
+    };
   };
 
 
