@@ -31,7 +31,7 @@ const router =
 
 // ------------------------------------------
 // GET ALL
-// ADMIN + FINANCE
+// ADMIN + FINANCE + HR
 // ------------------------------------------
 
 router.get(
@@ -39,7 +39,8 @@ router.get(
   authenticateToken,
   authorizeRoles(
     "ADMIN",
-    "FINANCE"
+    "FINANCE",
+    "HR"
   ),
   getAll
 );
@@ -47,7 +48,7 @@ router.get(
 
 // ------------------------------------------
 // GET BY ID
-// ADMIN + FINANCE
+// ADMIN + FINANCE + HR
 // ------------------------------------------
 
 router.get(
@@ -55,7 +56,8 @@ router.get(
   authenticateToken,
   authorizeRoles(
     "ADMIN",
-    "FINANCE"
+    "FINANCE",
+    "HR"
   ),
   getById
 );
@@ -63,7 +65,7 @@ router.get(
 
 // ------------------------------------------
 // CREATE
-// ADMIN + FINANCE
+// ADMIN + FINANCE + HR
 // ------------------------------------------
 
 router.post(
@@ -71,7 +73,8 @@ router.post(
   authenticateToken,
   authorizeRoles(
     "ADMIN",
-    "FINANCE"
+    "FINANCE",
+    "HR"
   ),
   create
 );
@@ -79,7 +82,7 @@ router.post(
 
 // ------------------------------------------
 // UPDATE
-// ADMIN + FINANCE
+// ADMIN + FINANCE + HR
 // ------------------------------------------
 
 router.put(
@@ -87,7 +90,8 @@ router.put(
   authenticateToken,
   authorizeRoles(
     "ADMIN",
-    "FINANCE"
+    "FINANCE",
+    "HR"
   ),
   update
 );
@@ -95,7 +99,7 @@ router.put(
 
 // ------------------------------------------
 // DELETE
-// ADMIN + FINANCE
+// ADMIN + FINANCE + HR
 // ------------------------------------------
 
 router.delete(
@@ -103,7 +107,8 @@ router.delete(
   authenticateToken,
   authorizeRoles(
     "ADMIN",
-    "FINANCE"
+    "FINANCE",
+    "HR"
   ),
   remove
 );

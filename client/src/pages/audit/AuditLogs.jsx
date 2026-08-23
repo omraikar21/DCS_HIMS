@@ -15,11 +15,42 @@ import {
   CheckCircle2,
   Printer,
   Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useNotification } from "../../hooks/useNotification";
 import { getAuditLogs } from "../../services/auditService";
 import { getLoadedSettings } from "../../services/settingsService";
+
+// Helper to format raw JSON or long detail strings into clear human-readable text
+const formatAuditDetails = (raw) => {
+  if (!raw) return "Operation verified and recorded.";
+  if (typeof raw === "string" && raw.trim().startsWith("{") && raw.trim().endsWith("}")) {
+    try {
+      const obj = JSON.parse(raw);
+      const parts = [];
+      if (obj.createdEmail) parts.push(`User: ${obj.createdEmail}`);
+      if (obj.createdRole) parts.push(`Role: ${obj.createdRole}`);
+      if (obj.updatedEmail) parts.push(`User: ${obj.updatedEmail}`);
+      if (obj.targetRole) parts.push(`Role: ${obj.targetRole}`);
+      if (obj.employeeName) parts.push(`Employee: ${obj.employeeName}`);
+      if (obj.documentName) parts.push(`Doc: ${obj.documentName}`);
+      if (obj.reportTitle) parts.push(`Report: ${obj.reportTitle}`);
+      if (obj.action) parts.push(`Action: ${obj.action}`);
+      if (obj.amount) parts.push(`Amount: ₹${Number(obj.amount).toLocaleString("en-IN")}`);
+      if (parts.length > 0) return parts.join(" · ");
+      return Object.entries(obj)
+        .slice(0, 3)
+        .map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`)
+        .join(" · ");
+    } catch {
+      return raw;
+    }
+  }
+  return raw;
+};
 
 function AuditLogs() {
   const { user, role } = useAuth();
@@ -31,6 +62,9 @@ function AuditLogs() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState("ALL");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
+  const [timeRange, setTimeRange] = useState("ALL"); // "2DAYS", "7DAYS", "30DAYS", "ALL"
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   // Fetch live audit logs from backend database
   const fetchLogs = async () => {
@@ -50,15 +84,22 @@ function AuditLogs() {
     fetchLogs();
   }, []);
 
+  // Filter logs based on search, role, category, and date range
   const filteredLogs = useMemo(() => {
+    const now = Date.now();
+    const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+
     return logs.filter((log) => {
       const code = log.logCode || `LOG-${log.id}`;
       const action = log.eventAction || "";
       const actor = log.actorName || "";
       const email = log.actorEmail || "";
-      const details = log.details || "";
+      const details = typeof log.details === "string" ? log.details : JSON.stringify(log.details || "");
 
       const matchesSearch =
+        !searchTerm ||
         code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         action.toLowerCase().includes(searchTerm.toLowerCase()) ||
         actor.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -68,9 +109,31 @@ function AuditLogs() {
       const matchesRole = selectedRole === "ALL" || log.role === selectedRole;
       const matchesCategory = selectedCategory === "ALL" || log.category === selectedCategory;
 
-      return matchesSearch && matchesRole && matchesCategory;
+      // Time Filter (e.g. Last 2 Days fresh page)
+      let matchesTime = true;
+      if (timeRange !== "ALL") {
+        const logDate = new Date(log.createdAt || log.created_at || Date.now()).getTime();
+        const diff = now - logDate;
+        if (timeRange === "2DAYS") matchesTime = diff <= twoDaysMs;
+        else if (timeRange === "7DAYS") matchesTime = diff <= sevenDaysMs;
+        else if (timeRange === "30DAYS") matchesTime = diff <= thirtyDaysMs;
+      }
+
+      return matchesSearch && matchesRole && matchesCategory && matchesTime;
     });
-  }, [logs, searchTerm, selectedRole, selectedCategory]);
+  }, [logs, searchTerm, selectedRole, selectedCategory, timeRange]);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedRole, selectedCategory, timeRange]);
+
+  // Pagination calculation
+  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / pageSize));
+  const paginatedLogs = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredLogs.slice(startIndex, startIndex + pageSize);
+  }, [filteredLogs, currentPage, pageSize]);
 
   // Export CSV
   const handleExportCSV = () => {
@@ -78,7 +141,7 @@ function AuditLogs() {
     const rows = filteredLogs
       .map(
         (l) =>
-          `"${l.logCode || `LOG-${l.id}`}","${l.eventAction}","${l.category}","${l.actorName}","${l.actorEmail}","${l.role}","${l.details || ""}","${l.formattedTimestamp || l.createdAt || "2026-08-21"}","${l.status}"`
+          `"${l.logCode || `LOG-${l.id}`}","${l.eventAction}","${l.category}","${l.actorName}","${l.actorEmail}","${l.role}","${(formatAuditDetails(l.details) || "").replace(/"/g, '""')}","${l.formattedTimestamp || l.createdAt || "2026-08-21"}","${l.status}"`
       )
       .join("\n");
 
@@ -121,7 +184,7 @@ function AuditLogs() {
 
             table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12.5px; }
             th { text-align: left; background: #F8F2FA; padding: 9px 10px; border-bottom: 2px solid #DDD2E2; color: #18243A; font-weight: 800; font-size: 12px; }
-            td { padding: 9px 10px; border-bottom: 1px solid #DDD2E2; vertical-align: top; }
+            td { padding: 9px 10px; border-bottom: 1px solid #DDD2E2; vertical-align: top; word-break: break-word; }
             .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10.5px; font-weight: 700; }
             .badge-success { background: #EDF9F2; color: #2E9B67; border: 1px solid #A3E4C3; }
             .badge-purple { background: #F8F2FA; color: #7B2A9B; border: 1px solid #DDD2E2; }
@@ -177,7 +240,7 @@ function AuditLogs() {
                       <div style="font-size: 11px; color: #64748b;">${l.actorEmail}</div>
                     </td>
                     <td><span class="badge badge-purple">${l.role}</span></td>
-                    <td style="max-width: 250px; color: #475569;">${l.details || "Operation verified."}</td>
+                    <td style="max-width: 250px; color: #475569;">${formatAuditDetails(l.details)}</td>
                     <td style="white-space: nowrap; color: #18243A; font-weight: 600;">${l.formattedTimestamp || l.createdAt || "2026-08-21"}</td>
                     <td><span class="badge badge-success">${l.status}</span></td>
                   </tr>
@@ -202,15 +265,20 @@ function AuditLogs() {
   };
 
   return (
-    <div className="audit-logs-page">
-      <div className="module-heading">
+    <div className="audit-logs-page" style={{ padding: "0 0 40px 0" }}>
+      {/* PAGE HEADER */}
+      <div className="module-heading" style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "16px", marginBottom: "20px" }}>
         <div>
           <p className="section-label">SECURITY, COMPLIANCE & GOVERNANCE</p>
-          <h1>Enterprise Audit Trail</h1>
-          <p>Live chronological tracking of system mutations, employee enrollments, reports, and administrative authorizations.</p>
+          <h1 style={{ margin: "4px 0", fontSize: "24px", fontWeight: "800", color: "#18243A" }}>
+            Enterprise Audit Trail
+          </h1>
+          <p style={{ margin: 0, fontSize: "13.5px", color: "#64748b" }}>
+            Live chronological tracking of system mutations, enrollments, reports, and administrative authorizations.
+          </p>
         </div>
 
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
           <button
             className="secondary-button"
             onClick={fetchLogs}
@@ -223,6 +291,8 @@ function AuditLogs() {
               borderColor: "#DDD2E2",
               color: "#18243A",
               fontSize: "13px",
+              borderRadius: "8px",
+              cursor: "pointer",
             }}
           >
             <RefreshCw size={14} className={loading ? "spin" : ""} />
@@ -240,6 +310,8 @@ function AuditLogs() {
               borderColor: "#DDD2E2",
               color: "#18243A",
               fontSize: "13px",
+              borderRadius: "8px",
+              cursor: "pointer",
             }}
           >
             <FileSpreadsheet size={14} />
@@ -256,6 +328,8 @@ function AuditLogs() {
               padding: "8px 16px",
               fontSize: "13px",
               background: "linear-gradient(135deg, #A51D8D 0%, #7B2A9B 100%)",
+              borderRadius: "8px",
+              cursor: "pointer",
             }}
           >
             <Printer size={14} />
@@ -267,7 +341,7 @@ function AuditLogs() {
               display: "inline-flex",
               alignItems: "center",
               gap: "6px",
-              padding: "8px 14px",
+              padding: "7px 12px",
               backgroundColor: "#EDF9F2",
               color: "#2E9B67",
               border: "1px solid #A3E4C3",
@@ -289,17 +363,16 @@ function AuditLogs() {
           flexWrap: "wrap",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: "14px",
+          gap: "12px",
           marginBottom: "18px",
-          marginTop: "12px",
           backgroundColor: "#FFFFFF",
           padding: "14px 18px",
           borderRadius: "12px",
           border: "1px solid #DDD2E2",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: "260px" }}>
-          <div className="input-wrapper" style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: "240px" }}>
+          <div className="input-wrapper" style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
             <Search size={16} color="#8492A6" />
             <input
               type="text"
@@ -311,9 +384,23 @@ function AuditLogs() {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+          {/* Time Range Filter (2 Days Fresh Page) */}
+          <div className="input-wrapper" style={{ padding: "6px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
+            <select
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value)}
+              style={{ border: "none", background: "transparent", fontSize: "13px", color: "#18243A", outline: "none", fontWeight: "700" }}
+            >
+              <option value="ALL">All Recorded Logs</option>
+              <option value="2DAYS">Last 2 Days (Fresh Logs)</option>
+              <option value="7DAYS">Last 7 Days</option>
+              <option value="30DAYS">Last 30 Days</option>
+            </select>
+          </div>
+
           {/* Category Filter */}
-          <div className="input-wrapper" style={{ padding: "6px 12px" }}>
+          <div className="input-wrapper" style={{ padding: "6px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
@@ -330,7 +417,7 @@ function AuditLogs() {
           </div>
 
           {/* Role Filter */}
-          <div className="input-wrapper" style={{ padding: "6px 12px" }}>
+          <div className="input-wrapper" style={{ padding: "6px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
             <select
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
@@ -347,104 +434,249 @@ function AuditLogs() {
         </div>
       </div>
 
-      {/* AUDIT LOG TABLE */}
-      <section className="dashboard-card" style={{ background: "#FFFFFF", border: "1px solid #DDD2E2" }}>
-        <div className="card-header" style={{ paddingBottom: "14px", borderBottom: "1px solid #DDD2E2" }}>
+      {/* AUDIT LOG TABLE CARD */}
+      <section className="dashboard-card" style={{ background: "#FFFFFF", border: "1px solid #DDD2E2", borderRadius: "12px", overflow: "hidden", padding: 0 }}>
+        <div className="card-header" style={{ padding: "16px 20px", borderBottom: "1px solid #DDD2E2", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", backgroundColor: "#fafbfc" }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: "17px", color: "#18243A", fontWeight: "800" }}>
+            <h3 style={{ margin: 0, fontSize: "16px", color: "#18243A", fontWeight: "800" }}>
               Active Security Log Stream ({filteredLogs.length} Records)
             </h3>
-            <p style={{ margin: "3px 0 0", fontSize: "13px", color: "#64748b" }}>
-              Database-backed audit chain chronologically tracking all actor operations.
+            <p style={{ margin: "2px 0 0", fontSize: "12.5px", color: "#64748b" }}>
+              {timeRange === "2DAYS" ? "Showing fresh logs generated within the last 2 days." : "Database-backed audit chain tracking all operations with 10 records per page."}
             </p>
+          </div>
+
+          <div style={{ fontSize: "12.5px", fontWeight: "700", color: "#9B2282" }}>
+            Page {currentPage} of {totalPages}
           </div>
         </div>
 
-        <div className="table-wrapper">
-          <table>
+        {/* RESPONSIVE TABLE WRAPPER */}
+        <div style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+          <table style={{ width: "100%", minWidth: "960px", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
-              <tr>
-                <th>Log Code</th>
-                <th>Event Action</th>
-                <th>Category</th>
-                <th>Actor & Email</th>
-                <th>Role</th>
-                <th>Audit Details</th>
-                <th>Date & Time</th>
-                <th>Status</th>
+              <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", width: "110px" }}>Log Code</th>
+                <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", width: "160px" }}>Event Action</th>
+                <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", width: "100px" }}>Category</th>
+                <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", width: "180px" }}>Actor & Email</th>
+                <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", width: "90px" }}>Role</th>
+                <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", minWidth: "240px", maxWidth: "340px" }}>Audit Details</th>
+                <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", width: "180px", whiteSpace: "nowrap" }}>Date & Time</th>
+                <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", width: "90px" }}>Status</th>
               </tr>
             </thead>
             <tbody>
-              {filteredLogs.map((log) => (
-                <tr key={log.id || log.logCode}>
-                  <td>
-                    <strong style={{ color: "#A51D8D", fontSize: "12.5px" }}>{log.logCode || `LOG-${log.id}`}</strong>
-                  </td>
-                  <td>
-                    <strong style={{ color: "#18243A", fontSize: "13px" }}>{log.eventAction}</strong>
-                  </td>
-                  <td>
-                    <span
-                      style={{
-                        padding: "2px 8px",
-                        backgroundColor: "#F8F2FA",
-                        border: "1px solid #DDD2E2",
-                        borderRadius: "4px",
-                        fontSize: "11px",
-                        fontWeight: "700",
-                        color: "#7B2A9B",
-                      }}
-                    >
-                      {log.category}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ display: "flex", flexDirection: "column" }}>
-                      <strong style={{ fontSize: "13px", color: "#18243A" }}>{log.actorName}</strong>
-                      <span style={{ fontSize: "11.5px", color: "#64748b" }}>{log.actorEmail}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span
-                      className="status-badge"
-                      style={{
-                        fontSize: "11px",
-                        padding: "3px 9px",
-                        backgroundColor: log.role === "ADMIN" ? "#F8F2FA" : "#EDF9F2",
-                        color: log.role === "ADMIN" ? "#A51D8D" : "#2E9B67",
-                        border: `1px solid ${log.role === "ADMIN" ? "#DDD2E2" : "#A3E4C3"}`,
-                      }}
-                    >
-                      {log.role}
-                    </span>
-                  </td>
-                  <td style={{ maxWidth: "280px", fontSize: "12.5px", color: "#475569" }}>
-                    {log.details || "Operation verified."}
-                  </td>
-                  <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: "5px", color: "#18243A", fontWeight: "600", fontSize: "12px", whiteSpace: "nowrap" }}>
-                      <Calendar size={13} color="#8492A6" />
-                      <span>{log.formattedTimestamp || log.createdAt || "2026-08-21 12:00:00 IST"}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span
-                      className="status-badge"
-                      style={{
-                        backgroundColor: "#EDF9F2",
-                        color: "#2E9B67",
-                        border: "1px solid #A3E4C3",
-                        fontSize: "11px",
-                        padding: "3px 9px",
-                      }}
-                    >
-                      {log.status}
-                    </span>
+              {loading ? (
+                <tr>
+                  <td colSpan="8" style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
+                    Loading audit stream...
                   </td>
                 </tr>
-              ))}
+              ) : paginatedLogs.length === 0 ? (
+                <tr>
+                  <td colSpan="8" style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
+                    No audit records found matching your filters.
+                  </td>
+                </tr>
+              ) : (
+                paginatedLogs.map((log) => (
+                  <tr
+                    key={log.id || log.logCode}
+                    style={{
+                      borderBottom: "1px solid #f1f5f9",
+                      transition: "background-color 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#faf5f9")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                  >
+                    <td style={{ padding: "12px 16px", verticalAlign: "middle" }}>
+                      <strong style={{ color: "#A51D8D", fontSize: "12px", fontFamily: "monospace" }}>
+                        {log.logCode || `LOG-${log.id}`}
+                      </strong>
+                    </td>
+                    <td style={{ padding: "12px 16px", verticalAlign: "middle" }}>
+                      <strong style={{ color: "#18243A", fontSize: "13px", display: "block" }}>
+                        {log.eventAction}
+                      </strong>
+                    </td>
+                    <td style={{ padding: "12px 16px", verticalAlign: "middle" }}>
+                      <span
+                        style={{
+                          padding: "2px 8px",
+                          backgroundColor: "#F8F2FA",
+                          border: "1px solid #DDD2E2",
+                          borderRadius: "4px",
+                          fontSize: "11px",
+                          fontWeight: "700",
+                          color: "#7B2A9B",
+                          display: "inline-block",
+                        }}
+                      >
+                        {log.category}
+                      </span>
+                    </td>
+                    <td style={{ padding: "12px 16px", verticalAlign: "middle" }}>
+                      <div style={{ display: "flex", flexDirection: "column" }}>
+                        <strong style={{ fontSize: "13px", color: "#18243A" }}>{log.actorName}</strong>
+                        <span style={{ fontSize: "11.5px", color: "#64748b" }}>{log.actorEmail}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: "12px 16px", verticalAlign: "middle" }}>
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: "700",
+                          padding: "2px 8px",
+                          borderRadius: "4px",
+                          backgroundColor: log.role === "ADMIN" ? "#F8F2FA" : "#EDF9F2",
+                          color: log.role === "ADMIN" ? "#A51D8D" : "#2E9B67",
+                          border: `1px solid ${log.role === "ADMIN" ? "#DDD2E2" : "#A3E4C3"}`,
+                          display: "inline-block",
+                        }}
+                      >
+                        {log.role}
+                      </span>
+                    </td>
+                    <td
+                      style={{
+                        padding: "12px 16px",
+                        verticalAlign: "middle",
+                        fontSize: "12.5px",
+                        color: "#334155",
+                        wordBreak: "break-word",
+                        overflowWrap: "anywhere",
+                        lineHeight: "1.45",
+                        maxWidth: "340px",
+                      }}
+                    >
+                      {formatAuditDetails(log.details)}
+                    </td>
+                    <td style={{ padding: "12px 16px", verticalAlign: "middle", whiteSpace: "nowrap" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#334155", fontWeight: "600", fontSize: "12px" }}>
+                        <Calendar size={13} color="#94a3b8" />
+                        <span>{log.formattedTimestamp || log.createdAt || "2026-08-23 12:00:00 IST"}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: "12px 16px", verticalAlign: "middle" }}>
+                      <span
+                        style={{
+                          backgroundColor: "#EDF9F2",
+                          color: "#2E9B67",
+                          border: "1px solid #A3E4C3",
+                          fontSize: "11px",
+                          fontWeight: "800",
+                          padding: "3px 8px",
+                          borderRadius: "4px",
+                          display: "inline-block",
+                        }}
+                      >
+                        {log.status || "SUCCESS"}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
+        </div>
+
+        {/* PAGINATION TOOLBAR (10 LOGS PER PAGE) */}
+        <div
+          style={{
+            padding: "14px 20px",
+            borderTop: "1px solid #e2e8f0",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            backgroundColor: "#ffffff",
+          }}
+        >
+          <div style={{ fontSize: "13px", color: "#64748b" }}>
+            Showing <strong>{filteredLogs.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}</strong> to{" "}
+            <strong>{Math.min(currentPage * pageSize, filteredLogs.length)}</strong> of{" "}
+            <strong>{filteredLogs.length}</strong> records
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <button
+              type="button"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              style={{
+                padding: "6px 12px",
+                borderRadius: "6px",
+                border: "1px solid #cbd5e1",
+                backgroundColor: currentPage === 1 ? "#f8fafc" : "#ffffff",
+                color: currentPage === 1 ? "#94a3b8" : "#1e293b",
+                fontSize: "12.5px",
+                fontWeight: "600",
+                cursor: currentPage === 1 ? "not-allowed" : "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              <ChevronLeft size={15} />
+              Previous
+            </button>
+
+            {/* Page Number Pills */}
+            <div style={{ display: "flex", gap: "4px" }}>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                .map((pageNum, idx, arr) => {
+                  const prev = arr[idx - 1];
+                  const showEllipsis = prev && pageNum - prev > 1;
+
+                  return (
+                    <span key={pageNum} style={{ display: "flex", alignItems: "center" }}>
+                      {showEllipsis && <span style={{ padding: "0 4px", color: "#94a3b8" }}>...</span>}
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(pageNum)}
+                        style={{
+                          padding: "6px 11px",
+                          borderRadius: "6px",
+                          border: pageNum === currentPage ? "1px solid #9B2282" : "1px solid #cbd5e1",
+                          backgroundColor: pageNum === currentPage ? "#9B2282" : "#ffffff",
+                          color: pageNum === currentPage ? "#ffffff" : "#334155",
+                          fontSize: "12.5px",
+                          fontWeight: pageNum === currentPage ? "700" : "500",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {pageNum}
+                      </button>
+                    </span>
+                  );
+                })}
+            </div>
+
+            <button
+              type="button"
+              disabled={currentPage === totalPages || totalPages === 0}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              style={{
+                padding: "6px 12px",
+                borderRadius: "6px",
+                border: "1px solid #cbd5e1",
+                backgroundColor: currentPage === totalPages || totalPages === 0 ? "#f8fafc" : "#ffffff",
+                color: currentPage === totalPages || totalPages === 0 ? "#94a3b8" : "#1e293b",
+                fontSize: "12.5px",
+                fontWeight: "600",
+                cursor: currentPage === totalPages || totalPages === 0 ? "not-allowed" : "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              Next
+              <ChevronRight size={15} />
+            </button>
+          </div>
         </div>
       </section>
     </div>

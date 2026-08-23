@@ -1,149 +1,32 @@
 // ==========================================
-// DEVELOPMENT SEED
-// B6 - ROLE TEST USERS
+// DCS-HIMS DATABASE SEED RUNNER
+// Initializes database schema, tables, and super admin
 // ==========================================
 
-const bcrypt =
-  require("bcryptjs");
+const { pool } = require("../config/database");
+const { initDatabase } = require("./initDb");
+const { initSettingsTable } = require("../models/settingsModel");
+const { syncAllEmployeesToUsers } = require("../models/userModel");
 
+const runSeed = async () => {
+  try {
+    console.log("==================================");
+    console.log("DCS-HIMS Database Seed & Init");
+    console.log("==================================");
 
-const {
-  pool,
-} = require("../config/database");
+    await initDatabase();
+    await initSettingsTable();
+    await syncAllEmployeesToUsers();
 
-
-// ------------------------------------------
-// CREATE USER HELPER
-// ------------------------------------------
-
-const createSeedUser =
-  async ({
-    name,
-    email,
-    password,
-    role,
-  }) => {
-
-    // Check existing user
-
-    const existing =
-      await pool.query(
-        `
-        SELECT id
-        FROM users
-        WHERE email = $1
-        `,
-        [email]
-      );
-
-
-    if (
-      existing.rows.length > 0
-    ) {
-
-      console.log(
-        `${role} user already exists: ${email}`
-      );
-
-      return;
-
-    }
-
-
-    // Hash password
-
-    const passwordHash =
-      await bcrypt.hash(
-        password,
-        10
-      );
-
-
-    // Create user
-
-    const result =
-      await pool.query(
-        `
-        INSERT INTO users
-        (
-          name,
-          email,
-          password_hash,
-          role,
-          is_active
-        )
-        VALUES
-        ($1, $2, $3, $4, $5)
-        RETURNING
-          id,
-          name,
-          email,
-          role
-        `,
-        [
-          name,
-          email,
-          passwordHash,
-          role,
-          true,
-        ]
-      );
-
-
-    console.log(
-      `${role} user created:`,
-      result.rows[0]
-    );
-
-  };
-
-
-// ------------------------------------------
-// RUN SEED
-// ------------------------------------------
-
-const runSeed =
-  async () => {
-
-    try {
-
-      await createSeedUser({
-        name: "Om Raikar",
-        email: "omraikar2128@gmail.com",
-        password: "Admin@123",
-        role: "ADMIN",
-      });
-
-
-      console.log(
-        "=================================="
-      );
-
-      console.log(
-        "Seed completed successfully."
-      );
-
-      console.log(
-        "=================================="
-      );
-
-
-    } catch (error) {
-
-      console.error(
-        "Seed failed:",
-        error.message
-      );
-
-      process.exitCode = 1;
-
-    } finally {
-
-      await pool.end();
-
-    }
-
-  };
-
+    console.log("==================================");
+    console.log("Seed & initialization completed.");
+    console.log("==================================");
+  } catch (error) {
+    console.error("Seed execution failed:", error.message);
+    process.exitCode = 1;
+  } finally {
+    await pool.end();
+  }
+};
 
 runSeed();

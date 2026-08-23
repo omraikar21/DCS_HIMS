@@ -14,10 +14,10 @@ const initialForm = {
   employeeName: "",
   payrollMonth: new Date().getMonth() + 1,
   payrollYear: new Date().getFullYear(),
-  basicSalary: 0,
-  hra: 0,
-  allowances: 0,
-  deductions: 0,
+  basicSalary: "",
+  hra: "",
+  allowances: "",
+  deductions: "",
   status: "Pending",
   bankName: "",
   bankAccount: "",
@@ -40,10 +40,10 @@ function PayrollModal({
         employeeName: record.employeeName || "",
         payrollMonth: record.monthKey ? Number(record.monthKey.split("-")[1]) : new Date().getMonth() + 1,
         payrollYear: record.monthKey ? Number(record.monthKey.split("-")[0]) : new Date().getFullYear(),
-        basicSalary: record.basicSalary || 0,
-        hra: record.hra || Math.round(Number(record.basicSalary || 0) * 0.25),
-        allowances: record.allowances || 0,
-        deductions: record.deductions || 0,
+        basicSalary: record.basicSalary !== undefined && record.basicSalary !== null ? record.basicSalary : "",
+        hra: record.hra !== undefined && record.hra !== null ? record.hra : (record.basicSalary ? Math.round(Number(record.basicSalary) * 0.25) : ""),
+        allowances: record.allowances !== undefined && record.allowances !== null ? record.allowances : "",
+        deductions: record.deductions !== undefined && record.deductions !== null ? record.deductions : "",
         status: record.status || "Pending",
         bankName: record.bankName || "",
         bankAccount: record.bankAccount || "",
@@ -55,8 +55,8 @@ function PayrollModal({
         ...initialForm,
         employeeId: firstEmp ? firstEmp.id : "",
         employeeName: firstEmp ? `${firstEmp.first_name || ""} ${firstEmp.last_name || ""}`.trim() : "",
-        basicSalary: firstEmp ? Number(firstEmp.salary || 0) : 0,
-        hra: firstEmp ? Math.round(Number(firstEmp.salary || 0) * 0.25) : 0,
+        basicSalary: firstEmp && firstEmp.salary ? firstEmp.salary : "",
+        hra: firstEmp && firstEmp.salary ? Math.round(Number(firstEmp.salary) * 0.25) : "",
         bankName: firstEmp?.bank_name || "",
         bankAccount: firstEmp?.bank_account || "",
         ifscCode: firstEmp?.ifsc_code || "",
@@ -77,8 +77,8 @@ function PayrollModal({
         ...prev,
         employeeId: selected.id,
         employeeName: `${selected.first_name || ""} ${selected.last_name || ""}`.trim(),
-        basicSalary: basic,
-        hra: Math.round(basic * 0.25),
+        basicSalary: basic || "",
+        hra: basic ? Math.round(basic * 0.25) : "",
         bankName: selected.bank_name || "",
         bankAccount: selected.bank_account || "",
         ifscCode: selected.ifsc_code || "",
@@ -90,25 +90,37 @@ function PayrollModal({
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
-    setForm({
-      ...form,
-      [name]: type === "number" ? Number(value) : value,
-    });
+    if (type === "number") {
+      if (value === "") {
+        setForm((prev) => ({ ...prev, [name]: "" }));
+        return;
+      }
+      let cleanVal = value;
+      if (cleanVal.length > 1 && cleanVal.startsWith("0") && !cleanVal.startsWith("0.")) {
+        cleanVal = cleanVal.replace(/^0+/, "") || "0";
+      }
+      setForm((prev) => ({ ...prev, [name]: cleanVal }));
+      return;
+    }
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const grossSalary =
-    Number(form.basicSalary) +
-    Number(form.hra) +
-    Number(form.allowances);
+  const numBasic = Number(form.basicSalary) || 0;
+  const numHra = Number(form.hra) || 0;
+  const numAllow = Number(form.allowances) || 0;
+  const numDed = Number(form.deductions) || 0;
 
-  const netSalary =
-    grossSalary -
-    Number(form.deductions);
+  const grossSalary = numBasic + numHra + numAllow;
+  const netSalary = Math.max(0, grossSalary - numDed);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSave({
       ...form,
+      basicSalary: Number(form.basicSalary) || 0,
+      hra: Number(form.hra) || 0,
+      allowances: Number(form.allowances) || 0,
+      deductions: Number(form.deductions) || 0,
       employeeDatabaseId: form.employeeId,
       grossSalary,
       netSalary,
@@ -295,6 +307,8 @@ function PayrollModal({
                 name="basicSalary"
                 value={form.basicSalary}
                 onChange={handleChange}
+                onFocus={(e) => e.target.select()}
+                placeholder="0"
                 min="0"
                 required
                 style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
@@ -310,6 +324,8 @@ function PayrollModal({
                 name="hra"
                 value={form.hra}
                 onChange={handleChange}
+                onFocus={(e) => e.target.select()}
+                placeholder="0"
                 min="0"
                 style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
               />
@@ -324,6 +340,8 @@ function PayrollModal({
                 name="allowances"
                 value={form.allowances}
                 onChange={handleChange}
+                onFocus={(e) => e.target.select()}
+                placeholder="0"
                 min="0"
                 style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
               />
@@ -338,6 +356,8 @@ function PayrollModal({
                 name="deductions"
                 value={form.deductions}
                 onChange={handleChange}
+                onFocus={(e) => e.target.select()}
+                placeholder="0"
                 min="0"
                 style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
               />

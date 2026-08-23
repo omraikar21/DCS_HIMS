@@ -1,29 +1,22 @@
 import {
   Files,
   CheckCircle2,
-  Clock3,
-  HardDrive,
+  FolderKanban,
 } from "lucide-react";
 
 import StatCard from "../dashboard/StatCard";
 
-function DocumentSummary({ records }) {
+function DocumentSummary({ records = [] }) {
+  const verified = records.filter(
+    (item) => item.status === "Verified" || !item.status
+  ).length;
 
-  const verified =
-    records.filter(
-      (item) =>
-        item.status === "Verified"
-    ).length;
-
-  const pending =
-    records.filter(
-      (item) =>
-        item.status === "Pending"
-    ).length;
+  const uniqueCategories = new Set(
+    records.map((item) => item.category).filter(Boolean)
+  ).size;
 
   return (
     <div className="stats-grid">
-
       <StatCard
         title="Total Documents"
         value={records.length}
@@ -33,29 +26,20 @@ function DocumentSummary({ records }) {
       />
 
       <StatCard
-        title="Verified"
+        title="Verified & Approved"
         value={verified}
-        note="Verified documents"
+        note="Official verified records"
         icon={CheckCircle2}
         type="green"
       />
 
       <StatCard
-        title="Pending"
-        value={pending}
-        note="Awaiting verification"
-        icon={Clock3}
-        type="orange"
-      />
-
-      <StatCard
-        title="Storage"
-        value="1.9 MB"
-        note="Current document usage"
-        icon={HardDrive}
+        title="Document Categories"
+        value={uniqueCategories || 1}
+        note="Structured document types"
+        icon={FolderKanban}
         type="blue"
       />
-
     </div>
   );
 }

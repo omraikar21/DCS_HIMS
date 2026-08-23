@@ -179,7 +179,6 @@ function HRDashboard() {
 
         <ChartCard
           title="Weekly Attendance"
-          onAction={() => navigate("/reports?reportId=REP-ATT-04")}
         >
 
 

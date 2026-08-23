@@ -9,6 +9,7 @@ import StatCard from "../dashboard/StatCard";
 
 function AttendanceSummary({
   records,
+  isSelfView = false,
 }) {
   const present =
     records.filter(
@@ -40,7 +41,7 @@ function AttendanceSummary({
       <StatCard
         title="Present"
         value={present}
-        note="Employees present"
+        note={isSelfView ? "Days present" : "Employees present"}
         icon={CheckCircle2}
         type="green"
       />
@@ -48,7 +49,7 @@ function AttendanceSummary({
       <StatCard
         title="Absent"
         value={absent}
-        note="Employees absent"
+        note={isSelfView ? "Days absent" : "Employees absent"}
         icon={XCircle}
         type="orange"
       />
@@ -56,7 +57,7 @@ function AttendanceSummary({
       <StatCard
         title="Late"
         value={late}
-        note="Late check-ins"
+        note={isSelfView ? "Late check-ins" : "Late check-ins"}
         icon={Clock3}
         type="purple"
       />
@@ -64,7 +65,7 @@ function AttendanceSummary({
       <StatCard
         title="On Leave"
         value={leave}
-        note="Approved leave"
+        note={isSelfView ? "Approved leaves" : "Approved leave"}
         icon={CalendarOff}
         type="blue"
       />

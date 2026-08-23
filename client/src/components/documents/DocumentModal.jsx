@@ -2,11 +2,13 @@ import { useEffect, useState, useRef } from "react";
 import { X, FileText, Upload, AlertCircle, CheckCircle2 } from "lucide-react";
 
 const initialForm = {
+  employeeDatabaseId: "",
   employeeName: "",
   employeeId: "",
   department: "Development",
   documentName: "",
   category: "Identity",
+  status: "Verified",
   fileData: "",
   fileName: "",
   fileSize: 0,
@@ -19,10 +21,20 @@ function DocumentModal({ isOpen, onClose, onSave, employees = [] }) {
 
   useEffect(() => {
     if (isOpen) {
-      setForm(initialForm);
+      const firstEmp = employees[0];
+      const initialCode = firstEmp ? (firstEmp.employee_code || `DCS-EMP-${String(firstEmp.id).padStart(3, "0")}`) : "";
+      const initialName = firstEmp ? `${firstEmp.first_name || ""} ${firstEmp.last_name || ""}`.trim() : "";
+
+      setForm({
+        ...initialForm,
+        employeeDatabaseId: firstEmp ? String(firstEmp.id) : "",
+        employeeId: initialCode,
+        employeeName: initialName,
+        department: firstEmp?.department_name || "Development",
+      });
       setError("");
     }
-  }, [isOpen]);
+  }, [isOpen, employees]);
 
   if (!isOpen) {
     return null;
@@ -35,18 +47,17 @@ function DocumentModal({ isOpen, onClose, onSave, employees = [] }) {
     });
   };
 
-  const handleEmployeeIdChange = (e) => {
+  const handleEmployeeSelect = (e) => {
     const val = e.target.value;
     const selected = employees.find(
       (emp) =>
-        emp.employee_code === val ||
-        `DCS-EMP-${String(emp.id).padStart(3, "0")}` === val ||
-        `EMP-${emp.id}` === val ||
-        String(emp.id) === String(val)
+        String(emp.id) === String(val) ||
+        emp.employee_code === val
     );
     if (selected) {
       setForm((prev) => ({
         ...prev,
+        employeeDatabaseId: String(selected.id),
         employeeId: selected.employee_code || `DCS-EMP-${String(selected.id).padStart(3, "0")}`,
         employeeName: `${selected.first_name || ""} ${selected.last_name || ""}`.trim(),
         department: selected.department_name || prev.department,
@@ -54,29 +65,7 @@ function DocumentModal({ isOpen, onClose, onSave, employees = [] }) {
     } else {
       setForm((prev) => ({
         ...prev,
-        employeeId: val,
-      }));
-    }
-  };
-
-  const handleEmployeeNameChange = (e) => {
-    const val = e.target.value;
-    const selected = employees.find(
-      (emp) =>
-        `${emp.first_name || ""} ${emp.last_name || ""}`.trim().toLowerCase() === val.trim().toLowerCase() ||
-        String(emp.id) === String(val)
-    );
-    if (selected) {
-      setForm((prev) => ({
-        ...prev,
-        employeeId: selected.employee_code || `DCS-EMP-${String(selected.id).padStart(3, "0")}`,
-        employeeName: `${selected.first_name || ""} ${selected.last_name || ""}`.trim(),
-        department: selected.department_name || prev.department,
-      }));
-    } else {
-      setForm((prev) => ({
-        ...prev,
-        employeeName: val,
+        employeeDatabaseId: val,
       }));
     }
   };
@@ -116,12 +105,8 @@ function DocumentModal({ isOpen, onClose, onSave, employees = [] }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.employeeId.trim()) {
-      setError("Employee ID is required.");
-      return;
-    }
-    if (!form.employeeName.trim()) {
-      setError("Employee Name is required.");
+    if (!form.employeeId.trim() && !form.employeeName.trim()) {
+      setError("Please select an employee.");
       return;
     }
     if (!form.documentName.trim()) {
@@ -149,8 +134,8 @@ function DocumentModal({ isOpen, onClose, onSave, employees = [] }) {
       <div className="document-modal" style={{ maxWidth: "640px", width: "100%" }}>
         <div className="modal-header">
           <div>
-            <p className="section-label">DOCUMENT DEPLOYMENT</p>
-            <h2>Upload PDF Document</h2>
+            <p className="section-label">DOCUMENT MANAGEMENT</p>
+            <h2>Upload Official Document</h2>
           </div>
 
           <button className="modal-close" onClick={onClose}>
@@ -179,53 +164,26 @@ function DocumentModal({ isOpen, onClose, onSave, employees = [] }) {
 
         <form onSubmit={handleSubmit}>
           <div className="form-grid" style={{ padding: "20px 24px" }}>
-            {/* ROW 1: INDIVIDUAL EMPLOYEE ID SELECTION */}
-            <div className="form-field">
-              <label>Employee ID</label>
+            {/* ROW 1: COMBINED EMPLOYEE NAME & ID DROPDOWN */}
+            <div className="form-field" style={{ gridColumn: "span 2" }}>
+              <label style={{ fontWeight: "700", marginBottom: "6px", display: "block" }}>
+                Select Employee (Name & Employee ID) *
+              </label>
               {employees.length > 0 ? (
                 <select
-                  name="employeeId"
-                  value={form.employeeId}
-                  onChange={handleEmployeeIdChange}
+                  name="employeeDatabaseId"
+                  value={form.employeeDatabaseId}
+                  onChange={handleEmployeeSelect}
                   required
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
                 >
-                  <option value="">-- Select Employee ID --</option>
+                  <option value="">-- Select Employee (Name & ID) --</option>
                   {employees.map((emp) => {
                     const code = emp.employee_code || `DCS-EMP-${String(emp.id).padStart(3, "0")}`;
-                    return (
-                      <option key={emp.id} value={code}>
-                        {code}
-                      </option>
-                    );
-                  })}
-                </select>
-              ) : (
-                <input
-                  name="employeeId"
-                  value={form.employeeId}
-                  onChange={handleChange}
-                  placeholder="e.g. DCS-EMP-001"
-                  required
-                />
-              )}
-            </div>
-
-            {/* ROW 1: INDIVIDUAL EMPLOYEE NAME SELECTION */}
-            <div className="form-field">
-              <label>Employee Name</label>
-              {employees.length > 0 ? (
-                <select
-                  name="employeeName"
-                  value={form.employeeName}
-                  onChange={handleEmployeeNameChange}
-                  required
-                >
-                  <option value="">-- Select Employee Name --</option>
-                  {employees.map((emp) => {
                     const fullName = `${emp.first_name || ""} ${emp.last_name || ""}`.trim() || "Employee";
                     return (
-                      <option key={emp.id} value={fullName}>
-                        {fullName}
+                      <option key={emp.id} value={emp.id}>
+                        {fullName} ({code})
                       </option>
                     );
                   })}
@@ -235,8 +193,9 @@ function DocumentModal({ isOpen, onClose, onSave, employees = [] }) {
                   name="employeeName"
                   value={form.employeeName}
                   onChange={handleChange}
-                  placeholder="e.g. John Doe"
+                  placeholder="e.g. Alex (DCS-EMP-001)"
                   required
+                  style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
                 />
               )}
             </div>

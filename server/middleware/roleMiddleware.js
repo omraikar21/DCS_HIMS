@@ -28,13 +28,18 @@ const authorizeRoles =
 
 
       // ------------------------------------
-      // ROLE CHECK
+      // ROLE CHECK (CASE-INSENSITIVE)
       // ------------------------------------
 
+      const userRole = (req.user.role || "").toUpperCase().replace(/[\s-]+/g, "_");
+      const normalizedAllowed = allowedRoles.map(r => r.toUpperCase().replace(/[\s-]+/g, "_"));
+
+      if (userRole === "SUPER_ADMIN" || userRole === "ADMIN") {
+        return next();
+      }
+
       if (
-        !allowedRoles.includes(
-          req.user.role
-        )
+        !normalizedAllowed.includes(userRole)
       ) {
 
         return res.status(403).json({

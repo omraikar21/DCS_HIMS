@@ -150,6 +150,7 @@ const createPayslip = async (data) => {
 
   const {
     payrollId,
+    employeeId,
     payslipNumber,
     generatedAt,
   } = data;
@@ -160,6 +161,7 @@ const createPayslip = async (data) => {
     INSERT INTO payslips
     (
       payroll_id,
+      employee_id,
       payslip_number,
       generated_at
     )
@@ -168,13 +170,15 @@ const createPayslip = async (data) => {
     (
       $1,
       $2,
-      $3
+      $3,
+      $4
     )
 
     RETURNING *
     `,
     [
       payrollId,
+      employeeId,
       payslipNumber,
       generatedAt,
     ]
@@ -249,10 +253,46 @@ const getPayslipByPayrollId = async (payrollId) => {
 };
 
 
+// ------------------------------------------
+// GET ALL PAYROLL RECORDS FOR A GIVEN MONTH
+// Used for bulk payslip generation by Finance
+// ------------------------------------------
+
+const getPayrollByMonth = async (month, year) => {
+
+  const result = await pool.query(
+    `
+    SELECT
+      p.id,
+      p.employee_id,
+      p.payroll_month,
+      p.payroll_year,
+      p.payment_status,
+      e.first_name,
+      e.last_name
+
+    FROM payroll p
+
+    JOIN employees e
+      ON p.employee_id = e.id
+
+    WHERE p.payroll_month = $1
+      AND p.payroll_year  = $2
+
+    ORDER BY p.id ASC
+    `,
+    [month, year]
+  );
+
+  return result.rows;
+};
+
+
 module.exports = {
   getAllPayslips,
   getPayslipById,
   getPayrollForPayslip,
+  getPayrollByMonth,
   createPayslip,
   updatePayslip,
   deletePayslip,

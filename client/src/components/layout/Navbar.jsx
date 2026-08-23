@@ -112,11 +112,66 @@ function Navbar({
         prev.map((n) => (n.id === item.id ? { ...n, is_read: true } : n))
       );
     }
+
+    const typeStr = (item.type || "").toUpperCase();
+    const catStr = (item.category || "").toLowerCase();
+    const titleStr = (item.title || "").toLowerCase();
+    const msgStr = (item.message || "").toLowerCase();
+
+    // 1. If it is a Payslip, Document, Financial Report, Payroll, or Salary statement:
+    if (
+      typeStr === "REPORT" ||
+      typeStr === "PAYROLL" ||
+      typeStr === "PAYSLIP" ||
+      typeStr === "DOCUMENT" ||
+      catStr.includes("report") ||
+      catStr.includes("payroll") ||
+      catStr.includes("finance") ||
+      catStr.includes("document") ||
+      titleStr.includes("report") ||
+      titleStr.includes("slip") ||
+      titleStr.includes("payslip") ||
+      titleStr.includes("payroll") ||
+      titleStr.includes("salary") ||
+      titleStr.includes("document") ||
+      msgStr.includes("report") ||
+      msgStr.includes("payslip") ||
+      msgStr.includes("document") ||
+      msgStr.includes("disbursed")
+    ) {
+      if (titleStr.includes("document") || catStr.includes("document") || typeStr === "DOCUMENT") {
+        navigate("/documents");
+      } else {
+        navigate("/reports");
+      }
+      return;
+    }
+
+    // 2. If it is a Notice, Announcement, Holiday, or System broadcast:
+    if (
+      typeStr === "ANNOUNCEMENT" ||
+      typeStr === "NOTICE" ||
+      catStr.includes("announcement") ||
+      catStr.includes("notice") ||
+      titleStr.includes("notice") ||
+      titleStr.includes("announcement") ||
+      titleStr.includes("holiday") ||
+      msgStr.includes("notice") ||
+      msgStr.includes("holiday") ||
+      msgStr.includes("announcement")
+    ) {
+      navigate("/announcements");
+      return;
+    }
+
+    // 3. Follow explicit link if defined
     if (item.link) {
       navigate(item.link);
-    } else {
-      navigate("/dashboard");
+      return;
     }
+
+    // Default to announcements
+    navigate("/announcements");
   };
 
   const handleLogout = () => {
@@ -125,8 +180,8 @@ function Navbar({
     navigate("/login");
   };
 
-  const userName = currentUser?.name || user?.name || "Om Raikar";
-  const userEmail = currentUser?.email || user?.email || "omraikar2128@gmail.com";
+  const userName = currentUser?.name || user?.name || "DCS User";
+  const userEmail = currentUser?.email || user?.email || "user@dcs.com";
   const userRole = role || currentUser?.role || user?.role || "ADMIN";
   const userAvatar = currentUser?.avatar || "";
 
@@ -251,21 +306,6 @@ function Navbar({
                     </div>
                   ))
                 )}
-              </div>
-
-              <div className="popover-footer">
-                <button
-                  onClick={() => {
-                    setNotificationOpen(false);
-                    if (userRole === "EMPLOYEE") {
-                      navigate("/reports?tab=my-reports");
-                    } else {
-                      navigate("/reports");
-                    }
-                  }}
-                >
-                  View complete notifications & reports →
-                </button>
               </div>
             </div>
           )}

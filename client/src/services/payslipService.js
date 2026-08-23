@@ -44,8 +44,7 @@ export const getPayslip = async (
 };
 
 
-// CREATE
-// Existing backend expects payrollId
+// CREATE (single — from a payrollId)
 
 export const createPayslip = async (
   payrollId
@@ -58,6 +57,22 @@ export const createPayslip = async (
         payrollId,
       }
     );
+
+  return response.data;
+
+};
+
+
+// BULK GENERATE FOR A MONTH
+// Called by the Finance "Generate Payslips" button
+// month: number 1-12, year: number e.g. 2026
+
+export const generatePayslipsForMonth = async (month, year) => {
+
+  const response = await post(
+    `${API_ENDPOINTS.payslips}/generate-month`,
+    { month, year }
+  );
 
   return response.data;
 
@@ -77,4 +92,4 @@ export const deletePayslip = async (
 
   return response.data;
 
-};
+};

@@ -47,14 +47,12 @@ function DocumentFilters({
     setSearch("");
     setCategory("All Categories");
     setDepartment("All Departments");
-    setStatus("All Status");
   };
 
   const hasFilters =
-    search ||
+    Boolean(search && search.trim()) ||
     category !== "All Categories" ||
-    department !== "All Departments" ||
-    status !== "All Status";
+    department !== "All Departments";
 
   return (
     <div className="document-filters">
@@ -86,18 +84,6 @@ function DocumentFilters({
         onChange={(e) => setDepartment(e.target.value)}
       >
         {departmentsList.map((item) => (
-          <option key={item} value={item}>
-            {item}
-          </option>
-        ))}
-      </select>
-
-      <select
-        className="document-dropdown"
-        value={status}
-        onChange={(e) => setStatus(e.target.value)}
-      >
-        {documentStatuses.map((item) => (
           <option key={item} value={item}>
             {item}
           </option>

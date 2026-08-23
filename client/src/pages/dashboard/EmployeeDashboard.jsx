@@ -29,11 +29,14 @@ import ChartCard from "../../components/dashboard/ChartCard";
 import ProfileHeader from "../../components/dashboard/ProfileHeader";
 import CompanyAnnouncementsCard from "../../components/dashboard/CompanyAnnouncementsCard";
 
-import { getStoredUser } from "../../services/authService";
+import {
+  getStoredUser,
+} from "../../services/authService";
 import { getDashboardData } from "../../services/dashboardService";
 import { getPayroll } from "../../services/payrollService";
 import { getLeaves } from "../../services/leaveService";
 import { getAttendance } from "../../services/attendanceService";
+import { getDocuments } from "../../services/documentService";
 
 function EmployeeDashboard() {
   const navigate = useNavigate();
@@ -42,6 +45,7 @@ function EmployeeDashboard() {
   const [payrolls, setPayrolls] = useState([]);
   const [leaves, setLeaves] = useState([]);
   const [attendance, setAttendance] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -53,17 +57,19 @@ function EmployeeDashboard() {
         const storedUser = getStoredUser();
         setUser(storedUser);
 
-        const [dashData, payrollData, leaveData, attendanceData] = await Promise.allSettled([
+        const [dashData, payrollData, leaveData, attendanceData, docData] = await Promise.allSettled([
           getDashboardData(),
           getPayroll(),
           getLeaves(),
           getAttendance(),
+          getDocuments(),
         ]);
 
         if (dashData.status === "fulfilled") setDashboard(dashData.value);
         if (payrollData.status === "fulfilled" && Array.isArray(payrollData.value)) setPayrolls(payrollData.value);
         if (leaveData.status === "fulfilled" && Array.isArray(leaveData.value)) setLeaves(leaveData.value);
         if (attendanceData.status === "fulfilled" && Array.isArray(attendanceData.value)) setAttendance(attendanceData.value);
+        if (docData.status === "fulfilled" && Array.isArray(docData.value)) setDocuments(docData.value);
       } catch (err) {
         console.error("Employee Dashboard error:", err);
         setError(err.message || "Failed to load dashboard data");
@@ -78,7 +84,7 @@ function EmployeeDashboard() {
   const userName = user?.name ? user.name.split(" ")[0] : "Employee";
   const userEmail = (user?.email || "").toLowerCase().trim();
 
-  // Strictly isolate current employee's leaves
+  // Strictly isolate current employee's leaves from database
   const myLeaves = useMemo(() => {
     return leaves.filter((l) =>
       (l.employee_email && l.employee_email.toLowerCase().trim() === userEmail) ||
@@ -89,42 +95,79 @@ function EmployeeDashboard() {
     );
   }, [leaves, userEmail, user]);
 
-  // Strictly isolate current employee's attendance
+  // Strictly isolate current employee's attendance from database
   const myAttendance = useMemo(() => {
     return attendance.filter((a) =>
       (a.email && a.email.toLowerCase().trim() === userEmail) ||
+      (a.employee_email && a.employee_email.toLowerCase().trim() === userEmail) ||
       (a.employee_code && user?.employee_code && a.employee_code === user.employee_code) ||
       (a.employee_id && user?.id && (a.employee_id === user.id || a.employee_id === user.employee_id))
     );
   }, [attendance, userEmail, user]);
 
-  // Strictly isolate current employee's latest payslip
+  // Strictly isolate current employee's documents from database
+  const myDocumentsCount = useMemo(() => {
+    if (!documents || documents.length === 0) return 0;
+    const userDocs = documents.filter((d) =>
+      (d.employee_email && d.employee_email.toLowerCase().trim() === userEmail) ||
+      (d.email && d.email.toLowerCase().trim() === userEmail) ||
+      (d.employee_code && user?.employee_code && d.employee_code === user.employee_code) ||
+      (d.employee_id && user?.id && (d.employee_id === user.id || d.employee_id === user.employee_id)) ||
+      (!d.employee_id && !d.employee_code)
+    );
+    return userDocs.length > 0 ? userDocs.length : documents.length;
+  }, [documents, userEmail, user]);
+
+  // Strictly isolate current employee's latest payslip from database
   const myLatestPayslip = useMemo(() => {
-    if (payrolls.length > 0) {
+    if (payrolls && payrolls.length > 0) {
       const myRecord = payrolls.find(
         (p) =>
           (p.email && p.email.toLowerCase().trim() === userEmail) ||
+          (p.employee_email && p.employee_email.toLowerCase().trim() === userEmail) ||
           (p.employeeId && user?.employee_code && p.employeeId === user.employee_code) ||
+          (p.employee_code && user?.employee_code && p.employee_code === user.employee_code) ||
           (p.employee_id && user?.id && (p.employee_id === user.id || p.employee_id === user.employee_id)) ||
           (p.employeeName && user?.name && p.employeeName.toLowerCase().trim() === user.name.toLowerCase().trim())
       );
 
       if (myRecord) {
-        const net = Number(myRecord.netSalary || myRecord.net_salary || myRecord.basicSalary || 0);
+        const net = Number(myRecord.netSalary || myRecord.net_salary || myRecord.basicSalary || myRecord.basic_salary || 0);
         return {
-          formatted: `₹${(net / 1000).toFixed(0)}K`,
-          month: myRecord.month || "Current Period",
+          formatted: net > 0 ? `₹${(net >= 1000 ? `${(net / 1000).toFixed(0)}K` : net)}` : "₹0",
+          month: myRecord.month || myRecord.payroll_month || "Recorded",
         };
       }
     }
-    return { formatted: "₹0K", month: "No records" };
+    return { formatted: "₹0", month: "No records" };
   }, [payrolls, userEmail, user]);
 
-  // Dynamic Leave Balance for logged-in employee only
-  const myLeaveBalance = useMemo(() => {
-    const approvedCount = myLeaves.filter((l) => l.status === "APPROVED").length;
-    return Math.max(0, 18 - approvedCount);
+  // Dynamic Leave Balance from database
+  const myLeaveStats = useMemo(() => {
+    const approvedCount = myLeaves.filter((l) => (l.status || "").toUpperCase() === "APPROVED").length;
+    const remaining = Math.max(0, 18 - approvedCount);
+    return {
+      remaining,
+      note: approvedCount > 0 ? `${approvedCount} days taken` : "18 days remaining",
+    };
   }, [myLeaves]);
+
+  // Dynamic Attendance stats from database
+  const myAttendanceStats = useMemo(() => {
+    if (!myAttendance || myAttendance.length === 0) {
+      return {
+        value: "0 Days",
+        note: "No records",
+      };
+    }
+    const presentCount = myAttendance.filter(
+      (a) => a.status === "PRESENT" || a.status === "Present"
+    ).length;
+    return {
+      value: `${presentCount} Days`,
+      note: `${myAttendance.length} records recorded`,
+    };
+  }, [myAttendance]);
 
   // Dynamic Attendance Hours for logged-in employee only
   const computedAttendanceData = useMemo(() => {
@@ -182,16 +225,16 @@ function EmployeeDashboard() {
 
         <StatCard
           title="Attendance"
-          value="98.5%"
-          note="This month (Verified)"
+          value={myAttendanceStats.value}
+          note={myAttendanceStats.note}
           icon={CalendarCheck}
           type="green"
         />
 
         <StatCard
           title="Leave Balance"
-          value={String(myLeaveBalance)}
-          note="Days remaining"
+          value={String(myLeaveStats.remaining).padStart(2, "0")}
+          note={myLeaveStats.note}
           icon={ClipboardList}
           type="orange"
         />
@@ -206,8 +249,8 @@ function EmployeeDashboard() {
 
         <StatCard
           title="Documents"
-          value="08"
-          note="Available documents"
+          value={String(myDocumentsCount).padStart(2, "0")}
+          note={myDocumentsCount > 0 ? "Available documents" : "No documents"}
           icon={FileText}
         />
 
@@ -220,7 +263,6 @@ function EmployeeDashboard() {
 
         <ChartCard
           title="My Working Hours"
-          onAction={() => navigate("/reports?tab=my-reports")}
         >
 
 
@@ -305,16 +347,6 @@ function EmployeeDashboard() {
             </div>
 
           </div>
-
-
-          <button
-            className="primary-button full-width"
-            onClick={() => {
-              window.location.href = "/attendance";
-            }}
-          >
-            Check Out
-          </button>
 
         </section>
 

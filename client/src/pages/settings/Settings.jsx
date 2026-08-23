@@ -234,7 +234,7 @@ function Settings() {
                   name="systemEmail"
                   value={settings.systemEmail || ""}
                   onChange={handleChange}
-                  placeholder="omraikar2128@gmail.com"
+                  placeholder="support@dcs.com"
                   required
                 />
                 <small style={{ color: "#64748b", fontSize: "11.5px", marginTop: "4px" }}>

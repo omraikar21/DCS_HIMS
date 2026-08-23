@@ -84,20 +84,6 @@ function Profile() {
   const [payslips, setPayslips] = useState([]);
   const [loadingPayroll, setLoadingPayroll] = useState(true);
 
-  // Compensation Editing Modal State
-  const [isEditSalaryModalOpen, setIsEditSalaryModalOpen] = useState(false);
-  const [salaryForm, setSalaryForm] = useState({
-    salary: 0,
-    hra: 0,
-    allowances: 0,
-    pfDeduction: 0,
-    taxDeduction: 0,
-    bankName: "",
-    bankAccount: "",
-    ifscCode: "",
-  });
-  const [savingSalary, setSavingSalary] = useState(false);
-
   useEffect(() => {
     const handleProfileUpdate = () => {
       const updated = getStoredUser();
@@ -107,13 +93,13 @@ function Profile() {
     return () => window.removeEventListener("userProfileUpdated", handleProfileUpdate);
   }, []);
 
-  const userName = currentUser?.name || user?.name || "Om Raikar";
-  const userEmail = (currentUser?.email || user?.email || "omraikar2128@gmail.com").toLowerCase().trim();
+  const userName = currentUser?.name || user?.name || "DCS User";
+  const userEmail = (currentUser?.email || user?.email || "employee@dcs.com").toLowerCase().trim();
   const userRole = (currentUser?.role || user?.role || "ADMIN").toUpperCase();
   const isSuperAdminProfile = Boolean(
     currentUser?.is_super_admin ||
     user?.is_super_admin ||
-    userEmail === "omraikar2128@gmail.com"
+    userRole === "SUPER_ADMIN"
   );
   const userAvatar = currentUser?.avatar || "";
 
@@ -129,29 +115,32 @@ function Profile() {
       const currentEmp = (emps || []).find(
         (e) =>
           (e.email && e.email.toLowerCase().trim() === userEmail) ||
+          (user?.email && e.email && e.email.toLowerCase().trim() === user.email.toLowerCase().trim()) ||
+          (user?.employee_code && e.employee_code === user.employee_code) ||
           (user?.id && e.user_id === user.id) ||
-          (user?.id && e.id === user.id)
+          (user?.id && e.id === user.id) ||
+          (currentUser?.name && `${e.first_name || ""} ${e.last_name || ""}`.trim().toLowerCase() === currentUser.name.toLowerCase().trim())
       );
-
-      if (currentEmp) {
-        setEmployeeData(currentEmp);
-        setSalaryForm({
-          salary: Number(currentEmp.salary || 0),
-          hra: Number(currentEmp.hra || 0),
-          allowances: Number(currentEmp.allowances || 0),
-          pfDeduction: Number(currentEmp.pf_deduction || 0),
-          taxDeduction: Number(currentEmp.tax_deduction || 0),
-          bankName: currentEmp.bank_name || "",
-          bankAccount: currentEmp.bank_account || "",
-          ifscCode: currentEmp.ifsc_code || "",
-        });
-      }
 
       const mySlips = (slips || []).filter(
         (s) =>
           (s.email && s.email.toLowerCase().trim() === userEmail) ||
+          (user?.email && s.email && s.email.toLowerCase().trim() === user.email.toLowerCase().trim()) ||
           (currentEmp && (s.employee_id === currentEmp.id || s.employee_id === currentEmp.databaseId))
       );
+
+      if (currentEmp) {
+        const resolvedBankName = currentEmp.bank_name || mySlips[0]?.bank_name || "";
+        const resolvedBankAccount = currentEmp.bank_account || mySlips[0]?.bank_account || "";
+        const resolvedIfscCode = currentEmp.ifsc_code || mySlips[0]?.ifsc_code || "";
+
+        setEmployeeData({
+          ...currentEmp,
+          bank_name: resolvedBankName,
+          bank_account: resolvedBankAccount,
+          ifsc_code: resolvedIfscCode,
+        });
+      }
 
       setPayslips(mySlips);
     } catch (err) {
@@ -164,37 +153,6 @@ function Profile() {
   useEffect(() => {
     loadProfilePayroll();
   }, [userEmail, user?.id]);
-
-  const handleSaveSalary = async (e) => {
-    if (e) e.preventDefault();
-    if (!["ADMIN", "FINANCE"].includes(userRole)) {
-      if (notification?.error) notification.error("Only Finance Department or Administrator can update compensation & bank credentials");
-      return;
-    }
-    if (!employeeData?.id && !employeeData?.databaseId) {
-      if (notification?.error) notification.error("Employee profile record not found");
-      return;
-    }
-
-    try {
-      setSavingSalary(true);
-      const empId = employeeData.id || employeeData.databaseId;
-      const updated = await updateEmployeeCompensation(empId, salaryForm);
-      setEmployeeData(updated);
-      setIsEditSalaryModalOpen(false);
-      if (notification?.success) {
-        notification.success("Salary structure & banking details saved in database!");
-      }
-      await loadProfilePayroll();
-    } catch (err) {
-      console.error("Save salary error:", err);
-      if (notification?.error) {
-        notification.error(err.message || "Failed to update compensation");
-      }
-    } finally {
-      setSavingSalary(false);
-    }
-  };
 
   // Super Admin Server Notice Modal State
   const [isServerNoticeModalOpen, setIsServerNoticeModalOpen] = useState(false);
@@ -950,15 +908,6 @@ function Profile() {
           const netMonthly = Math.max(0, grossMonthly - deductionsMonthly);
           const ctcAnnual = grossMonthly * 12;
 
-          const isTargetAdmin =
-            employeeData?.email?.toLowerCase().trim() === "omraikar2128@gmail.com" ||
-            (employeeData?.designation && employeeData.designation.toLowerCase().includes("admin")) ||
-            (employeeData?.role && employeeData.role.toUpperCase() === "ADMIN");
-
-          const canManageSalary =
-            userRole === "ADMIN" ||
-            (userRole === "FINANCE" && !isTargetAdmin);
-
           return (
             <>
               <div
@@ -995,31 +944,6 @@ function Profile() {
                     Comprehensive monthly salary structure, statutory tax withholdings, bank account credentials, and verified payslips.
                   </p>
                 </div>
-
-                {canManageSalary && (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditSalaryModalOpen(true)}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "7px",
-                      padding: "9px 16px",
-                      backgroundColor: "#9E2682",
-                      color: "#FFFFFF",
-                      border: "none",
-                      borderRadius: "8px",
-                      fontSize: "13px",
-                      fontWeight: "700",
-                      cursor: "pointer",
-                      boxShadow: "0 2px 8px rgba(158, 38, 130, 0.25)",
-                      transition: "all 0.2s ease",
-                    }}
-                  >
-                    <Pencil size={15} />
-                    Edit Salary & Bank Details
-                  </button>
-                )}
               </div>
 
               {/* 4 FINANCIAL KPI CARDS */}
@@ -1587,177 +1511,6 @@ function Profile() {
       )}
 
       {/* ========================================================================= */}
-      {/* EDIT COMPENSATION & BANK DETAILS MODAL (FINANCE / ADMIN)                  */}
-      {/* ========================================================================= */}
-      {isEditSalaryModalOpen && (
-        <div className="modal-overlay">
-          <div className="payroll-modal" style={{ maxWidth: "620px", background: "#FFFFFF", borderRadius: "14px", overflow: "hidden", border: "1px solid #EACEE3" }}>
-            <div className="modal-header" style={{ borderBottom: "1px solid #EACEE3", padding: "18px 24px" }}>
-              <div>
-                <p className="section-label" style={{ color: "#9E2682", fontWeight: "800", fontSize: "11px" }}>COMPENSATION MANAGEMENT</p>
-                <h2 style={{ fontSize: "18px", color: "#18243A", fontWeight: "800", margin: "2px 0 0" }}>Edit Salary & Bank Credentials</h2>
-              </div>
-              <button className="modal-close" onClick={() => setIsEditSalaryModalOpen(false)}>
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveSalary}>
-              <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px", maxHeight: "70vh", overflowY: "auto" }}>
-
-                {/* COMPENSATION INPUTS */}
-                <div style={{ borderBottom: "1px solid #f1f5f9", paddingBottom: "16px" }}>
-                  <h4 style={{ margin: "0 0 12px", fontSize: "13.5px", color: "#18243A", fontWeight: "700" }}>
-                    Monthly Salary Components
-                  </h4>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                    <div className="form-field">
-                      <label>Basic Monthly Salary ({currencySymbol})</label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="e.g. 85000"
-                        value={salaryForm.salary || ""}
-                        onChange={(e) => setSalaryForm({ ...salaryForm, salary: Number(e.target.value) || 0 })}
-                        required
-                      />
-                    </div>
-
-                    <div className="form-field">
-                      <label>HRA ({currencySymbol})</label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="e.g. 6000"
-                        value={salaryForm.hra || ""}
-                        onChange={(e) => setSalaryForm({ ...salaryForm, hra: Number(e.target.value) || 0 })}
-                      />
-                    </div>
-
-                    <div className="form-field">
-                      <label>Special & Travel Allowances ({currencySymbol})</label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="e.g. 4000"
-                        value={salaryForm.allowances || ""}
-                        onChange={(e) => setSalaryForm({ ...salaryForm, allowances: Number(e.target.value) || 0 })}
-                      />
-                    </div>
-
-                    <div className="form-field">
-                      <label>PF Deduction ({currencySymbol})</label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="e.g. 3500"
-                        value={salaryForm.pfDeduction || ""}
-                        onChange={(e) => setSalaryForm({ ...salaryForm, pfDeduction: Number(e.target.value) || 0 })}
-                      />
-                    </div>
-
-                    <div className="form-field" style={{ gridColumn: "span 2" }}>
-                      <label>Income Tax / TDS Withholding ({currencySymbol})</label>
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="e.g. 3000"
-                        value={salaryForm.taxDeduction || ""}
-                        onChange={(e) => setSalaryForm({ ...salaryForm, taxDeduction: Number(e.target.value) || 0 })}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* LIVE CALCULATED PREVIEW */}
-                {(() => {
-                  const sBasic = Number(salaryForm.salary || 0);
-                  const sHra = Number(salaryForm.hra || 0);
-                  const sAllow = Number(salaryForm.allowances || 0);
-                  const sPf = Number(salaryForm.pfDeduction || 0);
-                  const sTax = Number(salaryForm.taxDeduction || 0);
-                  const sGross = sBasic + sHra + sAllow;
-                  const sDed = sPf + sTax;
-                  const sNet = Math.max(0, sGross - sDed);
-                  const sCtc = sGross * 12;
-
-                  return (
-                    <div style={{ padding: "14px", background: "#FCF4FA", borderRadius: "8px", border: "1px solid #EACEE3" }}>
-                      <span style={{ fontSize: "11px", color: "#9E2682", fontWeight: "800", textTransform: "uppercase", display: "block", marginBottom: "8px" }}>
-                        Live Calculation Preview
-                      </span>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "13px" }}>
-                        <div>Monthly Gross: <strong>{currencySymbol}{sGross.toLocaleString("en-IN")}</strong></div>
-                        <div>Total Deductions: <strong style={{ color: "#D64545" }}>-{currencySymbol}{sDed.toLocaleString("en-IN")}</strong></div>
-                        <div>Net Take-Home: <strong style={{ color: "#2E9B67" }}>{currencySymbol}{sNet.toLocaleString("en-IN")}</strong></div>
-                        <div>Annual CTC: <strong style={{ color: "#751460" }}>{currencySymbol}{sCtc.toLocaleString("en-IN")}</strong></div>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* BANK DETAILS INPUTS */}
-                <div>
-                  <h4 style={{ margin: "0 0 12px", fontSize: "13.5px", color: "#18243A", fontWeight: "700" }}>
-                    Banking & Direct Deposit Credentials
-                  </h4>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                    <div className="form-field" style={{ gridColumn: "span 2" }}>
-                      <label>Beneficiary Bank Name</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. State Bank of India / HDFC Bank"
-                        value={salaryForm.bankName || ""}
-                        onChange={(e) => setSalaryForm({ ...salaryForm, bankName: e.target.value })}
-                      />
-                    </div>
-
-                    <div className="form-field">
-                      <label>Bank Account Number</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. 50100482910482"
-                        value={salaryForm.bankAccount || ""}
-                        onChange={(e) => setSalaryForm({ ...salaryForm, bankAccount: e.target.value })}
-                      />
-                    </div>
-
-                    <div className="form-field">
-                      <label>IFSC Code</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. SBIN0001234"
-                        value={salaryForm.ifscCode || ""}
-                        onChange={(e) => setSalaryForm({ ...salaryForm, ifscCode: e.target.value.toUpperCase() })}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              <div className="modal-footer" style={{ borderTop: "1px solid #EACEE3", padding: "14px 24px", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={() => setIsEditSalaryModalOpen(false)}
-                  disabled={savingSalary}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="primary-button"
-                  disabled={savingSalary}
-                  style={{ background: "#9E2682", borderColor: "#9E2682" }}
-                >
-                  {savingSalary ? "Saving to Database..." : "Save Salary & Bank"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

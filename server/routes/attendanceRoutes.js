@@ -22,24 +22,11 @@ const {
   create,
   update,
   remove,
-  recordFacePunchController,
-  recordBatchBiometricController,
-  getBiometricConfigController,
 } = require("../controllers/attendanceController");
 
 
 const router =
   express.Router();
-
-// ------------------------------------------
-// FACE RECOGNITION & BIOMETRIC API PUNCHES
-// AUTHENTICATED VIA X-API-KEY HEADER
-// ------------------------------------------
-
-router.post("/face-punch", recordFacePunchController);
-router.post("/biometric-punch", recordFacePunchController);
-router.post("/biometric-batch", recordBatchBiometricController);
-router.get("/biometric-config", authenticateToken, getBiometricConfigController);
 
 // ------------------------------------------
 // GET ALL

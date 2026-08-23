@@ -174,7 +174,7 @@ function EmployeeModal({
                 name="email"
                 value={form.email}
                 onChange={handleChange}
-                placeholder="e.g. employee@example.com"
+                placeholder="e.g. alex@dcs.com"
                 required
               />
               {errors.email && (
@@ -192,7 +192,7 @@ function EmployeeModal({
                 name="phone"
                 value={form.phone}
                 onChange={handlePhoneChange}
-                placeholder="10-digit mobile number"
+                placeholder="e.g. 9876543210"
                 maxLength={10}
                 required
               />

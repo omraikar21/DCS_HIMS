@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   X,
   Download,
@@ -7,7 +8,7 @@ import {
   Building,
   User,
   Calendar,
-  HardDrive,
+  ExternalLink,
 } from "lucide-react";
 
 function DocumentPreviewModal({
@@ -15,14 +16,55 @@ function DocumentPreviewModal({
   onClose,
   document: doc,
 }) {
+  const [blobUrl, setBlobUrl] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    let createdUrl = "";
+
+    if (!isOpen || !doc?.fileData) {
+      setBlobUrl("");
+      return;
+    }
+
+    // Fast non-blocking native Blob URL generation
+    if (doc.fileData.startsWith("data:")) {
+      fetch(doc.fileData)
+        .then((res) => res.blob())
+        .then((blob) => {
+          if (!active) return;
+          createdUrl = URL.createObjectURL(blob);
+          setBlobUrl(createdUrl);
+        })
+        .catch((err) => {
+          console.warn("Blob conversion error:", err);
+          if (active) setBlobUrl(doc.fileData);
+        });
+    } else {
+      setBlobUrl(doc.fileData);
+    }
+
+    return () => {
+      active = false;
+      if (createdUrl && createdUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(createdUrl);
+      }
+    };
+  }, [isOpen, doc?.fileData]);
+
   if (!isOpen || !doc) return null;
 
-  const isPdfData = doc.fileData && doc.fileData.startsWith("data:application/pdf");
   const isImageData =
-    doc.fileData &&
-    (doc.fileData.startsWith("data:image/") ||
-      doc.fileData.startsWith("http") ||
-      doc.fileData.startsWith("blob:"));
+    (doc.fileData && doc.fileData.startsWith("data:image/")) ||
+    (doc.fileName && /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(doc.fileName)) ||
+    (doc.documentName && /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(doc.documentName));
+
+  const isPdfData =
+    !isImageData &&
+    ((doc.fileData && doc.fileData.startsWith("data:application/pdf")) ||
+      (doc.fileName && doc.fileName.toLowerCase().endsWith(".pdf")) ||
+      doc.fileType === "PDF" ||
+      Boolean(doc.fileData));
 
   // Detect proper file extension
   const getFileExtension = () => {
@@ -37,9 +79,10 @@ function DocumentPreviewModal({
     return isImageData ? ".png" : ".pdf";
   };
 
-  // Real Document Print Handler (Prints actual image or PDF directly)
+  // Real Document Print Handler
   const handlePrint = () => {
-    if (!doc.fileData) return;
+    const printTarget = blobUrl || doc.fileData;
+    if (!printTarget) return;
 
     if (isImageData) {
       const printWindow = window.open("", "_blank");
@@ -57,7 +100,7 @@ function DocumentPreviewModal({
             </style>
           </head>
           <body>
-            <img src="${doc.fileData}" alt="${doc.documentName}" onload="setTimeout(function(){ window.focus(); window.print(); }, 250);" />
+            <img src="${printTarget}" alt="${doc.documentName}" onload="setTimeout(function(){ window.focus(); window.print(); }, 250);" />
             <script>
               window.onload = function() {
                 setTimeout(function() { window.focus(); window.print(); }, 400);
@@ -70,28 +113,7 @@ function DocumentPreviewModal({
       return;
     }
 
-    if (isPdfData) {
-      try {
-        const parts = doc.fileData.split(",");
-        const byteCharacters = atob(parts[1] || "");
-        const byteNumbers = new Uint8Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const blob = new Blob([byteNumbers], { type: "application/pdf" });
-        const blobUrl = URL.createObjectURL(blob);
-        const printWindow = window.open(blobUrl, "_blank");
-        if (printWindow) {
-          printWindow.focus();
-        }
-        return;
-      } catch (e) {
-        console.warn("PDF print fallback:", e);
-      }
-    }
-
-    // Default fallback
-    const printWindow = window.open(doc.fileData, "_blank");
+    const printWindow = window.open(printTarget, "_blank");
     if (printWindow) printWindow.focus();
   };
 
@@ -105,50 +127,29 @@ function DocumentPreviewModal({
       ? cleanDocName
       : `${cleanDocName}${extension}`;
 
-    // If base64 data URL, convert to Blob for reliable cross-browser download
-    if (doc.fileData.startsWith("data:")) {
-      try {
-        const parts = doc.fileData.split(",");
-        const mimeMatch = parts[0].match(/:(.*?);/);
-        const mimeType = mimeMatch ? mimeMatch[1] : "application/octet-stream";
-        const byteCharacters = atob(parts[1]);
-        const byteNumbers = new Uint8Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const blob = new Blob([byteNumbers], { type: mimeType });
-        const blobUrl = URL.createObjectURL(blob);
-
-        const link = document.createElement("a");
-        link.href = blobUrl;
-        link.download = downloadFilename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-        return;
-      } catch (err) {
-        console.warn("Blob conversion failed, using direct data link:", err);
-      }
-    }
-
     const link = document.createElement("a");
-    link.href = doc.fileData;
+    link.href = blobUrl || doc.fileData;
     link.download = downloadFilename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
+  const handleOpenNewTab = () => {
+    const target = blobUrl || doc.fileData;
+    if (target) {
+      window.open(target, "_blank");
+    }
+  };
 
   return (
     <div className="modal-overlay" style={{ zIndex: 10000 }}>
       <div
         className="document-modal"
         style={{
-          maxWidth: "680px",
-          width: "92%",
-          maxHeight: "90vh",
+          maxWidth: "760px",
+          width: "94%",
+          maxHeight: "92vh",
           display: "flex",
           flexDirection: "column",
           borderRadius: "16px",
@@ -172,35 +173,59 @@ function DocumentPreviewModal({
         >
           <div>
             <p className="section-label" style={{ color: "#9B2282", fontSize: "11px", fontWeight: "800", letterSpacing: "1.5px", margin: "0 0 2px 0" }}>
-              DOCUMENT PREVIEW
+              OFFICIAL DOCUMENT VIEWER
             </p>
             <h2 style={{ margin: 0, fontSize: "18px", fontWeight: "800", color: "#0f172a" }}>
               {doc.documentName}
             </h2>
           </div>
 
-          <button
-            className="modal-close"
-            onClick={onClose}
-            style={{ border: "none", background: "transparent", cursor: "pointer", padding: "6px" }}
-          >
-            <X size={20} color="#64748b" />
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <button
+              type="button"
+              onClick={handleOpenNewTab}
+              title="Open full document"
+              style={{
+                padding: "7px 12px",
+                borderRadius: "8px",
+                border: "1px solid #e2e8f0",
+                backgroundColor: "#ffffff",
+                color: "#334155",
+                fontSize: "12.5px",
+                fontWeight: "600",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+              }}
+            >
+              <ExternalLink size={14} color="#9B2282" />
+              Open Full View
+            </button>
+
+            <button
+              className="modal-close"
+              onClick={onClose}
+              style={{ border: "none", background: "transparent", cursor: "pointer", padding: "6px" }}
+            >
+              <X size={20} color="#64748b" />
+            </button>
+          </div>
         </div>
 
         {/* BODY */}
         <div style={{ padding: "20px 24px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "16px" }}>
-          {isPdfData ? (
-            <div style={{ width: "100%", height: "360px", borderRadius: "10px", overflow: "hidden", border: "1px solid #cbd5e1" }}>
-              <iframe
-                src={doc.fileData}
-                style={{ width: "100%", height: "100%", border: "none" }}
-                title="PDF Preview"
-              />
+          {isImageData ? (
+            <div style={{ width: "100%", maxHeight: "460px", display: "flex", justifyContent: "center", alignItems: "center", backgroundColor: "#0f172a", borderRadius: "10px", overflow: "hidden", padding: "12px" }}>
+              <img src={blobUrl || doc.fileData} alt={doc.documentName} style={{ maxHeight: "430px", maxWidth: "100%", objectFit: "contain", borderRadius: "6px" }} />
             </div>
-          ) : isImageData ? (
-            <div style={{ width: "100%", maxHeight: "360px", display: "flex", justifyContent: "center", alignItems: "center", backgroundColor: "#0f172a", borderRadius: "10px", overflow: "hidden", padding: "10px" }}>
-              <img src={doc.fileData} alt={doc.documentName} style={{ maxHeight: "340px", maxWidth: "100%", objectFit: "contain" }} />
+          ) : isPdfData ? (
+            <div style={{ width: "100%", height: "500px", borderRadius: "10px", overflow: "hidden", border: "1px solid #cbd5e1", backgroundColor: "#ffffff" }}>
+              <iframe
+                src={blobUrl || doc.fileData}
+                style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+                title="Document Viewer"
+              />
             </div>
           ) : (
             <div
@@ -237,14 +262,14 @@ function DocumentPreviewModal({
                     {doc.category || "General Document"}
                   </span>
                   <span style={{ padding: "2px 8px", borderRadius: "12px", backgroundColor: "#ecfdf5", color: "#059669", fontSize: "11px", fontWeight: "700" }}>
-                    Verified
+                    Approved & Verified
                   </span>
                 </div>
                 <strong style={{ fontSize: "16px", color: "#0f172a", display: "block" }}>
                   {doc.documentName}
                 </strong>
                 <span style={{ fontSize: "12.5px", color: "#64748b" }}>
-                  Assigned to {doc.employeeName || "All Organization"} · {doc.department || "General"}
+                  Assigned to {doc.employeeName || "Workforce"} · {doc.department || "General"}
                 </span>
               </div>
             </div>

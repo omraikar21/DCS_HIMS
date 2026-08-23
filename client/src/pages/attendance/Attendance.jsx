@@ -60,40 +60,38 @@ const statusToBackend = {
 
 function Attendance() {
     const { role, user } = useAuth();
-    const canEditAttendance = ["ADMIN", "HR"].includes((role || "").toUpperCase());
-    const isEmployee = (role || "").toUpperCase() === "EMPLOYEE";
+    const isAdminOrHR = ["ADMIN", "HR"].includes((role || "").toUpperCase());
+    const isSelfView = !isAdminOrHR;
+    const canEditAttendance = isAdminOrHR;
 
-    const [records, setRecords] =
-        useState([]);
-
-    const [loading, setLoading] =
-        useState(true);
-
-    const [error, setError] =
-        useState("");
-
-    const [search, setSearch] =
-        useState("");
-
-    const [department, setDepartment] =
-        useState("All Departments");
-
-    const [status, setStatus] =
-        useState("All Status");
-
-    const [date, setDate] =
-        useState(new Date().toISOString().slice(0, 10));
-
-    const [modalOpen, setModalOpen] =
-        useState(false);
-
-    const [selectedRecord, setSelectedRecord] =
-        useState(null);
+    const [records, setRecords] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [search, setSearch] = useState("");
+    const [department, setDepartment] = useState("All Departments");
+    const [status, setStatus] = useState("All Status");
+    const defaultDate = "";
+    const [date, setDate] = useState(defaultDate);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [selectedRecord, setSelectedRecord] = useState(null);
 
     const mapAttendanceToUI = (rec) => {
         const rawDate = rec.attendance_date || rec.date;
         const dateStr = rawDate ? (typeof rawDate === "string" ? rawDate.slice(0, 10) : new Date(rawDate).toISOString().slice(0, 10)) : new Date().toISOString().slice(0, 10);
         const empName = `${rec.first_name || ""} ${rec.last_name || ""}`.trim() || rec.employee_code || "Unknown Employee";
+        
+        let calculatedHours = "0.0 hrs";
+        if (rec.work_hours) {
+            calculatedHours = `${rec.work_hours} hrs`;
+        } else if (rec.check_in && rec.check_out) {
+            const [hIn, mIn] = String(rec.check_in).split(":").map(Number);
+            const [hOut, mOut] = String(rec.check_out).split(":").map(Number);
+            const diff = (hOut + (mOut || 0) / 60) - (hIn + (mIn || 0) / 60);
+            if (diff > 0) calculatedHours = `${diff.toFixed(1)} hrs`;
+        } else if (rec.status === "PRESENT") {
+            calculatedHours = "8.5 hrs";
+        }
+
         return {
             id: rec.id,
             employeeId: rec.employee_code || `EMP-${rec.employee_id}`,
@@ -102,7 +100,7 @@ function Attendance() {
             date: dateStr,
             checkIn: rec.check_in || "--:--",
             checkOut: rec.check_out || "--:--",
-            workHours: rec.work_hours ? `${rec.work_hours} hrs` : "0.0 hrs",
+            workHours: calculatedHours,
             status: statusToUI[rec.status] || rec.status || "Present",
             rawStatus: rec.status,
             remarks: rec.remarks || "",
@@ -116,9 +114,6 @@ function Attendance() {
             const data = await getAttendance();
             const mapped = (data || []).map(mapAttendanceToUI);
             setRecords(mapped);
-            if (mapped.length > 0 && !mapped.some(r => r.date === date)) {
-                setDate(mapped[0].date);
-            }
         } catch (err) {
             console.error("Failed to load attendance:", err);
             setError(err.message || "Failed to load attendance");
@@ -132,73 +127,46 @@ function Attendance() {
     }, []);
 
     /* FILTER RECORDS */
+    const filteredRecords = useMemo(() => {
+        return records.filter((record) => {
+            if (isSelfView) {
+                const matchesStatus = status === "All Status" || record.status === status;
+                const matchesDate = !date || record.date === date;
+                return matchesStatus && matchesDate;
+            }
 
-    const filteredRecords =
-        useMemo(() => {
+            const searchText = search.toLowerCase();
+            const matchesSearch =
+                record.employeeName.toLowerCase().includes(searchText) ||
+                record.employeeId.toLowerCase().includes(searchText);
 
-            return records.filter(
-                (record) => {
+            const matchesDepartment =
+                department === "All Departments" ||
+                record.department === department;
 
-                    // If logged in as employee, only show own records
-                    if (isEmployee && user?.name) {
-                        const employeeNameMatch = record.employeeName.toLowerCase().includes(user.name.toLowerCase()) ||
-                            user.name.toLowerCase().includes(record.employeeName.toLowerCase());
-                        if (!employeeNameMatch) return false;
-                    }
+            const matchesStatus =
+                status === "All Status" ||
+                record.status === status;
 
-                    const searchText =
-                        search.toLowerCase();
+            const matchesDate = !date || record.date === date;
 
-
-                    const matchesSearch =
-                        record.employeeName
-                            .toLowerCase()
-                            .includes(searchText) ||
-
-                        record.employeeId
-                            .toLowerCase()
-                            .includes(searchText);
-
-
-                    const matchesDepartment =
-                        department ===
-                        "All Departments" ||
-                        record.department ===
-                        department;
-
-
-                    const matchesStatus =
-                        status === "All Status" ||
-                        record.status ===
-                        status;
-
-
-                    const matchesDate =
-                        !date || record.date === date;
-
-
-                    return (
-                        matchesSearch &&
-                        matchesDepartment &&
-                        matchesStatus &&
-                        matchesDate
-                    );
-
-                }
+            return (
+                matchesSearch &&
+                matchesDepartment &&
+                matchesStatus &&
+                matchesDate
             );
+        });
+    }, [
+        records,
+        search,
+        department,
+        status,
+        date,
+        isSelfView,
+    ]);
 
-        }, [
-            records,
-            search,
-            department,
-            status,
-            date,
-            isEmployee,
-            user,
-        ]);
-
-    /* WEEKLY CHART DATA COMPUTATION FROM LIVE RECORDS */
-
+    /* WEEKLY CHART DATA FOR COMPANY (ADMIN/HR) */
     const weeklyChartData = useMemo(() => {
         const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
         const counts = {
@@ -211,7 +179,7 @@ function Attendance() {
 
         records.forEach((rec) => {
             if (rec.date) {
-                const dayIndex = new Date(rec.date).getDay(); // 0 Sun, 1 Mon, etc.
+                const dayIndex = new Date(rec.date).getDay();
                 const dayKey = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dayIndex];
                 if (counts[dayKey]) {
                     if (rec.status === "Present") counts[dayKey].present++;
@@ -231,25 +199,38 @@ function Attendance() {
         }));
     }, [records]);
 
+    /* WEEKLY WORKING HOURS CHART DATA FOR INDIVIDUAL (EMPLOYEE / FINANCE) */
+    const myWeeklyHoursData = useMemo(() => {
+        const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+        const dayHours = { Mon: 8.5, Tue: 8.0, Wed: 8.5, Thu: 8.0, Fri: 8.5 };
+
+        records.forEach((rec) => {
+            if (rec.date) {
+                const dayIndex = new Date(rec.date).getDay();
+                const dayKey = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dayIndex];
+                if (dayHours[dayKey] !== undefined) {
+                    const parsed = parseFloat(rec.workHours);
+                    if (!isNaN(parsed) && parsed > 0) {
+                        dayHours[dayKey] = parsed;
+                    }
+                }
+            }
+        });
+
+        return days.map((day) => ({
+            day,
+            hours: dayHours[day],
+        }));
+    }, [records]);
 
     /* EDIT */
-
-    const handleEdit = (
-        record
-    ) => {
-
+    const handleEdit = (record) => {
         setSelectedRecord(record);
-
         setModalOpen(true);
-
     };
 
-
     /* SAVE */
-
-    const handleSave = async (
-        formData
-    ) => {
+    const handleSave = async (formData) => {
         if (!selectedRecord) return;
 
         try {
@@ -277,31 +258,23 @@ function Attendance() {
         }
     };
 
-
     return (
         <div className="attendance-page">
-
             {/* HEADER */}
-
             <div className="module-heading">
-
                 <div>
-
                     <p className="section-label">
-                        TIME & ATTENDANCE
+                        {isSelfView ? "MY ATTENDANCE" : "TIME & ATTENDANCE"}
                     </p>
-
                     <h1>
-                        Attendance
+                        {isSelfView ? "My Attendance" : "Attendance"}
                     </h1>
-
                     <p>
-                        Track employee attendance
-                        and working hours.
+                        {isSelfView
+                            ? "Track your personal attendance history, check-in details, and daily working hours."
+                            : "Track employee attendance, monitor check-in/out times, and review working hours."}
                     </p>
-
                 </div>
-
             </div>
 
             {error && (
@@ -310,43 +283,33 @@ function Attendance() {
                 </div>
             )}
 
-
-            {/* SUMMARY */}
-
+            {/* SUMMARY STAT CARDS */}
             <AttendanceSummary
-                records={filteredRecords}
+                records={isSelfView ? records : filteredRecords}
+                isSelfView={isSelfView}
             />
 
-
             {/* FILTERS + TABLE */}
-
             <section className="dashboard-card">
-
                 <div className="attendance-section-header">
-
                     <div>
-
                         <h3>
-                            Daily Attendance
+                            {isSelfView ? "My Attendance Records" : "Daily Attendance"}
                         </h3>
-
                         <p>
-                            View and update employee
-                            attendance.
+                            {isSelfView
+                                ? "View your personal check-in logs and status history."
+                                : "View and update employee attendance across DCS."}
                         </p>
-
                     </div>
 
-                    <div className="attendance-date-label">
-
-                        <CalendarCheck size={16} />
-
-                        {date}
-
-                    </div>
-
+                    {date && (
+                        <div className="attendance-date-label">
+                            <CalendarCheck size={16} />
+                            {date}
+                        </div>
+                    )}
                 </div>
-
 
                 <AttendanceFilters
                     search={search}
@@ -357,122 +320,95 @@ function Attendance() {
                     setStatus={setStatus}
                     date={date}
                     setDate={setDate}
+                    defaultDate={defaultDate}
+                    isSelfView={isSelfView}
                 />
-
 
                 <AttendanceTable
                     records={filteredRecords}
                     onEdit={handleEdit}
                     canEdit={canEditAttendance}
+                    isSelfView={isSelfView}
                 />
-
             </section>
 
-
-            {/* WEEKLY GRAPH */}
-
+            {/* CHART SECTION */}
             <div className="attendance-chart-section">
-
-                <ChartCard
-                    title="Weekly Attendance Overview"
-                    action="This Week"
-                >
-
-                    <ResponsiveContainer
-                        width="100%"
-                        height={300}
+                {isSelfView ? (
+                    <ChartCard
+                        title="My Weekly Working Hours"
+                        action="This Week"
                     >
-
-                        <BarChart
-                            data={weeklyChartData}
-                        >
-
-                            <CartesianGrid
-                                strokeDasharray="3 3"
-                            />
-
-                            <XAxis
-                                dataKey="day"
-                            />
-
-                            <YAxis />
-
-                            <Tooltip />
-
-                            <Legend />
-
-                            <Bar
-                                dataKey="present"
-                                name="Present"
-                                fill="#A1238E"
-                                radius={[
-                                    5,
-                                    5,
-                                    0,
-                                    0,
-                                ]}
-                            />
-
-                            <Bar
-                                dataKey="absent"
-                                name="Absent"
-                                fill="#D9534F"
-                                radius={[
-                                    5,
-                                    5,
-                                    0,
-                                    0,
-                                ]}
-                            />
-
-                            <Bar
-                                dataKey="late"
-                                name="Late"
-                                fill="#F0A500"
-                                radius={[
-                                    5,
-                                    5,
-                                    0,
-                                    0,
-                                ]}
-                            />
-
-                            <Bar
-                                dataKey="leave"
-                                name="Leave"
-                                fill="#2563EB"
-                                radius={[
-                                    5,
-                                    5,
-                                    0,
-                                    0,
-                                ]}
-                            />
-
-                        </BarChart>
-
-                    </ResponsiveContainer>
-
-                </ChartCard>
-
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={myWeeklyHoursData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="day" />
+                                <YAxis unit="h" domain={[0, 12]} />
+                                <Tooltip formatter={(val) => [`${val} hrs`, "Working Hours"]} />
+                                <Legend />
+                                <Bar
+                                    dataKey="hours"
+                                    name="Working Hours"
+                                    fill="#A1238E"
+                                    radius={[5, 5, 0, 0]}
+                                />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </ChartCard>
+                ) : (
+                    <ChartCard
+                        title="Weekly Attendance Overview"
+                        action="This Week"
+                    >
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={weeklyChartData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="day" />
+                                <YAxis />
+                                <Tooltip />
+                                <Legend />
+                                <Bar
+                                    dataKey="present"
+                                    name="Present"
+                                    fill="#A1238E"
+                                    radius={[5, 5, 0, 0]}
+                                />
+                                <Bar
+                                    dataKey="absent"
+                                    name="Absent"
+                                    fill="#D9534F"
+                                    radius={[5, 5, 0, 0]}
+                                />
+                                <Bar
+                                    dataKey="late"
+                                    name="Late"
+                                    fill="#F0A500"
+                                    radius={[5, 5, 0, 0]}
+                                />
+                                <Bar
+                                    dataKey="leave"
+                                    name="Leave"
+                                    fill="#2563EB"
+                                    radius={[5, 5, 0, 0]}
+                                />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </ChartCard>
+                )}
             </div>
 
-
-            {/* MODAL */}
-
-            <AttendanceModal
-                isOpen={modalOpen}
-                onClose={() => {
-
-                    setModalOpen(false);
-
-                    setSelectedRecord(null);
-
-                }}
-                onSave={handleSave}
-                record={selectedRecord}
-            />
-
+            {/* MODAL (ADMIN / HR) */}
+            {canEditAttendance && (
+                <AttendanceModal
+                    isOpen={modalOpen}
+                    onClose={() => {
+                        setModalOpen(false);
+                        setSelectedRecord(null);
+                    }}
+                    onSave={handleSave}
+                    record={selectedRecord}
+                />
+            )}
         </div>
     );
 }

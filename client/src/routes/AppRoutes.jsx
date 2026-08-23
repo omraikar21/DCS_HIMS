@@ -453,7 +453,7 @@ function AppRoutes() {
 
         {/* ====================================
             ATTENDANCE
-            ADMIN + HR + EMPLOYEE
+            ADMIN + HR + EMPLOYEE + FINANCE
         ==================================== */}
 
         <Route
@@ -463,6 +463,7 @@ function AppRoutes() {
                 "ADMIN",
                 "HR",
                 "EMPLOYEE",
+                "FINANCE",
               ]}
             />
           }

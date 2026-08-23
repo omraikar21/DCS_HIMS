@@ -44,7 +44,7 @@ function Documents() {
   const notification = useNotification();
   const userRole = (role || user?.role || "EMPLOYEE").toUpperCase();
   const isEmployee = userRole === "EMPLOYEE";
-  const canDeploy = ["ADMIN", "HR", "FINANCE"].includes(userRole);
+  const canDeploy = ["ADMIN", "HR", "SUPER_ADMIN"].includes(userRole);
 
   const [records, setRecords] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -54,10 +54,43 @@ function Documents() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All Categories");
   const [department, setDepartment] = useState("All Departments");
-  const [status, setStatus] = useState("All Status");
   const [modalOpen, setModalOpen] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
+
+  // Filter employees that the current role is authorized to deploy documents for
+  const deployableEmployees = useMemo(() => {
+    if (userRole === "HR") {
+      // HR can add documents for Finance and Employees only (excludes Admin / Super Admin)
+      return employees.filter((emp) => {
+        const empRole = (emp.role || "").toUpperCase();
+        const empDept = (emp.department_name || "").toLowerCase();
+        const empDesig = (emp.designation || "").toLowerCase();
+        return (
+          empRole !== "ADMIN" &&
+          empRole !== "SUPER_ADMIN" &&
+          !empDept.includes("admin") &&
+          !empDesig.includes("admin")
+        );
+      });
+    }
+
+    if (userRole === "ADMIN" || userRole === "SUPER_ADMIN") {
+      // Admin can add HR, Finance, and Employee documents (admin itself does not require documents)
+      return employees.filter((emp) => {
+        const empRole = (emp.role || "").toUpperCase();
+        const empDept = (emp.department_name || "").toLowerCase();
+        const empDesig = (emp.designation || "").toLowerCase();
+        return (
+          empRole !== "SUPER_ADMIN" &&
+          empRole !== "ADMIN" &&
+          !empDept.includes("super admin")
+        );
+      });
+    }
+
+    return employees;
+  }, [employees, userRole]);
 
   const mapDocumentToUI = (doc) => {
     const name = `${doc.first_name || ""} ${doc.last_name || ""}`.trim() || "Employee";
@@ -116,6 +149,7 @@ function Documents() {
 
       const searchText = search.toLowerCase();
       const matchesSearch =
+        !search ||
         record.documentName.toLowerCase().includes(searchText) ||
         record.employeeName.toLowerCase().includes(searchText) ||
         record.employeeId.toLowerCase().includes(searchText);
@@ -126,12 +160,9 @@ function Documents() {
       const matchesDepartment =
         department === "All Departments" || record.department === department;
 
-      const matchesStatus =
-        status === "All Status" || record.status === status;
-
-      return matchesSearch && matchesCategory && matchesDepartment && matchesStatus;
+      return matchesSearch && matchesCategory && matchesDepartment;
     });
-  }, [records, search, category, department, status, isEmployee, user, employees]);
+  }, [records, search, category, department, isEmployee, user, employees]);
 
   const handleAdd = () => {
     setModalOpen(true);
@@ -228,8 +259,8 @@ function Documents() {
       setLoading(true);
       setError("");
 
-      let matchedEmpId = 1;
-      if (employees.length > 0) {
+      let matchedEmpId = formData.employeeDatabaseId ? Number(formData.employeeDatabaseId) : null;
+      if (!matchedEmpId && employees.length > 0) {
         const found = employees.find(
           e => e.employee_code === formData.employeeId ||
                `${e.first_name || ""} ${e.last_name || ""}`.trim().toLowerCase() === formData.employeeName.trim().toLowerCase()
@@ -308,13 +339,11 @@ function Documents() {
 
         <DocumentFilters
           search={search}
-          onSearchChange={setSearch}
+          setSearch={setSearch}
           category={category}
-          onCategoryChange={setCategory}
+          setCategory={setCategory}
           department={department}
-          onDepartmentChange={setDepartment}
-          status={status}
-          onStatusChange={setStatus}
+          setDepartment={setDepartment}
         />
 
         {loading ? (
@@ -332,13 +361,13 @@ function Documents() {
         )}
       </section>
 
-      {/* UPLOAD MODAL (ADMIN, HR & FINANCE ONLY) */}
+      {/* UPLOAD MODAL (ADMIN & HR ONLY) */}
       {canDeploy && (
         <DocumentModal
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
           onSave={handleSave}
-          employees={employees}
+          employees={deployableEmployees}
         />
       )}
 

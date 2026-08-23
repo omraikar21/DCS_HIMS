@@ -144,6 +144,9 @@ const create = async (req, res) => {
       allowances,
       deductions,
       paymentStatus,
+      bankName,
+      bankAccount,
+      ifscCode,
     } = req.body;
 
 
@@ -295,10 +298,6 @@ const create = async (req, res) => {
     }
 
 
-    // --------------------------------------
-    // CREATE
-    // --------------------------------------
-
     const payroll =
       await addPayroll({
 
@@ -328,7 +327,33 @@ const create = async (req, res) => {
           paymentStatus ||
           "PENDING",
 
+        bankName:
+          bankName || null,
+
+        bankAccount:
+          bankAccount || null,
+
+        ifscCode:
+          ifscCode || null,
+
       });
+
+    // Also persist bank details to employee if provided
+    if (bankName || bankAccount || ifscCode) {
+      try {
+        const { pool } = require("../config/database");
+        await pool.query(
+          `UPDATE employees
+           SET bank_name = COALESCE($1, bank_name),
+               bank_account = COALESCE($2, bank_account),
+               ifsc_code = COALESCE($3, ifsc_code)
+           WHERE id = $4`,
+          [bankName || null, bankAccount || null, ifscCode || null, Number(employeeId)]
+        );
+      } catch (bankErr) {
+        console.warn("Sync employee bank info warning:", bankErr);
+      }
+    }
 
 
     return res.status(201).json({
@@ -476,6 +501,23 @@ const update = async (req, res) => {
         paymentDate: finalPaymentDate,
       }
     );
+
+    // Also persist bank details to employee if provided
+    if ((bankName || bankAccount || ifscCode) && existing.employee_id) {
+      try {
+        const { pool } = require("../config/database");
+        await pool.query(
+          `UPDATE employees
+           SET bank_name = COALESCE($1, bank_name),
+               bank_account = COALESCE($2, bank_account),
+               ifsc_code = COALESCE($3, ifsc_code)
+           WHERE id = $4`,
+          [bankName || null, bankAccount || null, ifscCode || null, existing.employee_id]
+        );
+      } catch (bankErr) {
+        console.warn("Sync employee bank info warning:", bankErr);
+      }
+    }
 
     // If marked as PAID, ensure a payslip record exists in payslips table
     if (finalStatus === "PAID" || finalStatus === "Paid") {

@@ -17,6 +17,7 @@ const {
   getAll,
   getById,
   create,
+  generateForMonth,
   update,
   remove,
 } = require("../controllers/payslipController");
@@ -51,7 +52,24 @@ router.get(
 
 
 // ------------------------------------------
-// CREATE
+// BULK GENERATE FOR MONTH
+// ADMIN + FINANCE ONLY
+// Body: { month: 8, year: 2026 }
+// ------------------------------------------
+
+router.post(
+  "/generate-month",
+  authenticateToken,
+  authorizeRoles(
+    "ADMIN",
+    "FINANCE"
+  ),
+  generateForMonth
+);
+
+
+// ------------------------------------------
+// CREATE (single, by payrollId)
 // ADMIN + FINANCE
 // ------------------------------------------
 

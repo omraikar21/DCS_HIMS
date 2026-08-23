@@ -21,32 +21,39 @@ function AttendanceFilters({
   setStatus,
   date,
   setDate,
+  defaultDate = "",
+  isSelfView = false,
 }) {
   const [departmentsList, setDepartmentsList] = useState(["All Departments"]);
 
   useEffect(() => {
-    getDepartments()
-      .then((data) => {
-        if (data && data.length > 0) {
-          const names = data.map((d) => d.name).filter(Boolean);
-          setDepartmentsList(["All Departments", ...names]);
-        } else {
-          setDepartmentsList(["All Departments"]);
-        }
-      })
-      .catch(() => setDepartmentsList(["All Departments"]));
-  }, []);
+    if (!isSelfView) {
+      getDepartments()
+        .then((data) => {
+          if (data && data.length > 0) {
+            const names = data.map((d) => d.name).filter(Boolean);
+            setDepartmentsList(["All Departments", ...names]);
+          } else {
+            setDepartmentsList(["All Departments"]);
+          }
+        })
+        .catch(() => setDepartmentsList(["All Departments"]));
+    }
+  }, [isSelfView]);
 
   const clearFilters = () => {
     setSearch("");
     setDepartment("All Departments");
     setStatus("All Status");
+    setDate(defaultDate || "");
   };
 
-  const hasFilters =
-    search ||
-    department !== "All Departments" ||
-    status !== "All Status";
+  const hasFilters = Boolean(
+    (search && search.trim().length > 0) ||
+    (department && department !== "All Departments") ||
+    (status && status !== "All Status") ||
+    (date !== defaultDate)
+  );
 
   return (
     <div className="attendance-filters">
@@ -55,33 +62,38 @@ function AttendanceFilters({
         <input
           type="date"
           value={date}
+          title="Filter by Date"
           onChange={(e) => setDate(e.target.value)}
         />
       </div>
 
-      {/* SEARCH */}
-      <div className="attendance-search">
-        <Search size={17} />
-        <input
-          type="text"
-          placeholder="Search employee..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
+      {/* SEARCH (ONLY FOR ADMIN / HR) */}
+      {!isSelfView && (
+        <div className="attendance-search">
+          <Search size={17} />
+          <input
+            type="text"
+            placeholder="Search employee..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      )}
 
-      {/* DEPARTMENT */}
-      <select
-        className="attendance-dropdown"
-        value={department}
-        onChange={(e) => setDepartment(e.target.value)}
-      >
-        {departmentsList.map((item) => (
-          <option key={item} value={item}>
-            {item}
-          </option>
-        ))}
-      </select>
+      {/* DEPARTMENT (ONLY FOR ADMIN / HR) */}
+      {!isSelfView && (
+        <select
+          className="attendance-dropdown"
+          value={department}
+          onChange={(e) => setDepartment(e.target.value)}
+        >
+          {departmentsList.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </select>
+      )}
 
       {/* STATUS */}
       <select
@@ -96,14 +108,15 @@ function AttendanceFilters({
         ))}
       </select>
 
-      {/* CLEAR */}
+      {/* ALL DATES / CLEAR */}
       {hasFilters && (
         <button
           className="clear-filter-button"
           onClick={clearFilters}
+          title="Clear all filters & show all history"
         >
           <X size={14} />
-          Clear
+          {isSelfView ? "Show All History" : "Clear"}
         </button>
       )}
     </div>

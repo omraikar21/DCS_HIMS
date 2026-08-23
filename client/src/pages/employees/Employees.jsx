@@ -327,19 +327,10 @@ function Employees() {
   };
 
 
-  /*
-   * =========================================
-   * VIEW EMPLOYEE
-   * =========================================
-   */
-
-  const handleView = (
-    employee
-  ) => {
-
-    window.location.href =
-      `/employees/${employee.databaseId}`;
-
+  const handleView = (employee) => {
+    setSelectedEmployee(employee);
+    setErrors({});
+    setModalOpen(true);
   };
 
 
@@ -638,13 +629,9 @@ function Employees() {
    */
 
   const handleCloseModal = () => {
-
     setModalOpen(false);
-
     setSelectedEmployee(null);
-
     setErrors({});
-
   };
 
 

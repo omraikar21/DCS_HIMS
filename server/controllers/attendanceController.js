@@ -5,12 +5,11 @@
 
 const {
   getAttendanceRecords,
+  getUserAttendanceRecords,
   getAttendance,
   addAttendance,
   editAttendance,
   removeAttendance,
-  processFacePunchService,
-  processBiometricBatchService,
 } = require("../services/attendanceService");
 
 
@@ -28,8 +27,14 @@ const getAll =
 
     try {
 
-      const records =
-        await getAttendanceRecords();
+      const userRole = (req.user?.role || "").toUpperCase();
+      let records;
+
+      if (["ADMIN", "HR"].includes(userRole)) {
+        records = await getAttendanceRecords();
+      } else {
+        records = await getUserAttendanceRecords(req.user);
+      }
 
 
       return res.status(200).json({
@@ -426,157 +431,10 @@ const remove =
   };
 
 
-// ------------------------------------------
-// FACE RECOGNITION BIOMETRIC PUNCH (SINGLE)
-// ------------------------------------------
-
-const BIOMETRIC_API_KEY =
-  process.env.BIOMETRIC_API_KEY || "dcs_face_recognition_secure_key_2026";
-
-const verifyBiometricApiKey = (req) => {
-  const headerKey =
-    req.headers["x-api-key"] ||
-    req.headers["authorization"]?.replace("Bearer ", "");
-  const queryKey = req.query.apiKey;
-  return (
-    headerKey === BIOMETRIC_API_KEY ||
-    queryKey === BIOMETRIC_API_KEY ||
-    req.user
-  );
-};
-
-const recordFacePunchController = async (req, res) => {
-  try {
-    if (!verifyBiometricApiKey(req)) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid or missing Face Recognition API Key (X-API-KEY).",
-      });
-    }
-
-    const {
-      employee_code,
-      employee_id,
-      email,
-      punch_time,
-      device_id,
-      confidence,
-      punch_type,
-      remarks,
-    } = req.body;
-
-    if (!employee_code && !employee_id && !email) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Please provide employee_code (e.g. DCS-EMP-001), employee_id, or email.",
-      });
-    }
-
-    const result = await processFacePunchService({
-      employeeCode: employee_code,
-      employeeId: employee_id,
-      email,
-      punchTime: punch_time,
-      deviceId: device_id || "FACE_DETECTION_DEVICE_01",
-      confidence,
-      punchType: punch_type || "AUTO",
-      remarks,
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: `Face attendance logged for ${result.employee.name} (${result.employee.code}). Action: ${result.action}`,
-      data: result,
-    });
-  } catch (error) {
-    console.error("Face punch error:", error);
-    return res
-      .status(error.message.includes("not found") ? 404 : 500)
-      .json({
-        success: false,
-        message:
-          error.message || "Failed to process face attendance punch",
-      });
-  }
-};
-
-// ------------------------------------------
-// FACE RECOGNITION BIOMETRIC BATCH SYNC
-// ------------------------------------------
-
-const recordBatchBiometricController = async (req, res) => {
-  try {
-    if (!verifyBiometricApiKey(req)) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid or missing Face Recognition API Key (X-API-KEY).",
-      });
-    }
-
-    const { records, device_id } = req.body;
-    if (!Array.isArray(records) || records.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide an array of punch records.",
-      });
-    }
-
-    const result = await processBiometricBatchService(
-      records,
-      device_id
-    );
-
-    return res.status(200).json({
-      success: true,
-      message: `Batch face punches processed: ${result.successful} successful, ${result.failed} failed.`,
-      data: result,
-    });
-  } catch (error) {
-    console.error("Batch biometric error:", error);
-    return res.status(500).json({
-      success: false,
-      message:
-        error.message || "Failed to process batch biometric punches",
-    });
-  }
-};
-
-// ------------------------------------------
-// GET BIOMETRIC API CONFIG FOR ADMIN
-// ------------------------------------------
-
-const getBiometricConfigController = async (req, res) => {
-  try {
-    return res.status(200).json({
-      success: true,
-      data: {
-        apiKey: BIOMETRIC_API_KEY,
-        endpoint: "/api/attendance/face-punch",
-        batchEndpoint: "/api/attendance/biometric-batch",
-        supportedIdentifiers: [
-          "employee_code",
-          "employee_id",
-          "email",
-        ],
-        status: "ACTIVE",
-      },
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Failed to retrieve biometric config",
-    });
-  }
-};
-
 module.exports = {
   getAll,
   getById,
   create,
   update,
   remove,
-  recordFacePunchController,
-  recordBatchBiometricController,
-  getBiometricConfigController,
 };

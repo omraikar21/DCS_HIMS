@@ -7,6 +7,7 @@ const {
   getAllPayslips,
   getPayslipById,
   getPayrollForPayslip,
+  getPayrollByMonth,
   createPayslip,
   updatePayslip,
   deletePayslip,
@@ -49,7 +50,7 @@ const getPayslip = async (id) => {
 
 
 // ------------------------------------------
-// CREATE
+// CREATE (single payslip from payrollId)
 // ------------------------------------------
 
 const generatePayslip = async (payrollId) => {
@@ -99,6 +100,8 @@ const generatePayslip = async (payrollId) => {
 
       payrollId,
 
+      employeeId: payroll.employee_id,
+
       payslipNumber,
 
       generatedAt:
@@ -108,6 +111,59 @@ const generatePayslip = async (payrollId) => {
 
 
   return payslip;
+};
+
+
+// ------------------------------------------
+// BULK GENERATE for a full month
+// Called by Finance via the "Generate" button
+// Returns { generated, skipped, errors }
+// ------------------------------------------
+
+const generatePayslipsForMonth = async (month, year) => {
+
+  const payrollRows = await getPayrollByMonth(month, year);
+
+  if (!payrollRows || payrollRows.length === 0) {
+    throw new Error(
+      `No payroll records found for ${month}/${year}. Please add payroll entries first.`
+    );
+  }
+
+  const generated = [];
+  const skipped   = [];
+  const errors    = [];
+
+  for (const row of payrollRows) {
+
+    // Check if payslip already exists
+    const existing = await getPayslipByPayrollId(row.id);
+
+    if (existing) {
+      skipped.push({ payrollId: row.id, reason: "Payslip already exists" });
+      continue;
+    }
+
+    try {
+
+      const payslipNumber =
+        `PS-${row.payroll_year}-${String(row.payroll_month).padStart(2, "0")}-${row.id}`;
+
+      const ps = await createPayslip({
+        payrollId:   row.id,
+        employeeId:  row.employee_id,
+        payslipNumber,
+        generatedAt: new Date(),
+      });
+
+      generated.push(ps);
+
+    } catch (err) {
+      errors.push({ payrollId: row.id, error: err.message });
+    }
+  }
+
+  return { generated, skipped, errors };
 };
 
 
@@ -161,6 +217,7 @@ module.exports = {
   getPayslipRecords,
   getPayslip,
   generatePayslip,
+  generatePayslipsForMonth,
   editPayslip,
   removePayslip,
-};
+};

@@ -7,6 +7,7 @@ const {
   getPayslipRecords,
   getPayslip,
   generatePayslip,
+  generatePayslipsForMonth,
   editPayslip,
   removePayslip,
 } = require("../services/payslipService");
@@ -311,10 +312,65 @@ const remove = async (req, res) => {
 };
 
 
+// ------------------------------------------
+// BULK GENERATE FOR MONTH
+// POST /api/payslips/generate-month
+// Body: { month: 8, year: 2026 }
+// ------------------------------------------
+
+const generateForMonth = async (req, res) => {
+
+  try {
+
+    const { month, year } = req.body;
+
+    if (!month || !year) {
+      return res.status(400).json({
+        success: false,
+        message: "month and year are required",
+      });
+    }
+
+    const monthNum = Number(month);
+    const yearNum  = Number(year);
+
+    if (
+      !Number.isInteger(monthNum) || monthNum < 1 || monthNum > 12 ||
+      !Number.isInteger(yearNum)  || yearNum  < 2000
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid month or year",
+      });
+    }
+
+    const result = await generatePayslipsForMonth(monthNum, yearNum);
+
+    return res.status(200).json({
+      success: true,
+      message: `Payslip generation complete: ${result.generated.length} generated, ${result.skipped.length} already existed.`,
+      data: result,
+    });
+
+  } catch (error) {
+
+    console.error("Bulk generate payslips error:", error);
+
+    return res.status(400).json({
+      success: false,
+      message: error.message || "Failed to generate payslips",
+    });
+
+  }
+
+};
+
+
 module.exports = {
   getAll,
   getById,
   create,
+  generateForMonth,
   update,
   remove,
 };

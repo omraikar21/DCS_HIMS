@@ -412,7 +412,7 @@ function Login() {
                   id="login-email"
                   type="text"
                   name="email"
-                  placeholder="omraikar2128@gmail.com"
+                  placeholder="e.g. alex@dcs.com or DCS-001"
                   value={formData.email}
                   onChange={handleChange}
                   autoComplete="username"
@@ -640,7 +640,7 @@ function Login() {
                       <Mail size={16} />
                       <input
                         type="email"
-                        placeholder="e.g. employee@example.com"
+                        placeholder="e.g. employee@dcs.com"
                         value={forgotEmail}
                         onChange={(e) => setForgotEmail(e.target.value)}
                         required

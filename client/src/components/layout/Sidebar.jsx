@@ -36,9 +36,19 @@ const menuItems = {
             icon: LayoutDashboard,
         },
         {
-            name: "Add Admin / Roles",
+            name: "Roles & Users",
             path: "/user-management",
             icon: ShieldCheck,
+        },
+        {
+            name: "Reports",
+            path: "/reports",
+            icon: BarChart3,
+        },
+        {
+            name: "Announcements",
+            path: "/announcements",
+            icon: Megaphone,
         },
         {
             name: "Server Notices",
@@ -115,7 +125,7 @@ const menuItems = {
             icon: ScrollText,
         },
         {
-            name: "Team & Roles",
+            name: "Roles & Users",
             path: "/user-management",
             icon: ShieldCheck,
         },
@@ -168,7 +178,7 @@ const menuItems = {
             icon: ClipboardList,
         },
         {
-            name: "Finance Team",
+            name: "Roles & Users",
             path: "/user-management",
             icon: ShieldCheck,
         },
@@ -194,6 +204,43 @@ const menuItems = {
         },
     ],
 
+    FINANCE: [
+        {
+            name: "Dashboard",
+            path: "/finance-dashboard",
+            icon: LayoutDashboard,
+        },
+        {
+            name: "My Attendance",
+            path: "/attendance",
+            icon: CalendarCheck,
+        },
+        {
+            name: "Payroll",
+            path: "/payroll",
+            icon: WalletCards,
+        },
+        {
+            name: "Payslips",
+            path: "/payslips",
+            icon: FileText,
+        },
+        {
+            name: "Reports",
+            path: "/reports",
+            icon: BarChart3,
+        },
+        {
+            name: "Announcements",
+            path: "/announcements",
+            icon: Megaphone,
+        },
+        {
+            name: "Profile",
+            path: "/profile",
+            icon: UserCircle,
+        },
+    ],
 
     EMPLOYEE: [
         {
@@ -232,45 +279,7 @@ const menuItems = {
             icon: Megaphone,
         },
         {
-            name: "Notifications",
-            path: "/notifications",
-            icon: Bell,
-        },
-        {
             name: "My Profile",
-            path: "/profile",
-            icon: UserCircle,
-        },
-    ],
-
-    FINANCE: [
-        {
-            name: "Dashboard",
-            path: "/finance-dashboard",
-            icon: LayoutDashboard,
-        },
-        {
-            name: "Payroll",
-            path: "/payroll",
-            icon: WalletCards,
-        },
-        {
-            name: "Payslips",
-            path: "/payslips",
-            icon: FileText,
-        },
-        {
-            name: "Financial Reports",
-            path: "/reports",
-            icon: BarChart3,
-        },
-        {
-            name: "Announcements",
-            path: "/announcements",
-            icon: Megaphone,
-        },
-        {
-            name: "Profile",
             path: "/profile",
             icon: UserCircle,
         },
