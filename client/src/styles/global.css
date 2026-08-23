@@ -2032,7 +2032,9 @@ input[type="checkbox"] {
 .employee-filters,
 .department-filters,
 .payroll-filters,
+.payslip-filters,
 .leave-filters,
+.attendance-filters,
 .recruitment-filters,
 .onboarding-filters,
 .document-filters,
@@ -2053,6 +2055,8 @@ input[type="checkbox"] {
 .department-search,
 .leave-search,
 .payroll-search,
+.payslip-search,
+.attendance-search,
 .document-search,
 .recruitment-search,
 .onboarding-search,
@@ -2076,6 +2080,8 @@ input[type="checkbox"] {
 .department-search:focus-within,
 .leave-search:focus-within,
 .payroll-search:focus-within,
+.payslip-search:focus-within,
+.attendance-search:focus-within,
 .document-search:focus-within,
 .recruitment-search:focus-within,
 .onboarding-search:focus-within,
@@ -2089,6 +2095,8 @@ input[type="checkbox"] {
 .department-search input,
 .leave-search input,
 .payroll-search input,
+.payslip-search input,
+.attendance-search input,
 .document-search input,
 .recruitment-search input,
 .onboarding-search input,
@@ -2108,6 +2116,8 @@ input[type="checkbox"] {
 .department-search svg,
 .leave-search svg,
 .payroll-search svg,
+.payslip-search svg,
+.attendance-search svg,
 .document-search svg,
 .recruitment-search svg,
 .onboarding-search svg,
@@ -2121,8 +2131,14 @@ input[type="checkbox"] {
 .department-dropdown,
 .leave-dropdown,
 .payroll-dropdown,
+.payslip-dropdown,
+.attendance-dropdown,
+.recruitment-dropdown,
+.onboarding-dropdown,
 .document-dropdown,
-.payroll-month input[type="month"] {
+.payroll-month input,
+.payslip-month input,
+.attendance-date input {
   height: 42px !important;
   padding: 0 36px 0 14px !important;
   background: #FFFFFF url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center !important;
@@ -2141,11 +2157,26 @@ input[type="checkbox"] {
   outline: none !important;
 }
 
+.payroll-month input,
+.payslip-month input,
+.attendance-date input {
+  background-image: none !important;
+  padding: 0 12px !important;
+  min-width: 140px !important;
+}
+
 .filter-dropdown:hover,
 .department-dropdown:hover,
 .leave-dropdown:hover,
 .payroll-dropdown:hover,
-.document-dropdown:hover {
+.payslip-dropdown:hover,
+.attendance-dropdown:hover,
+.recruitment-dropdown:hover,
+.onboarding-dropdown:hover,
+.document-dropdown:hover,
+.payroll-month input:hover,
+.payslip-month input:hover,
+.attendance-date input:hover {
   border-color: #94A3B8 !important;
 }
 
@@ -2153,7 +2184,14 @@ input[type="checkbox"] {
 .department-dropdown:focus,
 .leave-dropdown:focus,
 .payroll-dropdown:focus,
-.document-dropdown:focus {
+.payslip-dropdown:focus,
+.attendance-dropdown:focus,
+.recruitment-dropdown:focus,
+.onboarding-dropdown:focus,
+.document-dropdown:focus,
+.payroll-month input:focus,
+.payslip-month input:focus,
+.attendance-date input:focus {
   border-color: #A1238E !important;
   box-shadow: 0 0 0 3px rgba(161, 35, 142, 0.12) !important;
 }

@@ -1,7 +1,6 @@
-import {
-  Search,
-  X,
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, X } from "lucide-react";
+import { getDepartments } from "../../services/departmentService";
 
 const documentCategories = [
   "All Categories",
@@ -10,15 +9,6 @@ const documentCategories = [
   "Employment",
   "Financial",
   "Policy",
-];
-
-const documentDepartments = [
-  "All Departments",
-  "Development",
-  "AI/ML",
-  "IoT",
-  "HR",
-  "Finance",
 ];
 
 const documentStatuses = [
@@ -38,6 +28,20 @@ function DocumentFilters({
   status,
   setStatus,
 }) {
+  const [departmentsList, setDepartmentsList] = useState(["All Departments"]);
+
+  useEffect(() => {
+    getDepartments()
+      .then((data) => {
+        if (data && data.length > 0) {
+          const names = data.map((d) => d.name).filter(Boolean);
+          setDepartmentsList(["All Departments", ...names]);
+        } else {
+          setDepartmentsList(["All Departments"]);
+        }
+      })
+      .catch(() => setDepartmentsList(["All Departments"]));
+  }, []);
 
   const clearFilters = () => {
     setSearch("");
@@ -46,98 +50,59 @@ function DocumentFilters({
     setStatus("All Status");
   };
 
-
   const hasFilters =
     search ||
     category !== "All Categories" ||
     department !== "All Departments" ||
     status !== "All Status";
 
-
   return (
     <div className="document-filters">
-
       <div className="document-search">
-
         <Search size={17} />
-
         <input
           type="text"
           placeholder="Search document or employee..."
           value={search}
-          onChange={(e) =>
-            setSearch(e.target.value)
-          }
+          onChange={(e) => setSearch(e.target.value)}
         />
-
       </div>
-
 
       <select
         className="document-dropdown"
         value={category}
-        onChange={(e) =>
-          setCategory(e.target.value)
-        }
+        onChange={(e) => setCategory(e.target.value)}
       >
-
-        {documentCategories.map(
-          (item) => (
-            <option
-              key={item}
-              value={item}
-            >
-              {item}
-            </option>
-          )
-        )}
-
+        {documentCategories.map((item) => (
+          <option key={item} value={item}>
+            {item}
+          </option>
+        ))}
       </select>
-
 
       <select
         className="document-dropdown"
         value={department}
-        onChange={(e) =>
-          setDepartment(e.target.value)
-        }
+        onChange={(e) => setDepartment(e.target.value)}
       >
-
-        {documentDepartments.map(
-          (item) => (
-            <option
-              key={item}
-              value={item}
-            >
-              {item}
-            </option>
-          )
-        )}
-
+        {departmentsList.map((item) => (
+          <option key={item} value={item}>
+            {item}
+          </option>
+        ))}
       </select>
-
 
       <select
         className="document-dropdown"
         value={status}
-        onChange={(e) =>
-          setStatus(e.target.value)
-        }
+        onChange={(e) => setStatus(e.target.value)}
       >
-
-        {documentStatuses.map(
-          (item) => (
-            <option
-              key={item}
-              value={item}
-            >
-              {item}
-            </option>
-          )
-        )}
-
+        {documentStatuses.map((item) => (
+          <option key={item} value={item}>
+            {item}
+          </option>
+        ))}
       </select>
-
 
       {hasFilters && (
         <button
@@ -148,7 +113,6 @@ function DocumentFilters({
           Clear
         </button>
       )}
-
     </div>
   );
 }

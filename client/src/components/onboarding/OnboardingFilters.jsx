@@ -1,16 +1,6 @@
-import {
-  Search,
-  X,
-} from "lucide-react";
-
-const onboardingDepartments = [
-  "All Departments",
-  "Development",
-  "AI/ML",
-  "IoT",
-  "HR",
-  "Finance",
-];
+import { useState, useEffect } from "react";
+import { Search, X } from "lucide-react";
+import { getDepartments } from "../../services/departmentService";
 
 const onboardingStatuses = [
   "All Status",
@@ -27,6 +17,20 @@ function OnboardingFilters({
   status,
   setStatus,
 }) {
+  const [departmentsList, setDepartmentsList] = useState(["All Departments"]);
+
+  useEffect(() => {
+    getDepartments()
+      .then((data) => {
+        if (data && data.length > 0) {
+          const names = data.map((d) => d.name).filter(Boolean);
+          setDepartmentsList(["All Departments", ...names]);
+        } else {
+          setDepartmentsList(["All Departments"]);
+        }
+      })
+      .catch(() => setDepartmentsList(["All Departments"]));
+  }, []);
 
   const clearFilters = () => {
     setSearch("");
@@ -34,75 +38,46 @@ function OnboardingFilters({
     setStatus("All Status");
   };
 
-
   const hasFilters =
     search ||
     department !== "All Departments" ||
     status !== "All Status";
 
-
   return (
     <div className="onboarding-filters">
-
       <div className="onboarding-search">
-
         <Search size={17} />
-
         <input
           type="text"
           placeholder="Search employee..."
           value={search}
-          onChange={(e) =>
-            setSearch(e.target.value)
-          }
+          onChange={(e) => setSearch(e.target.value)}
         />
-
       </div>
-
 
       <select
         className="onboarding-dropdown"
         value={department}
-        onChange={(e) =>
-          setDepartment(e.target.value)
-        }
+        onChange={(e) => setDepartment(e.target.value)}
       >
-
-        {onboardingDepartments.map(
-          (item) => (
-            <option
-              key={item}
-              value={item}
-            >
-              {item}
-            </option>
-          )
-        )}
-
+        {departmentsList.map((item) => (
+          <option key={item} value={item}>
+            {item}
+          </option>
+        ))}
       </select>
-
 
       <select
         className="onboarding-dropdown"
         value={status}
-        onChange={(e) =>
-          setStatus(e.target.value)
-        }
+        onChange={(e) => setStatus(e.target.value)}
       >
-
-        {onboardingStatuses.map(
-          (item) => (
-            <option
-              key={item}
-              value={item}
-            >
-              {item}
-            </option>
-          )
-        )}
-
+        {onboardingStatuses.map((item) => (
+          <option key={item} value={item}>
+            {item}
+          </option>
+        ))}
       </select>
-
 
       {hasFilters && (
         <button
@@ -113,7 +88,6 @@ function OnboardingFilters({
           Clear
         </button>
       )}
-
     </div>
   );
 }
