@@ -91,7 +91,7 @@ function Recruitment() {
       email: rec.email || "",
       phone: rec.phone || "",
       position: rec.position || "",
-      department: rec.name || rec.department_name || "Development",
+      department: rec.name || rec.department_name || "General",
       departmentId: rec.department_id,
       experience: rec.experience_years ? `${rec.experience_years} Years` : "Fresher",
       appliedDate,

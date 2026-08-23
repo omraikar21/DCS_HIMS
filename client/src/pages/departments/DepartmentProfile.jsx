@@ -50,7 +50,7 @@ function DepartmentProfile() {
                         name: data.name || "",
                         code: data.name ? data.name.slice(0, 4).toUpperCase() : "DEPT",
                         employees: Number(data.employee_count || 0),
-                        location: "Hubballi",
+                        location: data.location || "Main Office",
                         description: data.description || "No description provided.",
                         status: data.is_active !== false ? "Active" : "Inactive",
                     });

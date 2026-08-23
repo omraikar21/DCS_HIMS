@@ -290,6 +290,7 @@ function Departments() {
                     setLocation={setLocation}
                     status={status}
                     setStatus={setStatus}
+                    departments={departments}
                 />
 
 

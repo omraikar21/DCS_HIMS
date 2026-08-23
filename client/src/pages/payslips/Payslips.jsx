@@ -64,8 +64,8 @@ function Payslips() {
   const mapPayslipToUI = (rec) => {
     const name = `${rec.first_name || ""} ${rec.last_name || ""}`.trim() || "Employee";
     const monthStr = rec.payroll_month && rec.payroll_year
-      ? `${monthNames[Number(rec.payroll_month) - 1] || "August"} ${rec.payroll_year}`
-      : "August 2026";
+      ? `${monthNames[Number(rec.payroll_month) - 1] || ""} ${rec.payroll_year}`.trim()
+      : "-";
     const basic = Number(rec.basic_salary || 0);
     const allowances = Number(rec.allowances || 0);
     const deductions = Number(rec.deductions || 0);
@@ -78,7 +78,7 @@ function Payslips() {
       payrollId: rec.payroll_id,
       employeeId: rec.employee_code || `EMP-${rec.employee_id}`,
       employeeName: name,
-      department: rec.department_name || "Development",
+      department: rec.department_name || "General",
       month: monthStr,
       basicSalary: basic,
       grossSalary: gross,

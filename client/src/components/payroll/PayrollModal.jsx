@@ -12,16 +12,16 @@ import {
 const initialForm = {
   employeeId: "",
   employeeName: "",
-  payrollMonth: 8,
-  payrollYear: 2026,
+  payrollMonth: new Date().getMonth() + 1,
+  payrollYear: new Date().getFullYear(),
   basicSalary: 0,
   hra: 0,
   allowances: 0,
   deductions: 0,
   status: "Pending",
-  bankName: "HDFC Bank",
-  bankAccount: "50100482910482",
-  ifscCode: "HDFC0001234",
+  bankName: "",
+  bankAccount: "",
+  ifscCode: "",
 };
 
 function PayrollModal({
@@ -38,16 +38,16 @@ function PayrollModal({
       setForm({
         employeeId: record.employeeDatabaseId || record.employeeId || "",
         employeeName: record.employeeName || "",
-        payrollMonth: record.monthKey ? Number(record.monthKey.split("-")[1]) : 8,
-        payrollYear: record.monthKey ? Number(record.monthKey.split("-")[0]) : 2026,
+        payrollMonth: record.monthKey ? Number(record.monthKey.split("-")[1]) : new Date().getMonth() + 1,
+        payrollYear: record.monthKey ? Number(record.monthKey.split("-")[0]) : new Date().getFullYear(),
         basicSalary: record.basicSalary || 0,
         hra: record.hra || Math.round(Number(record.basicSalary || 0) * 0.25),
         allowances: record.allowances || 0,
         deductions: record.deductions || 0,
         status: record.status || "Pending",
-        bankName: record.bankName || "HDFC Bank",
-        bankAccount: record.bankAccount || "50100482910482",
-        ifscCode: record.ifscCode || "HDFC0001234",
+        bankName: record.bankName || "",
+        bankAccount: record.bankAccount || "",
+        ifscCode: record.ifscCode || "",
       });
     } else {
       const firstEmp = employees[0];
@@ -55,11 +55,11 @@ function PayrollModal({
         ...initialForm,
         employeeId: firstEmp ? firstEmp.id : "",
         employeeName: firstEmp ? `${firstEmp.first_name || ""} ${firstEmp.last_name || ""}`.trim() : "",
-        basicSalary: firstEmp ? Number(firstEmp.salary || 85000) : 85000,
-        hra: firstEmp ? Math.round(Number(firstEmp.salary || 85000) * 0.25) : 21250,
-        bankName: firstEmp?.bank_name || "HDFC Bank",
-        bankAccount: firstEmp?.bank_account || "50100482910482",
-        ifscCode: firstEmp?.ifsc_code || "HDFC0001234",
+        basicSalary: firstEmp ? Number(firstEmp.salary || 0) : 0,
+        hra: firstEmp ? Math.round(Number(firstEmp.salary || 0) * 0.25) : 0,
+        bankName: firstEmp?.bank_name || "",
+        bankAccount: firstEmp?.bank_account || "",
+        ifscCode: firstEmp?.ifsc_code || "",
       });
     }
   }, [record, isOpen, employees]);
@@ -72,16 +72,16 @@ function PayrollModal({
     const empId = Number(e.target.value);
     const selected = employees.find((emp) => emp.id === empId);
     if (selected) {
-      const basic = Number(selected.salary || 85000);
+      const basic = Number(selected.salary || 0);
       setForm((prev) => ({
         ...prev,
         employeeId: selected.id,
         employeeName: `${selected.first_name || ""} ${selected.last_name || ""}`.trim(),
         basicSalary: basic,
         hra: Math.round(basic * 0.25),
-        bankName: selected.bank_name || prev.bankName || "HDFC Bank",
-        bankAccount: selected.bank_account || prev.bankAccount || "50100482910482",
-        ifscCode: selected.ifsc_code || prev.ifscCode || "HDFC0001234",
+        bankName: selected.bank_name || "",
+        bankAccount: selected.bank_account || "",
+        ifscCode: selected.ifsc_code || "",
       }));
     } else {
       setForm((prev) => ({ ...prev, employeeId: empId }));

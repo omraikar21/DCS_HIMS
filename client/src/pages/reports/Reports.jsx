@@ -70,219 +70,37 @@ function Reports() {
 
   // Form State for creating and sending Finance Report
   const [financeForm, setFinanceForm] = useState({
-    targetEmail: "anandck89@gmail.com",
+    targetEmail: "",
     reportTitle: "Monthly Salary & Compensation Statement",
-    fiscalPeriod: "August 2026",
-    grossSalary: "85000",
-    allowances: "10000",
-    deductions: "6500",
-    specialNotes: "Regular monthly salary credit with verified performance bonus and statutory PF/TDS withholdings.",
+    fiscalPeriod: new Date().toLocaleString("en-US", { month: "long", year: "numeric" }),
+    grossSalary: "",
+    allowances: "",
+    deductions: "",
+    specialNotes: "Regular monthly salary credit with verified statutory deductions.",
   });
 
   // Local Storage Custom Finance Reports
   const [customReports, setCustomReports] = useState(() => {
     try {
       const stored = localStorage.getItem("dcs_custom_finance_reports");
-      if (stored) return JSON.parse(stored);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(
+            (r) =>
+              r.id !== "REP-FIN-ANAND-01" &&
+              !r.title?.includes("August 2026 Salary")
+          );
+        }
+      }
     } catch {
       // fallback
     }
-    return [
-      {
-        id: "REP-FIN-ANAND-01",
-        title: "August 2026 Salary & Tax Deduction Statement",
-        category: "Personal Finance & Compensation",
-        generatedBy: "Finance Team (Om Raikar)",
-        targetRoles: ["EMPLOYEE", "FINANCE", "ADMIN"],
-        targetEmployeeEmail: "anandck89@gmail.com",
-        targetEmployeeName: "Anand (Senior AI Engineer)",
-        purpose: "Monthly Salary Disbursal, Statutory PF/TDS Deductions, Income Tax Proof",
-        usage: "Referred to Anand for employee salary slip verification and IT declaration.",
-        format: "PDF / Verified Slip",
-        scope: "Confidential Employee Compensation",
-        date: "2026-08-21",
-        icon: Receipt,
-        color: "#A51D8D",
-        data: {
-          summary: [
-            { label: "Gross Earnings", value: `${currencySymbol}85,000` },
-            { label: "Allowances & Incentives", value: `${currencySymbol}10,000` },
-            { label: "Total Deductions (PF/Tax)", value: `${currencySymbol}6,500` },
-            { label: "Net Bank Payout", value: `${currencySymbol}88,500` },
-          ],
-          details: [
-            { item: "Basic Pay Component", dept: "Earnings", metric: "Base Salary", score: `${currencySymbol}55,000` },
-            { item: "House Rent Allowance (HRA)", dept: "Earnings", metric: "Allowance", score: `${currencySymbol}20,000` },
-            { item: "Special & Travel Allowance", dept: "Earnings", metric: "Allowance", score: `${currencySymbol}10,000` },
-            { item: "Provident Fund (PF Employee)", dept: "Deductions", metric: "Statutory", score: `-${currencySymbol}3,500` },
-            { item: "Professional Tax (PT) & TDS", dept: "Deductions", metric: "Tax", score: `-${currencySymbol}3,000` },
-          ],
-        },
-      }
-    ];
+    return [];
   });
 
   // Base Corporate Catalog
-  const standardReports = [
-    {
-      id: "REP-ACH-01",
-      title: "Workforce Achievements & Quarterly Review",
-      category: "Human Resources",
-      generatedBy: "HR Department (Om Raikar)",
-      targetRoles: ["HR", "ADMIN"],
-      targetEmployeeEmail: "ALL",
-      targetEmployeeName: "Executive Leadership & HR",
-      purpose: "Performance Appraisal, Sprint Deliverables, and Promotion Eligibility",
-      usage: "Used by Admin & HR for semi-annual appraisal cycles and talent retention.",
-      description: "Employee quarterly performance ratings, milestones reached, sprint deliverables, and promotion recommendations.",
-      format: "PDF / Excel",
-      scope: "Enterprise Staff",
-      date: "2026-08-21",
-      icon: Award,
-      color: "#A51D8D",
-      data: {
-        summary: [
-          { label: "Top Performers (Band A+)", value: "1 Lead Engineer" },
-          { label: "Quarterly Milestones Met", value: "99.0%" },
-          { label: "Promotions Processed", value: "1 Candidate" },
-          { label: "Training Certifications", value: "4 Completed" },
-        ],
-        details: [
-          { item: "Anand", dept: "Software Development", metric: "Senior AI Architecture Delivery", score: "99% (Exceeds)" },
-          { item: "Om Raikar", dept: "Management", metric: "Enterprise Infrastructure Scale", score: "98% (Exceeds)" },
-        ],
-      },
-    },
-
-
-    {
-      id: "REP-PAY-02",
-      title: "Company-Wide Payroll & Tax Distribution Statement",
-      category: "Finance & Payroll",
-      generatedBy: "Finance Team (Om Raikar)",
-      targetRoles: ["FINANCE", "ADMIN"],
-      targetEmployeeEmail: "ALL",
-      targetEmployeeName: "Finance & Corporate Audit",
-      purpose: "Statutory Tax Withholding, Gross vs Net Audit, Banking Disbursal Reconciliation",
-      usage: "Used by Finance and Executive Management to monitor total monthly payroll liability.",
-      description: "Comprehensive financial statement of gross salaries, statutory PF & TDS withholdings, and net disbursements.",
-      format: "Excel / PDF",
-      scope: "All Departments",
-      date: "2026-08-21",
-      icon: WalletCards,
-      color: "#2563EB",
-      data: {
-        summary: [
-          { label: "Total Monthly Gross", value: `${currencySymbol}2,85,000` },
-          { label: "Statutory Deductions (PF/Tax)", value: `${currencySymbol}24,500` },
-          { label: "Net Take-Home Disbursed", value: `${currencySymbol}2,60,500` },
-          { label: "Active Payroll Records", value: "4 Employees" },
-        ],
-        details: [
-          { item: "Anand (Senior AI Engineer)", dept: "Development", metric: `Gross: ${currencySymbol}85,000`, score: `Net: ${currencySymbol}78,500` },
-          { item: "Rahul Verma (AI/ML Engineer)", dept: "AI/ML", metric: `Gross: ${currencySymbol}75,000`, score: `Net: ${currencySymbol}69,000` },
-          { item: "Priya Sharma (Software Engineer)", dept: "Development", metric: `Gross: ${currencySymbol}65,000`, score: `Net: ${currencySymbol}59,800` },
-          { item: "Sneha Kulkarni (UI/UX Designer)", dept: "Design", metric: `Gross: ${currencySymbol}60,000`, score: `Net: ${currencySymbol}53,200` },
-        ],
-      },
-    },
-
-    {
-      id: "REP-PS-03",
-      title: "Organization Payslip & Compensation Benchmark",
-      category: "Organization Overview",
-      generatedBy: "Finance & Accounts Dept",
-      targetRoles: ["ADMIN", "HR", "FINANCE", "EMPLOYEE"],
-      targetEmployeeEmail: "ALL",
-      targetEmployeeName: "All Staff & Management",
-      purpose: "General Compensation Transparency, Annual Salary Slabs, Grade Bands",
-      usage: "Open enterprise compensation overview for company-wide reference.",
-      description: "High-level organizational compensation trends, department salary averages, and overall company payslip analytics.",
-      format: "PDF / Chart",
-      scope: "General Company Overview",
-      date: "2026-08-21",
-      icon: Receipt,
-      color: "#2E9B67",
-      data: {
-        summary: [
-          { label: "Company Salary Range", value: `${currencySymbol}60,000 - ${currencySymbol}85,000` },
-          { label: "Average Compensation", value: `${currencySymbol}71,250` },
-          { label: "Payslip Release Cycle", value: "Monthly (1st Business Day)" },
-          { label: "Disbursement Fulfillment", value: "100% On-Time" },
-        ],
-        details: [
-          { item: "Software Engineering", dept: "Development", metric: "Average Salary", score: `${currencySymbol}75,000` },
-          { item: "Artificial Intelligence", dept: "AI/ML", metric: "Average Salary", score: `${currencySymbol}75,000` },
-          { item: "UI/UX & Product Design", dept: "Design", metric: "Average Salary", score: `${currencySymbol}60,000` },
-          { item: "Human Resources & Talent", dept: "HR", metric: "Average Salary", score: `${currencySymbol}65,000` },
-        ],
-      },
-    },
-
-    {
-      id: "REP-ATT-04",
-      title: "Workforce Attendance & Shift Adherence Review",
-      category: "Time & Attendance",
-      generatedBy: "HR Department (Om Raikar)",
-      targetRoles: ["HR", "ADMIN"],
-      targetEmployeeEmail: "ALL",
-      targetEmployeeName: "HR & Department Managers",
-      purpose: "Leave Balances, Shift Attendance Compliance, Overtime Authorization",
-      usage: "Used by HR to verify attendance before monthly payroll processing.",
-      description: "Monthly punctuality statistics, average working hours per employee, overtime tallies, and leave utilization.",
-      format: "Excel / PDF",
-      scope: "All Staff",
-      date: "2026-08-21",
-      icon: Calendar,
-      color: "#EA580C",
-      data: {
-        summary: [
-          { label: "Overall Attendance Rate", value: "98.5%" },
-          { label: "Average Daily Hours", value: "8.5 hrs / day" },
-          { label: "Total Overtime Logged", value: "18 Hours" },
-          { label: "Approved Leave Utilization", value: "3 Days" },
-        ],
-        details: [
-          { item: "Anand", dept: "Development", metric: "100% Punctuality", score: "8.7 hrs avg" },
-          { item: "Priya Sharma", dept: "Development", metric: "98% Punctuality", score: "8.5 hrs avg" },
-          { item: "Rahul Verma", dept: "AI/ML", metric: "99% Punctuality", score: "8.6 hrs avg" },
-          { item: "Sneha Kulkarni", dept: "Design", metric: "97% Punctuality", score: "8.3 hrs avg" },
-        ],
-      },
-    },
-
-    {
-      id: "REP-DEP-05",
-      title: "Department Headcount & Resource Capacity",
-      category: "Organization",
-      generatedBy: "Human Resources",
-      targetRoles: ["HR", "ADMIN"],
-      targetEmployeeEmail: "ALL",
-      targetEmployeeName: "Executive Leadership",
-      purpose: "Department Resource Allocation, Capacity Planning, Hiring Demand",
-      usage: "Quarterly staffing review to budget future engineering & design headcount.",
-      description: "Departmental capacity breakdown and headcount distribution across project domains.",
-      format: "PDF",
-      scope: "All Departments",
-      date: "2026-08-21",
-      icon: Building2,
-      color: "#0891B2",
-      data: {
-        summary: [
-          { label: "Total Headcount", value: "4 Employees" },
-          { label: "Active Operating Units", value: "4 Departments" },
-          { label: "Engineering Ratio", value: "75% Technical" },
-          { label: "Resource Utilization", value: "100% Capacity" },
-        ],
-        details: [
-          { item: "Software Development", dept: "Engineering", metric: "2 Engineers", score: "Full Capacity" },
-          { item: "Artificial Intelligence & ML", dept: "Research", metric: "1 AI Lead", score: "Full Capacity" },
-          { item: "UI/UX & Product Design", dept: "Design", metric: "1 Product Designer", score: "Full Capacity" },
-          { item: "Finance & HR Management", dept: "Operations", metric: "2 Managers", score: "Active" },
-        ],
-      },
-    },
-  ];
+  const standardReports = [];
 
   const allReports = useMemo(() => {
     return [...customReports, ...standardReports];
@@ -627,8 +445,32 @@ function Reports() {
           gap: "20px",
         }}
       >
-        {visibleReports.map((report) => {
-          const Icon = report.icon || Receipt;
+        {visibleReports.length === 0 ? (
+          <div
+            className="dashboard-card full-width"
+            style={{
+              gridColumn: "1 / -1",
+              textAlign: "center",
+              padding: "48px 24px",
+              color: "#64748B",
+              background: "#FFFFFF",
+              borderRadius: "12px",
+              border: "1px solid #DDD2E2",
+            }}
+          >
+            <FileSpreadsheet size={44} color="#A51D8D" style={{ margin: "0 auto 12px", opacity: 0.7 }} />
+            <h3 style={{ fontSize: "17px", fontWeight: "700", color: "#18243A", margin: "0 0 6px" }}>
+              No Reports Published Yet
+            </h3>
+            <p style={{ fontSize: "13.5px", margin: "0 0 16px", color: "#64748B", maxWidth: "520px", marginLeft: "auto", marginRight: "auto" }}>
+              {isFinance || userRole === "ADMIN"
+                ? "Click 'Create & Send Finance Report' above to issue a formal salary statement or financial report for any employee."
+                : "No personal compensation slips or organizational statements have been issued to your profile yet."}
+            </p>
+          </div>
+        ) : (
+          visibleReports.map((report) => {
+            const Icon = report.icon || Receipt;
           const isPersonalToMe =
             isEmployee &&
             report.targetEmployeeEmail &&
@@ -776,7 +618,7 @@ function Reports() {
               </div>
             </div>
           );
-        })}
+        }))}
       </div>
 
       {createModalOpen && (

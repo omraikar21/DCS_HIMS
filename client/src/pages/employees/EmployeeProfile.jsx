@@ -40,11 +40,11 @@ function EmployeeProfile() {
             name: fullName,
             email: data.email || "",
             phone: data.phone || "",
-            department: data.department_name || "Development",
-            designation: data.designation || "Engineer",
+            department: data.department_name || "General",
+            designation: data.designation || "Staff",
             status: statusMap[data.employment_status] || "Active",
-            joiningDate: data.joining_date ? String(data.joining_date).slice(0, 10) : "2026-01-15",
-            location: data.address || "Hubballi",
+            joiningDate: data.joining_date ? String(data.joining_date).slice(0, 10) : "-",
+            location: data.address || "-",
           });
         }
       } catch (err) {

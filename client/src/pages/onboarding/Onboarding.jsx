@@ -86,10 +86,10 @@ function Onboarding() {
       databaseId: rec.id,
       employeeId: rec.employee_code || (rec.candidate_id ? `CAN-${rec.candidate_id}` : `EMP-${rec.employee_id || rec.id}`),
       employeeName: name,
-      department: rec.name || "Development",
-      position: rec.designation || "Software Developer",
+      department: rec.name || "General",
+      position: rec.designation || "New Joiner",
       joiningDate,
-      documents: rec.documents_completed ? "5/5" : "3/5",
+      documents: rec.documents_completed ? "Completed" : "Pending",
       progress,
       status: statusToUI[rec.onboarding_status] || "Started",
     };

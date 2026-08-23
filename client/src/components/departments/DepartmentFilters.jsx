@@ -3,12 +3,7 @@ import {
   X,
 } from "lucide-react";
 
-const departmentLocations = [
-  "All Locations",
-  "Hubballi",
-  "Belagavi",
-  "Dharwad",
-];
+import { useMemo } from "react";
 
 const departmentStatuses = [
   "All Status",
@@ -23,7 +18,15 @@ function DepartmentFilters({
   setLocation,
   status,
   setStatus,
+  departments = [],
 }) {
+  const departmentLocations = useMemo(() => {
+    const locSet = new Set(["All Locations"]);
+    departments.forEach((d) => {
+      if (d.location && d.location !== "-") locSet.add(d.location);
+    });
+    return Array.from(locSet);
+  }, [departments]);
   const clearFilters = () => {
     setSearch("");
     setLocation("All Locations");

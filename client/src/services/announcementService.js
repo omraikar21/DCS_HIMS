@@ -5,46 +5,25 @@
 
 import { addNotification } from "./notificationService";
 
-const DEFAULT_ANNOUNCEMENTS = [
-  {
-    id: 1,
-    title: "Annual DCS Technology Summit 2026",
-    category: "Company Event",
-    date: "August 25, 2026",
-    pinned: true,
-    content: "We are pleased to announce our Annual Technology Summit scheduled for August 25. All engineering and product teams will showcase their latest innovations in AI, IoT, and Cloud architecture.",
-    author: "Management",
-  },
-  {
-    id: 2,
-    title: "Updated Leave and Punctuality Guidelines",
-    category: "HR Policy",
-    date: "August 15, 2026",
-    pinned: true,
-    content: "Please review the updated HR policy regarding casual and earned leave applications. All leave requests must be submitted at least 2 days in advance via the DCS-HIMS Portal.",
-    author: "HR Department",
-  },
-  {
-    id: 3,
-    title: "Independence Day Celebration & Office Schedule",
-    category: "Notice",
-    date: "August 14, 2026",
-    pinned: false,
-    content: "The office will remain closed on August 15 in observance of Independence Day. Regular operations will resume on August 16.",
-    author: "HR Operations",
-  },
-];
-
 export const getAnnouncements = () => {
   try {
     const raw = localStorage.getItem("dcs_announcements");
     if (!raw) {
-      localStorage.setItem("dcs_announcements", JSON.stringify(DEFAULT_ANNOUNCEMENTS));
-      return DEFAULT_ANNOUNCEMENTS;
+      return [];
     }
-    return JSON.parse(raw) || DEFAULT_ANNOUNCEMENTS;
+    const parsed = JSON.parse(raw);
+    // Filter out legacy dummy announcements if stored previously
+    if (Array.isArray(parsed)) {
+      return parsed.filter(
+        (a) =>
+          a.title !== "Annual DCS Technology Summit 2026" &&
+          a.title !== "Updated Leave and Punctuality Guidelines" &&
+          a.title !== "Independence Day Celebration & Office Schedule"
+      );
+    }
+    return [];
   } catch {
-    return DEFAULT_ANNOUNCEMENTS;
+    return [];
   }
 };
 
