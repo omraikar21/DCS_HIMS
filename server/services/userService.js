@@ -53,7 +53,7 @@ const fetchUsersList = async (requester) => {
 // ------------------------------------------
 // PROVISION USER ACCOUNT WITH ROLE
 // ------------------------------------------
-const createUserWithRole = async ({ name, email, role, password }, requester) => {
+const createNewUser = async ({ name, email, role, password }, requester) => {
   const cleanName = (name || "").trim();
   const cleanEmail = (email || "").trim().toLowerCase();
   const targetRole = (role || "").trim().toUpperCase();
@@ -389,6 +389,7 @@ const removeUser = async (id, requester) => {
 module.exports = {
   fetchUsersList,
   createNewUser,
+  createUserWithRole: createNewUser,
   modifyUser,
   removeUser,
 };
