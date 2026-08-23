@@ -21,9 +21,43 @@ import {
 
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { useAuth } from "../../hooks/useAuth";
 import { getLoadedSettings } from "../../services/settingsService";
 
 const menuItems = {
+    SUPER_ADMIN: [
+        {
+            name: "Dashboard",
+            path: "/dashboard",
+            icon: LayoutDashboard,
+        },
+        {
+            name: "Add Admin / Roles",
+            path: "/user-management",
+            icon: ShieldCheck,
+        },
+        {
+            name: "Announcements",
+            path: "/announcements",
+            icon: Megaphone,
+        },
+        {
+            name: "Audit Logs",
+            path: "/audit-logs",
+            icon: ScrollText,
+        },
+        {
+            name: "Settings",
+            path: "/settings",
+            icon: Settings,
+        },
+        {
+            name: "Profile",
+            path: "/profile",
+            icon: UserCircle,
+        },
+    ],
+
     ADMIN: [
         {
             name: "Dashboard",
@@ -257,9 +291,15 @@ function Sidebar({
         return () => window.removeEventListener("dcsSettingsUpdated", handleSettingsUpdate);
     }, []);
 
-    const normalizedRole = (role || "ADMIN").toUpperCase();
-    const items =
-        menuItems[normalizedRole] || menuItems.ADMIN;
+    const { user, role: authRole } = useAuth();
+    const isSuperAdmin = Boolean(
+        user?.is_super_admin ||
+        (user?.email && user.email.toLowerCase().trim() === "omraikar2128@gmail.com")
+    );
+
+    const normalizedRole = (role || authRole || "ADMIN").toUpperCase();
+    const activeRoleKey = isSuperAdmin ? "SUPER_ADMIN" : normalizedRole;
+    const items = menuItems[activeRoleKey] || menuItems.ADMIN;
 
     const handleNavigation = (path) => {
         navigate(path);
@@ -342,7 +382,7 @@ function Sidebar({
                     </div>
 
                     <strong className="sidebar-role-value">
-                        {normalizedRole}
+                        {isSuperAdmin ? "SUPER ADMIN" : normalizedRole}
                     </strong>
                 </div>
 
