@@ -199,10 +199,40 @@ const getDepartmentByName =
 
 
 
+const getOrCreateDepartment = async (name) => {
+  if (!name || name === "Unassigned") return null;
+  const trimmed = name.trim();
+
+  // 1. Exact match
+  const exact = await pool.query(
+    "SELECT * FROM departments WHERE LOWER(TRIM(name)) = LOWER($1) LIMIT 1",
+    [trimmed]
+  );
+  if (exact.rows.length > 0) return exact.rows[0];
+
+  // 2. Partial match
+  const partial = await pool.query(
+    "SELECT * FROM departments WHERE LOWER(name) LIKE '%' || LOWER($1) || '%' LIMIT 1",
+    [trimmed]
+  );
+  if (partial.rows.length > 0) return partial.rows[0];
+
+  // 3. Create new department
+  const inserted = await pool.query(
+    `INSERT INTO departments (name, description, is_active)
+     VALUES ($1, $2, TRUE)
+     ON CONFLICT (name) DO UPDATE SET is_active = TRUE
+     RETURNING *`,
+    [trimmed, `${trimmed} Department`]
+  );
+  return inserted.rows[0];
+};
+
 module.exports = {
   getAllDepartments,
   getDepartmentById,
   getDepartmentByName,
+  getOrCreateDepartment,
   createDepartment,
   updateDepartment,
   deleteDepartment,

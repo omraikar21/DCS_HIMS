@@ -64,6 +64,12 @@ function EmployeeModal({
   const handleSubmit = async (e) => {
     e.preventDefault();
     setGeneralError("");
+
+    if (!form.department || !form.department.trim() || form.department === "Unassigned") {
+      setGeneralError("Department is required. Please select or enter a department.");
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -187,24 +193,35 @@ function EmployeeModal({
 
 
             <div className="form-field">
-
-              <label>
-                Department
-              </label>
-
-              <select
-                name="department"
-                value={form.department}
-                onChange={handleChange}
-              >
-                <option value="">-- Select Department --</option>
-                {departments.map((dept) => (
-                  <option key={dept.id || dept.name} value={dept.name}>
-                    {dept.name}
-                  </option>
-                ))}
-              </select>
-
+              <label>Department *</label>
+              {departments.length > 0 ? (
+                <select
+                  name="department"
+                  value={form.department}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="">-- Select Department * --</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id || dept.name} value={dept.name}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  name="department"
+                  value={form.department}
+                  onChange={handleChange}
+                  placeholder="e.g. Engineering / HR *"
+                  required
+                />
+              )}
+              {errors.department && (
+                <span style={{ color: "#e11d48", fontSize: "12px", marginTop: "4px" }}>
+                  {errors.department}
+                </span>
+              )}
             </div>
 
 

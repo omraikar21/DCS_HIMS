@@ -403,12 +403,17 @@ function Employees() {
 
 
     if (phoneError) {
-
       newErrors.phone =
         phoneError;
-
     }
 
+    /*
+     * Department
+     */
+    const deptError = required(formData.department, "Department");
+    if (deptError || formData.department === "Unassigned") {
+      newErrors.department = "Department is required";
+    }
 
     setErrors(
       newErrors

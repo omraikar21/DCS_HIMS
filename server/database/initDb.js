@@ -304,6 +304,23 @@ const initDatabase = async () => {
       );
     }
 
+    // 16. ENSURE NO EMPLOYEE IS UNASSIGNED
+    try {
+      const unassigned = await pool.query("SELECT id FROM employees WHERE department_id IS NULL");
+      if (unassigned.rows.length > 0) {
+        const defDept = await pool.query(`
+          INSERT INTO departments (name, description, is_active)
+          VALUES ('General', 'General organizational operations and engineering', TRUE)
+          ON CONFLICT (name) DO UPDATE SET is_active = TRUE
+          RETURNING id;
+        `);
+        const targetDeptId = defDept.rows[0].id;
+        await pool.query("UPDATE employees SET department_id = $1 WHERE department_id IS NULL", [targetDeptId]);
+      }
+    } catch (unassignedErr) {
+      console.warn("[DB INIT] Department reassignment notice:", unassignedErr.message);
+    }
+
     console.log("[DB INIT] Database initialization completed successfully.");
   } catch (err) {
     console.error("[DB INIT ERROR] Failed to initialize database tables:", err.message);

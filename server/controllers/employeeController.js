@@ -20,6 +20,7 @@ const {
 
 const {
   getDepartmentByNameService,
+  getOrCreateDepartmentService,
 } = require("../services/departmentService");
 
 const {
@@ -207,6 +208,13 @@ const create =
       }
 
 
+      if (!department && !departmentId) {
+        return res.status(400).json({
+          success: false,
+          message: "Department is required",
+        });
+      }
+
       let resolvedDepartmentId =
         departmentId || null;
 
@@ -216,7 +224,7 @@ const create =
       ) {
         try {
           const departmentRecord =
-            await getDepartmentByNameService(
+            await getOrCreateDepartmentService(
               department
             );
 
@@ -414,7 +422,7 @@ const update =
       ) {
         try {
           const departmentRecord =
-            await getDepartmentByNameService(
+            await getOrCreateDepartmentService(
               department
             );
 

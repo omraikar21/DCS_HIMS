@@ -7,6 +7,7 @@ const {
   getAllDepartments,
   getDepartmentById,
   getDepartmentByName,
+  getOrCreateDepartment,
   createDepartment,
   updateDepartment,
   deleteDepartment,
@@ -136,11 +137,29 @@ const getDepartmentByNameService =
 
   };
 
+// ------------------------------------------
+// GET OR CREATE DEPARTMENT
+// ------------------------------------------
+
+const getOrCreateDepartmentService =
+  async (name) => {
+
+    if (!name) {
+      return null;
+    }
+
+    return await getOrCreateDepartment(
+      name
+    );
+
+  };
+
 
 module.exports = {
   getDepartments,
   getDepartment,
   getDepartmentByNameService,
+  getOrCreateDepartmentService,
   addDepartment,
   editDepartment,
   removeDepartment,
