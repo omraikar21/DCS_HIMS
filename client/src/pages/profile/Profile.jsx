@@ -108,8 +108,13 @@ function Profile() {
   }, []);
 
   const userName = currentUser?.name || user?.name || "Om Raikar";
-  const userEmail = (currentUser?.email || user?.email || "omraikar2128@gmail.com").trim().toLowerCase();
-  const userRole = (role || currentUser?.role || user?.role || "ADMIN").toUpperCase();
+  const userEmail = (currentUser?.email || user?.email || "omraikar2128@gmail.com").toLowerCase().trim();
+  const userRole = (currentUser?.role || user?.role || "ADMIN").toUpperCase();
+  const isSuperAdminProfile = Boolean(
+    currentUser?.is_super_admin ||
+    user?.is_super_admin ||
+    userEmail === "omraikar2128@gmail.com"
+  );
   const userAvatar = currentUser?.avatar || "";
 
   // Load employee and payslip data for the active profile
@@ -729,7 +734,7 @@ function Profile() {
 
 
       {/* DETAILS GRID */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "24px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: isSuperAdminProfile ? "1fr" : "repeat(auto-fit, minmax(340px, 1fr))", gap: "24px" }}>
 
         {/* CARD 1: ACCOUNT DETAILS */}
         <div className="dashboard-card">
@@ -783,52 +788,54 @@ function Profile() {
           </div>
         </div>
 
-        {/* CARD 2: ROLE PERMISSIONS */}
-        <div className="dashboard-card">
-          <div className="card-header" style={{ marginBottom: "16px" }}>
-            <div>
-              <h3>Role Privileges & Access</h3>
-              <p>Capabilities configured for your account tier.</p>
+        {/* CARD 2: ROLE PERMISSIONS (ONLY SHOWN FOR NON-SUPER-ADMIN PROFILES) */}
+        {!isSuperAdminProfile && (
+          <div className="dashboard-card">
+            <div className="card-header" style={{ marginBottom: "16px" }}>
+              <div>
+                <h3>Role Privileges & Access</h3>
+                <p>Capabilities configured for your account tier.</p>
+              </div>
             </div>
-          </div>
 
-          <p style={{ fontSize: "13.5px", color: "#475569", lineHeight: "1.5", marginBottom: "16px" }}>
-            {currentRoleInfo.desc}
-          </p>
+            <p style={{ fontSize: "13.5px", color: "#475569", lineHeight: "1.5", marginBottom: "16px" }}>
+              {currentRoleInfo.desc}
+            </p>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {currentRoleInfo.permissions.map((perm, idx) => (
-              <div
-                key={idx}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  fontSize: "13.5px",
-                  color: "#334155",
-                  padding: "6px 0",
-                }}
-              >
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {currentRoleInfo.permissions.map((perm, idx) => (
                 <div
+                  key={idx}
                   style={{
-                    width: "20px",
-                    height: "20px",
-                    borderRadius: "50%",
-                    backgroundColor: "#f0dced",
-                    color: "#A1238E",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
+                    gap: "10px",
+                    fontSize: "13.5px",
+                    color: "#334155",
+                    padding: "6px 0",
                   }}
                 >
-                  <CheckCircle size={13} />
+                  <div
+                    style={{
+                      width: "20px",
+                      height: "20px",
+                      borderRadius: "50%",
+                      backgroundColor: "#f0dced",
+                      color: "#A1238E",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <CheckCircle size={13} />
+                  </div>
+                  <span>{perm}</span>
                 </div>
-                <span>{perm}</span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
 
@@ -837,12 +844,6 @@ function Profile() {
       ========================================= */}
       <div style={{ marginTop: "32px" }}>
         {(() => {
-          const isSuperAdminProfile = Boolean(
-            currentUser?.is_super_admin ||
-            user?.is_super_admin ||
-            userEmail === "omraikar2128@gmail.com"
-          );
-
           if (isSuperAdminProfile) {
             return (
               <>
@@ -877,56 +878,8 @@ function Profile() {
                       Application Architecture & Server Console
                     </h2>
                     <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>
-                      Core Platform Maintainer Console. Broadcast real-time system alerts, monitor low server load, manage database cluster & provision administrators. (Exempt from Employee Corporate Salary)
+                      Core Platform Maintainer Console. Real-time server load telemetry, API gateway status, and PostgreSQL database cluster health. (Exempt from Employee Corporate Salary)
                     </p>
-                  </div>
-
-                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                    <button
-                      type="button"
-                      onClick={() => setIsServerNoticeModalOpen(true)}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "7px",
-                        padding: "9px 16px",
-                        backgroundColor: "#9E2682",
-                        color: "#FFFFFF",
-                        border: "none",
-                        borderRadius: "8px",
-                        fontSize: "13px",
-                        fontWeight: "700",
-                        cursor: "pointer",
-                        boxShadow: "0 2px 8px rgba(158, 38, 130, 0.25)",
-                        transition: "all 0.2s ease",
-                      }}
-                    >
-                      <BellRing size={15} />
-                      Send Server / Low Load Notice
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => navigate("/users")}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "7px",
-                        padding: "9px 16px",
-                        backgroundColor: "#18243A",
-                        color: "#FFFFFF",
-                        border: "none",
-                        borderRadius: "8px",
-                        fontSize: "13px",
-                        fontWeight: "700",
-                        cursor: "pointer",
-                        boxShadow: "0 2px 8px rgba(24, 36, 58, 0.2)",
-                        transition: "all 0.2s ease",
-                      }}
-                    >
-                      <Shield size={15} />
-                      Manage Administrators
-                    </button>
                   </div>
                 </div>
 
@@ -981,31 +934,6 @@ function Profile() {
                     </div>
                     <div style={{ fontSize: "22px", fontWeight: "900", color: "#18243A" }}>Super Admin</div>
                     <span style={{ fontSize: "12px", color: "#751460", marginTop: "4px", display: "block", fontWeight: "600" }}>Admin Provisioning Active</span>
-                  </div>
-                </div>
-
-                {/* DEVELOPER INFRASTRUCTURE DETAILS */}
-                <div className="dashboard-card" style={{ background: "#FFFFFF", border: "1px solid #EACEE3", padding: "24px", marginBottom: "28px" }}>
-                  <h3 style={{ margin: "0 0 14px", fontSize: "16px", color: "#18243A", fontWeight: "800", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <Terminal size={18} color="#9E2682" />
-                    System Platform Overview & Developer Diagnostics
-                  </h3>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px", fontSize: "13px" }}>
-                    <div style={{ padding: "14px", background: "#F8FAFC", borderRadius: "8px", border: "1px solid #E2E8F0" }}>
-                      <div style={{ fontWeight: "700", color: "#18243A", marginBottom: "4px" }}>System Maintainer & Developer</div>
-                      <div style={{ color: "#64748b" }}>Om Raikar (omraikar2128@gmail.com)</div>
-                      <div style={{ marginTop: "8px", fontSize: "12px", color: "#9E2682", fontWeight: "700" }}>• Core Platform Administrator</div>
-                    </div>
-                    <div style={{ padding: "14px", background: "#F8FAFC", borderRadius: "8px", border: "1px solid #E2E8F0" }}>
-                      <div style={{ fontWeight: "700", color: "#18243A", marginBottom: "4px" }}>Face Attendance Integration Engine</div>
-                      <div style={{ color: "#64748b" }}>Local Client Python SDK & REST Camera Integration</div>
-                      <div style={{ marginTop: "8px", fontSize: "12px", color: "#2E9B67", fontWeight: "700" }}>• Real-time Biometric Logging Ready</div>
-                    </div>
-                    <div style={{ padding: "14px", background: "#F8FAFC", borderRadius: "8px", border: "1px solid #E2E8F0" }}>
-                      <div style={{ fontWeight: "700", color: "#18243A", marginBottom: "4px" }}>Corporate Payroll Exemption</div>
-                      <div style={{ color: "#64748b" }}>Super Administrator has no payroll or salary deduction records</div>
-                      <div style={{ marginTop: "8px", fontSize: "12px", color: "#64748b", fontWeight: "700" }}>• Developer Governance Authority</div>
-                    </div>
                   </div>
                 </div>
               </>
@@ -1824,112 +1752,6 @@ function Profile() {
                   style={{ background: "#9E2682", borderColor: "#9E2682" }}
                 >
                   {savingSalary ? "Saving to Database..." : "Save Salary & Bank"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================
-          SUPER ADMIN SERVER & SYSTEM NOTICE MODAL
-      ========================================= */}
-      {isServerNoticeModalOpen && (
-        <div className="modal-overlay">
-          <div className="employee-modal" style={{ maxWidth: "560px" }}>
-            <div className="modal-header">
-              <div>
-                <p className="section-label">PLATFORM GOVERNANCE</p>
-                <h2>Broadcast Server & System Notice</h2>
-              </div>
-              <button className="modal-close" onClick={() => setIsServerNoticeModalOpen(false)}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSendServerNotice}>
-              <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
-                <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>
-                  Broadcast an official real-time infrastructure, maintenance, or low server load update directly to all administrators, HR, finance, and employee dashboards.
-                </p>
-
-                <div className="form-field">
-                  <label>Notification Subject / Title</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Server Operations & Low Load Status Notice"
-                    value={serverNoticeData.title}
-                    onChange={(e) => setServerNoticeData({ ...serverNoticeData, title: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-field">
-                  <label>Priority Level</label>
-                  <select
-                    value={serverNoticeData.priority}
-                    onChange={(e) => setServerNoticeData({ ...serverNoticeData, priority: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      borderRadius: "8px",
-                      border: "1px solid #EACEE3",
-                      backgroundColor: "#FFFFFF",
-                      fontSize: "13.5px",
-                      color: "#18243A",
-                      fontWeight: "600",
-                    }}
-                  >
-                    <option value="NORMAL">Normal / Informational (Standard)</option>
-                    <option value="HIGH">High Priority / Urgent</option>
-                    <option value="CRITICAL">Critical Infrastructure Alert</option>
-                  </select>
-                </div>
-
-                <div className="form-field">
-                  <label>Detailed System Message</label>
-                  <textarea
-                    required
-                    rows={4}
-                    placeholder="e.g. All backend services and PostgreSQL database nodes are running at optimal low load..."
-                    value={serverNoticeData.message}
-                    onChange={(e) => setServerNoticeData({ ...serverNoticeData, message: e.target.value })}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      borderRadius: "8px",
-                      border: "1px solid #EACEE3",
-                      fontFamily: "inherit",
-                      fontSize: "13px",
-                      resize: "vertical",
-                    }}
-                  />
-                </div>
-
-                <div style={{ padding: "12px", background: "#EDF9F2", borderRadius: "8px", border: "1px solid #A3E4C3", display: "flex", alignItems: "center", gap: "10px" }}>
-                  <BadgeCheck size={18} color="#2E9B67" style={{ flexShrink: 0 }} />
-                  <span style={{ fontSize: "12px", color: "#2E9B67", lineHeight: "1.4" }}>
-                    <strong>Developer Delivery:</strong> This notice will be recorded in PostgreSQL audit tables and immediately pushed to all active user dashboards.
-                  </span>
-                </div>
-              </div>
-
-              <div className="modal-footer" style={{ borderTop: "1px solid #EACEE3", padding: "14px 24px", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={() => setIsServerNoticeModalOpen(false)}
-                  disabled={sendingServerNotice}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="primary-button"
-                  disabled={sendingServerNotice}
-                  style={{ background: "#9E2682", borderColor: "#9E2682" }}
-                >
-                  {sendingServerNotice ? "Broadcasting..." : "Broadcast System Notice"}
                 </button>
               </div>
             </form>

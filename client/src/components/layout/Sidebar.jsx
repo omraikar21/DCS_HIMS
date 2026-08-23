@@ -16,13 +16,17 @@ import {
     X,
     UserPlus,
     ShieldCheck,
+    BellRing,
+    BadgeCheck,
 } from "lucide-react";
 
 
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useAuth } from "../../hooks/useAuth";
+import { useNotification } from "../../hooks/useNotification";
 import { getLoadedSettings } from "../../services/settingsService";
+import { createAnnouncement } from "../../services/notificationService";
 
 const menuItems = {
     SUPER_ADMIN: [
@@ -37,9 +41,10 @@ const menuItems = {
             icon: ShieldCheck,
         },
         {
-            name: "Announcements",
-            path: "/announcements",
-            icon: Megaphone,
+            name: "Server Notices",
+            path: "#server-notices",
+            action: "OPEN_SERVER_NOTICE",
+            icon: BellRing,
         },
         {
             name: "Audit Logs",
@@ -301,8 +306,57 @@ function Sidebar({
     const activeRoleKey = isSuperAdmin ? "SUPER_ADMIN" : normalizedRole;
     const items = menuItems[activeRoleKey] || menuItems.ADMIN;
 
-    const handleNavigation = (path) => {
-        navigate(path);
+    const notification = useNotification();
+    const [noticeModalOpen, setNoticeModalOpen] = useState(false);
+    const [noticeData, setNoticeData] = useState({
+        title: "Server Operations & Low Load Status Notice",
+        timeframe: "Today 03:00 PM – 04:00 PM IST",
+        message: "All backend services and PostgreSQL database nodes are operating normally under low load (12%). System latency < 40ms.",
+        priority: "NORMAL",
+        isShutdown: false,
+    });
+    const [sendingNotice, setSendingNotice] = useState(false);
+
+    const handleSendNotice = async (e) => {
+        if (e) e.preventDefault();
+        if (!noticeData.title.trim() || !noticeData.message.trim()) {
+            if (notification?.error) notification.error("Title and message are required");
+            return;
+        }
+
+        try {
+            setSendingNotice(true);
+            const fullMessage = noticeData.timeframe.trim()
+                ? `[TIMEFRAME: ${noticeData.timeframe.trim()}] ${noticeData.message.trim()}`
+                : noticeData.message.trim();
+
+            await createAnnouncement({
+                title: noticeData.title.trim(),
+                message: fullMessage,
+                priority: noticeData.priority || "NORMAL",
+                category: noticeData.isShutdown ? "Platform Maintenance / Downtime" : "Server Infrastructure",
+            });
+            setNoticeModalOpen(false);
+            if (notification?.success) {
+                notification.success("Server notice broadcast to all platform user dashboards!");
+            }
+        } catch (err) {
+            console.error("Failed to broadcast server notice:", err);
+            if (notification?.error) {
+                notification.error(err.message || "Failed to broadcast notice");
+            }
+        } finally {
+            setSendingNotice(false);
+        }
+    };
+
+    const handleNavigation = (item) => {
+        if (item.action === "OPEN_SERVER_NOTICE") {
+            setNoticeModalOpen(true);
+            onClose();
+            return;
+        }
+        navigate(item.path);
         onClose();
     };
 
@@ -398,7 +452,7 @@ function Sidebar({
                             <button
                                 key={item.name}
                                 className={`sidebar-item ${isActive ? "sidebar-item-active" : ""}`}
-                                onClick={() => handleNavigation(item.path)}
+                                onClick={() => handleNavigation(item)}
                                 type="button"
                                 title={item.name}
                             >
@@ -436,6 +490,120 @@ function Sidebar({
                     className="sidebar-overlay"
                     onClick={onClose}
                 />
+            )}
+
+            {/* SUPER ADMIN SERVER & DOWNTIME NOTICE MODAL */}
+            {noticeModalOpen && (
+                <div className="modal-overlay" style={{ zIndex: 9999 }}>
+                    <div className="employee-modal" style={{ maxWidth: "560px" }}>
+                        <div className="modal-header">
+                            <div>
+                                <p className="section-label">PLATFORM GOVERNANCE</p>
+                                <h2>Broadcast Server / Downtime Notice</h2>
+                            </div>
+                            <button className="modal-close" onClick={() => setNoticeModalOpen(false)}>
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSendNotice}>
+                            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+                                <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>
+                                    Broadcast real-time server health notifications, maintenance adjustments, or scheduled application downtime alerts directly from the developer console.
+                                </p>
+
+                                <div className="form-field">
+                                    <label>Notification Subject / Title</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="e.g. Server Maintenance & Temporary Downtime Alert"
+                                        value={noticeData.title}
+                                        onChange={(e) => setNoticeData({ ...noticeData, title: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="form-field">
+                                    <label>Scheduled Timeframe / Window</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Today 03:00 PM – 04:00 PM IST (or Immediate)"
+                                        value={noticeData.timeframe}
+                                        onChange={(e) => setNoticeData({ ...noticeData, timeframe: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="form-field">
+                                    <label>Notice Priority</label>
+                                    <select
+                                        value={noticeData.priority}
+                                        onChange={(e) => setNoticeData({ ...noticeData, priority: e.target.value })}
+                                        style={{
+                                            width: "100%",
+                                            padding: "10px 14px",
+                                            borderRadius: "8px",
+                                            border: "1px solid #EACEE3",
+                                            backgroundColor: "#FFFFFF",
+                                            fontSize: "13.5px",
+                                            color: "#18243A",
+                                            fontWeight: "600",
+                                        }}
+                                    >
+                                        <option value="NORMAL">Normal / Low Load Status Notice</option>
+                                        <option value="HIGH">High Priority / Scheduled Maintenance</option>
+                                        <option value="CRITICAL">Critical Infrastructure / Application Shutdown</option>
+                                    </select>
+                                </div>
+
+                                <div className="form-field">
+                                    <label>Detailed System Message</label>
+                                    <textarea
+                                        required
+                                        rows={4}
+                                        placeholder="e.g. The application will undergo scheduled server optimization..."
+                                        value={noticeData.message}
+                                        onChange={(e) => setNoticeData({ ...noticeData, message: e.target.value })}
+                                        style={{
+                                            width: "100%",
+                                            padding: "10px 14px",
+                                            borderRadius: "8px",
+                                            border: "1px solid #EACEE3",
+                                            fontFamily: "inherit",
+                                            fontSize: "13px",
+                                            resize: "vertical",
+                                        }}
+                                    />
+                                </div>
+
+                                <div style={{ padding: "12px", background: "#EDF9F2", borderRadius: "8px", border: "1px solid #A3E4C3", display: "flex", alignItems: "center", gap: "10px" }}>
+                                    <BadgeCheck size={18} color="#2E9B67" style={{ flexShrink: 0 }} />
+                                    <span style={{ fontSize: "12px", color: "#2E9B67", lineHeight: "1.4" }}>
+                                        <strong>Immediate Delivery:</strong> Recorded in database audit logs and instantly pushed to all active user dashboards.
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="modal-footer" style={{ borderTop: "1px solid #EACEE3", padding: "14px 24px", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                                <button
+                                    type="button"
+                                    className="secondary-button"
+                                    onClick={() => setNoticeModalOpen(false)}
+                                    disabled={sendingNotice}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="primary-button"
+                                    disabled={sendingNotice}
+                                    style={{ background: "#9E2682", borderColor: "#9E2682" }}
+                                >
+                                    {sendingNotice ? "Broadcasting..." : "Broadcast Server Notice"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             )}
         </>
     );

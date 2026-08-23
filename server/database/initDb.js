@@ -315,46 +315,11 @@ const initDatabase = async () => {
       `, [adminEmail, adminPass]);
       console.log(`[DB INIT] Primary Super Admin created (${adminEmail} / Admin@123).`);
     } else {
-      // Ensure Om Raikar is set as super admin
+      // Ensure Om Raikar is set as permanent super admin
       await pool.query(
-        "UPDATE users SET is_super_admin = TRUE, role = 'ADMIN' WHERE email = $1",
+        "UPDATE users SET is_super_admin = TRUE, role = 'ADMIN', name = 'Om Raikar' WHERE email = $1",
         [adminEmail]
       );
-    }
-
-    // 16. SEED CORE DEPARTMENTS (Administration, HR, Finance, Software, AI/ML, IoT, Operations, Sales)
-    const coreDepts = [
-      { name: "Administration", desc: "Executive Administration and Corporate Management" },
-      { name: "Human Resources", desc: "HR, Talent Acquisition, People Operations and Onboarding" },
-      { name: "Finance & Accounts", desc: "Financial Planning, Corporate Accounts and Payroll Management" },
-      { name: "Software Development", desc: "Enterprise Full-Stack, Cloud and Mobile Software Engineering" },
-      { name: "AI & Machine Learning", desc: "Artificial Intelligence, Deep Learning and Cognitive Systems" },
-      { name: "IoT & Embedded Systems", desc: "Smart Hardware, Microcontrollers and IoT Architecture" },
-      { name: "Consultancy & Operations", desc: "Strategic Business Consulting and Enterprise Operations" },
-      { name: "Sales & Marketing", desc: "Corporate Sales, Client Relationships and Brand Marketing" },
-    ];
-
-    for (const d of coreDepts) {
-      await pool.query(
-        `INSERT INTO departments (name, description, is_active)
-         VALUES ($1, $2, TRUE)
-         ON CONFLICT (name) DO UPDATE SET description = $2, is_active = TRUE;`,
-        [d.name, d.desc]
-      );
-    }
-
-    // 17. ENSURE NO EMPLOYEE IS UNASSIGNED
-    try {
-      const unassigned = await pool.query("SELECT id FROM employees WHERE department_id IS NULL");
-      if (unassigned.rows.length > 0) {
-        const defDept = await pool.query(`SELECT id FROM departments WHERE name = 'Software Development' OR name = 'General' LIMIT 1`);
-        if (defDept.rows.length > 0) {
-          const targetDeptId = defDept.rows[0].id;
-          await pool.query("UPDATE employees SET department_id = $1 WHERE department_id IS NULL", [targetDeptId]);
-        }
-      }
-    } catch (unassignedErr) {
-      console.warn("[DB INIT] Department reassignment notice:", unassignedErr.message);
     }
 
     console.log("[DB INIT] Database initialization completed successfully.");
