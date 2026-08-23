@@ -95,7 +95,14 @@ const createEmployee =
     designation,
     joiningDate = null,
     salary = 0,
+    hra = 0,
+    allowances = 0,
+    pfDeduction = 0,
+    taxDeduction = 0,
     employmentStatus = "ACTIVE",
+    bankName = null,
+    bankAccount = null,
+    ifscCode = null,
     address = "",
   }) => {
 
@@ -134,9 +141,25 @@ const createEmployee =
       employeeCode = candidateCode;
     }
 
-    const cleanJoiningDate = joiningDate && String(joiningDate).trim() !== "" 
-      ? String(joiningDate).slice(0, 10) 
-      : null;
+    let cleanJoiningDate = null;
+    if (joiningDate && String(joiningDate).trim() !== "") {
+      const str = String(joiningDate).trim();
+      if (/^\d{2}[-/]\d{2}[-/]\d{4}$/.test(str)) {
+        const parts = str.split(/[-/]/);
+        cleanJoiningDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      } else if (/^\d{4}[-/]\d{2}[-/]\d{2}/.test(str)) {
+        cleanJoiningDate = str.slice(0, 10);
+      } else {
+        try {
+          const parsed = new Date(str);
+          if (!isNaN(parsed.getTime())) {
+            cleanJoiningDate = parsed.toISOString().slice(0, 10);
+          }
+        } catch {
+          cleanJoiningDate = null;
+        }
+      }
+    }
 
     const cleanSalary = salary ? Number(salary) || 0 : 0;
     const cleanHra = hra ? Number(hra) || 0 : 0;
