@@ -18,6 +18,7 @@ import {
 
 import {
     getDepartment,
+    getDepartmentCodeAndId,
 } from "../../services/departmentService";
 
 function DepartmentProfile() {
@@ -44,11 +45,12 @@ function DepartmentProfile() {
                 setError("");
                 const data = await getDepartment(id);
                 if (data) {
+                    const { uniqueId, badgeCode } = getDepartmentCodeAndId(data.name, data.id);
                     setDepartment({
-                        id: `DCS-DEPT-${String(data.id).padStart(3, "0")}`,
+                        id: uniqueId,
                         databaseId: data.id,
                         name: data.name || "",
-                        code: data.name ? data.name.slice(0, 4).toUpperCase() : "DEPT",
+                        code: badgeCode,
                         employees: Number(data.employee_count || 0),
                         location: data.location || "Main Office",
                         description: data.description || "No description provided.",

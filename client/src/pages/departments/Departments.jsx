@@ -13,6 +13,7 @@ import {
     getDepartments,
     createDepartment,
     updateDepartment,
+    getDepartmentCodeAndId,
 } from "../../services/departmentService";
 
 import DepartmentFilters
@@ -56,16 +57,19 @@ function Departments() {
     const [selectedDepartment, setSelectedDepartment] =
         useState(null);
 
-    const mapDepartmentToUI = (dept) => ({
-        id: `DCS-DEPT-${String(dept.id).padStart(3, "0")}`,
-        databaseId: dept.id,
-        name: dept.name || "",
-        code: dept.name ? dept.name.slice(0, 4).toUpperCase() : "DEPT",
-        employees: Number(dept.employee_count || 0),
-        location: dept.location || "Main Office",
-        description: dept.description || "",
-        status: dept.is_active !== false ? "Active" : "Inactive",
-    });
+    const mapDepartmentToUI = (dept) => {
+        const { uniqueId, badgeCode } = getDepartmentCodeAndId(dept.name, dept.id);
+        return {
+            id: uniqueId,
+            databaseId: dept.id,
+            name: dept.name || "",
+            code: badgeCode,
+            employees: Number(dept.employee_count || 0),
+            location: dept.location || "Main Office",
+            description: dept.description || "",
+            status: dept.is_active !== false ? "Active" : "Inactive",
+        };
+    };
 
     const loadDepartments = async () => {
         try {
