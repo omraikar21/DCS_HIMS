@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { get, post, put, remove } from "../services/apiClient";
+import { get, post, remove } from "../services/apiClient";
 
 describe("apiClient", () => {
   beforeEach(() => {

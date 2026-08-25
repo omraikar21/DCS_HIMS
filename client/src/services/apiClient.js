@@ -67,12 +67,17 @@ const request = async (
 
 
   if (!response.ok) {
+    if (response.status === 403 && (data?.accountSuspended || (data?.message || "").includes("Suspended"))) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+      window.location.href = "/login?error=suspended";
+    }
 
     throw new Error(
       data?.message ||
       "API request failed"
     );
-
   }
 
 

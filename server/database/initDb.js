@@ -6,7 +6,7 @@
 const bcrypt = require("bcryptjs");
 const { pool } = require("../config/database");
 
-const initDatabase = async () => {
+const initDatabase = async (isSeedExecution = false) => {
   try {
     console.log("[DB INIT] Verifying and creating tables if not present...");
 
@@ -68,8 +68,11 @@ const initDatabase = async () => {
       );
     `);
 
-    // Ensure compensation columns exist on existing databases
+    // Ensure columns exist on existing databases
     await pool.query(`
+      ALTER TABLE departments ADD COLUMN IF NOT EXISTS allocated_admin VARCHAR(150);
+      ALTER TABLE departments ADD COLUMN IF NOT EXISTS allocated_user VARCHAR(150);
+      ALTER TABLE departments ADD COLUMN IF NOT EXISTS department_head VARCHAR(150);
       ALTER TABLE employees ADD COLUMN IF NOT EXISTS hra NUMERIC(12,2) DEFAULT 0;
       ALTER TABLE employees ADD COLUMN IF NOT EXISTS allowances NUMERIC(12,2) DEFAULT 0;
       ALTER TABLE employees ADD COLUMN IF NOT EXISTS pf_deduction NUMERIC(12,2) DEFAULT 0;
@@ -80,6 +83,17 @@ const initDatabase = async () => {
       ALTER TABLE employees ALTER COLUMN bank_name DROP DEFAULT;
       ALTER TABLE employees ALTER COLUMN bank_account DROP DEFAULT;
       ALTER TABLE employees ALTER COLUMN ifsc_code DROP DEFAULT;
+    `);
+
+    // Backfill allocated_admin / allocated_user / department_head for existing departments in database
+    await pool.query(`
+      UPDATE departments d
+      SET allocated_admin = u.name,
+          allocated_user = u.name,
+          department_head = u.name
+      FROM employees e
+      JOIN users u ON u.id = e.user_id
+      WHERE e.department_id = d.id AND u.role = 'ADMIN';
     `);
 
     // Clean any hardcoded placeholder bank accounts
@@ -275,54 +289,151 @@ const initDatabase = async () => {
         DELETE FROM users 
         WHERE email LIKE '%@dcshims.com' 
            OR email IN ('admin@dcshims.com', 'hr@dcshims.com', 'finance@dcshims.com', 'employee@dcshims.com');
+
+        DELETE FROM employees
+        WHERE LOWER(email) IN ('omraikar2128@gmail.com', 'omraikar2128@gamil.com');
       `);
 
       await pool.query(`
         DELETE FROM departments 
-        WHERE description IN (
-          'Core web architecture, backend APIs, and microservices',
-          'LLM pipelines, agentic workflows, and predictive modeling',
-          'Kubernetes infrastructure, CI/CD, and multi-cloud reliability',
-          'Smart sensors, edge telemetry, and firmware development',
-          'Talent management, employee relations, and HR policies',
-          'Financial planning, statutory tax compliance, and payroll',
-          'Design systems, prototyping, and modern user experiences',
-          'Automated testing, load testing, and release certification',
-          'Handles employee management and HR operations',
-          'Handles software and technology operations',
-          'Handles payroll and financial operations',
-          'Handles administrative activities',
-          'Handles daily organizational operations'
-        );
+        WHERE name IN ('Finance', 'Development', 'AI ML', 'Administration', 'DCS-ADM-1', 'DCS-HR-2', 'DCS-FIN-3', 'DCS-DEV-4', 'DCS-AIML-5')
+           OR (description IN (
+            'Core web architecture, backend APIs, and microservices',
+            'LLM pipelines, agentic workflows, and predictive modeling',
+            'Kubernetes infrastructure, CI/CD, and multi-cloud reliability',
+            'Smart sensors, edge telemetry, and firmware development',
+            'Talent management, employee relations, and HR policies',
+            'Financial planning, statutory tax compliance, and payroll',
+            'Design systems, prototyping, and modern user experiences',
+            'Automated testing, load testing, and release certification',
+            'Handles employee management and HR operations',
+            'Handles software and technology operations',
+            'Handles payroll and financial operations',
+            'Handles administrative activities',
+            'Handles daily organizational operations'
+          ) AND name NOT IN ('Software Development', 'Human Resources', 'Finance & Accounts', 'Product & Design', 'Quality Assurance'));
       `);
     } catch (cleanupErr) {
       console.warn("[DB INIT] Cleanup notice:", cleanupErr.message);
     }
 
-    // 15. SEED SUPER ADMIN (omraikar2128@gmail.com / Admin@123)
+    // 15. SEED SUPER ADMIN & SYSTEM USERS
     const adminEmail = "omraikar2128@gmail.com";
-    const adminCheck = await pool.query(
-      "SELECT id FROM users WHERE email = $1",
-      [adminEmail]
-    );
+    const defaultPasswordHash = await bcrypt.hash("Admin@123", 10);
 
+    // Super Admin
+    const adminCheck = await pool.query("SELECT id FROM users WHERE email = $1", [adminEmail]);
     if (adminCheck.rows.length === 0) {
-      const adminPass = await bcrypt.hash("Admin@123", 10);
       await pool.query(`
         INSERT INTO users (name, email, password_hash, role, is_super_admin, is_active)
         VALUES ('Om Raikar', $1, $2, 'ADMIN', TRUE, TRUE)
         ON CONFLICT (email) DO NOTHING;
-      `, [adminEmail, adminPass]);
-      console.log(`[DB INIT] Primary Super Admin created (${adminEmail} / Admin@123).`);
+      `, [adminEmail, defaultPasswordHash]);
+      console.log(`[DB INIT] Primary Super Admin created (${adminEmail}).`);
     } else {
-      // Ensure Om Raikar is set as permanent super admin
       await pool.query(
         "UPDATE users SET is_super_admin = TRUE, role = 'ADMIN', name = 'Om Raikar' WHERE email = $1",
         [adminEmail]
       );
     }
 
-    console.log("[DB INIT] Database initialization completed successfully.");
+    // Only run mock seeding if explicitly requested via seed.js
+    if (!isSeedExecution) {
+      console.log("[DB INIT] Database tables and schema verified. Skipping mock employee re-seeding.");
+      return;
+    }
+
+    // Seed Core Roles (Primary Admin, HR, Finance, Team Leads, Employees)
+    const seedUsers = [
+      { name: "Executive Admin", email: "admin@dcs.com", role: "ADMIN", is_super: false },
+      { name: "Priya Sharma", email: "hr@dcs.com", role: "HR", is_super: false },
+      { name: "Rahul Verma", email: "finance@dcs.com", role: "FINANCE", is_super: false },
+      { name: "Rajesh Gupta", email: "tl_dev@dcs.com", role: "TEAM_LEAD", is_super: false },
+      { name: "Vikram Singh", email: "tl_hr@dcs.com", role: "TEAM_LEAD", is_super: false },
+      { name: "Amit Patel", email: "amit@dcs.com", role: "EMPLOYEE", is_super: false },
+      { name: "Neha Sen", email: "neha@dcs.com", role: "EMPLOYEE", is_super: false },
+      { name: "Sneha Roy", email: "sneha@dcs.com", role: "EMPLOYEE", is_super: false },
+    ];
+
+    for (const u of seedUsers) {
+      await pool.query(`
+        INSERT INTO users (name, email, password_hash, role, is_super_admin, is_active)
+        VALUES ($1, $2, $3, $4, $5, TRUE)
+        ON CONFLICT (email) DO NOTHING;
+      `, [u.name, u.email, defaultPasswordHash, u.role, u.is_super]);
+    }
+
+    // Departments start fresh - Primary Admin creates departments and assigns Team Leads dynamically
+
+    // Seed Employee Profiles
+    const devDept = (await pool.query("SELECT id FROM departments WHERE name = 'Software Development'")).rows[0]?.id;
+    const hrDept = (await pool.query("SELECT id FROM departments WHERE name = 'Human Resources'")).rows[0]?.id;
+    const finDept = (await pool.query("SELECT id FROM departments WHERE name = 'Finance & Accounts'")).rows[0]?.id;
+
+    const seedEmployees = [
+      { code: "EMP-001", name: "Priya Sharma", email: "hr@dcs.com", desig: "HR Manager", deptId: hrDept, salary: 85000, hra: 25000, bank: "HDFC Bank", acc: "50100482910482", ifsc: "HDFC0001234" },
+      { code: "EMP-002", name: "Rahul Verma", email: "finance@dcs.com", desig: "Finance Lead", deptId: finDept, salary: 92000, hra: 28000, bank: "ICICI Bank", acc: "000401582910", ifsc: "ICIC0000004" },
+      { code: "EMP-003", name: "Rajesh Gupta", email: "tl_dev@dcs.com", desig: "Senior Lead Engineer", deptId: devDept, salary: 115000, hra: 35000, bank: "Axis Bank", acc: "918010048291", ifsc: "UTIB0000123" },
+      { code: "EMP-004", name: "Vikram Singh", email: "tl_hr@dcs.com", desig: "HR Team Lead", deptId: hrDept, salary: 78000, hra: 22000, bank: "SBI Bank", acc: "30192840192", ifsc: "SBIN0000301" },
+      { code: "EMP-005", name: "Amit Patel", email: "amit@dcs.com", desig: "Full Stack Developer", deptId: devDept, salary: 65000, hra: 18000, bank: "HDFC Bank", acc: "501009182736", ifsc: "HDFC0001234" },
+      { code: "EMP-006", name: "Neha Sen", email: "neha@dcs.com", desig: "Frontend Developer", deptId: devDept, salary: 60000, hra: 16000, bank: "Kotak Bank", acc: "8110928374", ifsc: "KKBK0000181" },
+      { code: "EMP-007", name: "Sneha Roy", email: "sneha@dcs.com", desig: "QA Engineer", deptId: devDept, salary: 55000, hra: 15000, bank: "SBI Bank", acc: "20193847561", ifsc: "SBIN0000301" },
+    ];
+
+    for (const e of seedEmployees) {
+      const uRes = await pool.query("SELECT id FROM users WHERE email = $1", [e.email]);
+      const userId = uRes.rows[0]?.id || null;
+
+      await pool.query(`
+        INSERT INTO employees (user_id, employee_code, first_name, last_name, email, department_id, designation, salary, hra, allowances, pf_deduction, tax_deduction, bank_name, bank_account, ifsc_code, employment_status, joining_date)
+        VALUES ($1, $2, $3, '', $4, $5, $6, $7, $8, 5000, 1800, 2500, $9, $10, $11, 'ACTIVE', CURRENT_DATE - INTERVAL '120 days')
+        ON CONFLICT (email) DO UPDATE SET
+          user_id = EXCLUDED.user_id,
+          salary = EXCLUDED.salary,
+          hra = EXCLUDED.hra,
+          bank_name = EXCLUDED.bank_name,
+          bank_account = EXCLUDED.bank_account,
+          ifsc_code = EXCLUDED.ifsc_code;
+      `, [userId, e.code, e.name, e.email, e.deptId, e.desig, e.salary, e.hra, e.bank, e.acc, e.ifsc]);
+    }
+
+    // Seed Past 7 Days Attendance Records
+    const empsList = (await pool.query("SELECT id FROM employees")).rows;
+    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+      for (const emp of empsList) {
+        const isPresent = (emp.id + dayOffset) % 5 !== 0;
+        const status = isPresent ? "PRESENT" : (dayOffset % 2 === 0 ? "ABSENT" : "LEAVE");
+        await pool.query(`
+          INSERT INTO attendance (employee_id, attendance_date, check_in, check_out, status, remarks)
+          VALUES ($1, CURRENT_DATE - INTERVAL '${dayOffset} days', '09:00:00', '18:00:00', $2, 'Automated Seed Record')
+          ON CONFLICT (employee_id, attendance_date) DO NOTHING;
+        `, [emp.id, status]);
+      }
+    }
+
+    // Seed Sample Leaves
+    if (empsList.length >= 2) {
+      await pool.query(`
+        INSERT INTO leaves (employee_id, leave_type, start_date, end_date, reason, status, applicant_role)
+        VALUES 
+          ($1, 'SICK', CURRENT_DATE - INTERVAL '2 days', CURRENT_DATE, 'Medical fever and recovery', 'APPROVED', 'EMPLOYEE'),
+          ($2, 'CASUAL', CURRENT_DATE + INTERVAL '1 day', CURRENT_DATE + INTERVAL '3 days', 'Personal family event', 'PENDING', 'TEAM_LEAD')
+        ON CONFLICT DO NOTHING;
+      `, [empsList[0].id, empsList[1].id]);
+    }
+
+    // Seed Sample Payroll Records for Past 3 Months
+    for (let m = 6; m <= 8; m++) {
+      for (const emp of empsList) {
+        await pool.query(`
+          INSERT INTO payroll (employee_id, payroll_month, payroll_year, basic_salary, allowances, deductions, gross_salary, net_salary, payment_status, payment_date)
+          VALUES ($1, $2, 2026, 65000, 15000, 4300, 80000, 75700, 'PAID', CURRENT_DATE - INTERVAL '15 days')
+          ON CONFLICT (employee_id, payroll_month, payroll_year) DO NOTHING;
+        `, [emp.id, m]);
+      }
+    }
+
+    console.log("[DB INIT] Database initialization and rich data seeding completed successfully.");
   } catch (err) {
     console.error("[DB INIT ERROR] Failed to initialize database tables:", err.message);
   }

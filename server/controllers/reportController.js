@@ -27,6 +27,8 @@ const getReports = async (req, res) => {
   }
 };
 
+const { createNotification } = require("../models/notificationModel");
+
 // CREATE REPORT
 const addReport = async (req, res) => {
   try {
@@ -41,7 +43,7 @@ const addReport = async (req, res) => {
 
     const newReport = await createReport({
       reportTitle,
-      reportType: reportType || "FINANCE",
+      reportType: reportType || "FINANCE_REPORT",
       period: period || "",
       parameters: parameters || {},
       data: data || [],
@@ -49,10 +51,28 @@ const addReport = async (req, res) => {
       createdByName: req.user?.name || "Finance Manager",
     });
 
+    // Notify Primary Admin instantly
+    try {
+      await createNotification({
+        title: `Finance Report Submitted: ${reportTitle}`,
+        message: `Finance executive ${req.user?.name || "Finance Team"} submitted a financial report for period: ${period || "Current"}.`,
+        type: "NOTIFICATION",
+        sender_role: "FINANCE",
+        sender_name: req.user?.name || "Finance Team",
+        sender_email: req.user?.email || "finance@dcstechnology.com",
+        target_role: "ADMIN",
+        category: "FINANCE_REPORT",
+        priority: "HIGH",
+        link: "/reports",
+      });
+    } catch (notifErr) {
+      console.warn("Report notification warning:", notifErr.message);
+    }
+
     return res.status(201).json({
       success: true,
       data: newReport,
-      message: "Custom report saved successfully",
+      message: "Finance report submitted to Primary Admin successfully",
     });
   } catch (error) {
     console.error("Create report error:", error);

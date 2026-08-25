@@ -20,6 +20,12 @@ export const createAnnouncement = async (data) => {
     message: data.content || data.message || "",
     category: data.category || "Notice",
     priority: data.pinned ? "HIGH" : "NORMAL",
+    targetDepartment: data.targetDepartment || undefined,
+    audienceType: data.audienceType || "TEAM",
+    targetUserEmail: data.targetUserEmail || undefined,
+    targetUserName: data.targetUserName || undefined,
+    targetUserId: data.targetUserId || undefined,
+    reason: data.reason || undefined,
   };
 
   const created = await createAnnouncementApi(payload);

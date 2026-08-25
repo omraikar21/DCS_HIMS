@@ -50,15 +50,66 @@ const getNotificationsForUser = async ({ userId, email, role }) => {
 };
 
 // ------------------------------------------
-// GET COMPANY ANNOUNCEMENTS (ALL)
+// GET COMPANY & DEPARTMENT ANNOUNCEMENTS
 // ------------------------------------------
-const getCompanyAnnouncements = async () => {
+const getCompanyAnnouncements = async (user) => {
+  let userDept = "";
+  if (user?.id || user?.email) {
+    try {
+      const empRes = await pool.query(
+        `SELECT d.name AS department_name FROM employees e 
+         LEFT JOIN departments d ON e.department_id = d.id 
+         WHERE e.user_id = $1 OR LOWER(e.email) = LOWER($2) LIMIT 1`,
+        [user?.id || 0, (user?.email || "").toLowerCase().trim()]
+      );
+      if (empRes.rows[0]?.department_name) {
+        userDept = empRes.rows[0].department_name.trim();
+      }
+    } catch (err) {
+      console.warn("Could not query user department for announcements:", err.message);
+    }
+  }
+
   const result = await pool.query(`
     SELECT * FROM notifications 
-    WHERE type = 'ANNOUNCEMENT' AND target_role = 'ALL'
-    ORDER BY created_at DESC LIMIT 20;
+    WHERE type = 'ANNOUNCEMENT' 
+    ORDER BY created_at DESC LIMIT 50;
   `);
-  return result.rows;
+
+  if (!user || ["ADMIN", "HR"].includes((user.role || "").toUpperCase())) {
+    return result.rows;
+  }
+
+  const cleanUserDept = userDept.toLowerCase().trim();
+  const cleanUserEmail = (user?.email || "").toLowerCase().trim();
+
+  return result.rows.filter((n) => {
+    const targetRole = (n.target_role || "ALL").toUpperCase();
+    const targetDept = (n.metadata?.target_department || "").toLowerCase().trim();
+    const senderEmail = (n.sender_email || "").toLowerCase().trim();
+    const audienceType = n.metadata?.audience_type || "TEAM";
+    const targetUserEmail = (n.metadata?.target_user_email || n.target_email || "").toLowerCase().trim();
+
+    // The author/sender can always see their own notice
+    if (senderEmail && senderEmail === cleanUserEmail) return true;
+
+    // Individual-targeted announcement
+    if (audienceType === "INDIVIDUAL" && targetUserEmail && targetUserEmail !== "all") {
+      return targetUserEmail === cleanUserEmail;
+    }
+
+    // Universal company announcements
+    if (targetRole === "ALL" && !targetDept) return true;
+
+    // Team Lead department-scoped announcements
+    if (cleanUserDept && targetDept && targetDept === cleanUserDept) return true;
+    if (cleanUserDept && targetRole && targetRole === cleanUserDept.toUpperCase()) return true;
+    
+    // Fallback: If no department is set on announcement, it is universal
+    if (targetRole === "ALL") return true;
+
+    return false;
+  });
 };
 
 // ------------------------------------------

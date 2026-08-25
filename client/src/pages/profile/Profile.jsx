@@ -25,6 +25,9 @@ import {
   Server,
   Cpu,
   Activity,
+  Users,
+  Layers,
+  ArrowRight,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useNotification } from "../../hooks/useNotification";
@@ -89,7 +92,10 @@ function Profile() {
   const isSuperAdminProfile = Boolean(
     currentUser?.is_super_admin ||
     user?.is_super_admin ||
-    userRole === "SUPER_ADMIN"
+    userRole === "SUPER_ADMIN" ||
+    userEmail === "omraikar2128@gmail.com" ||
+    userEmail === "omraikar2128@gamil.com" ||
+    userEmail.includes("omraikar")
   );
   const userAvatar = currentUser?.avatar || "";
 
@@ -106,18 +112,26 @@ function Profile() {
         (e) =>
           (e.email && e.email.toLowerCase().trim() === userEmail) ||
           (user?.email && e.email && e.email.toLowerCase().trim() === user.email.toLowerCase().trim()) ||
-          (user?.employee_code && e.employee_code === user.employee_code) ||
-          (user?.id && e.user_id === user.id) ||
-          (user?.id && e.id === user.id) ||
+          (user?.employee_code && e.employee_code && e.employee_code.toLowerCase().trim() === user.employee_code.toLowerCase().trim()) ||
+          (user?.id && (e.user_id === user.id || e.id === user.id)) ||
           (currentUser?.name && `${e.first_name || ""} ${e.last_name || ""}`.trim().toLowerCase() === currentUser.name.toLowerCase().trim())
       );
 
-      const mySlips = (slips || []).filter(
-        (s) =>
-          (s.email && s.email.toLowerCase().trim() === userEmail) ||
-          (user?.email && s.email && s.email.toLowerCase().trim() === user.email.toLowerCase().trim()) ||
-          (currentEmp && (s.employee_id === currentEmp.id || s.employee_id === currentEmp.databaseId))
-      );
+      const mySlips = (slips || []).filter((s) => {
+        const slipEmail = (s.email || "").toLowerCase().trim();
+        const slipName = `${s.first_name || ""} ${s.last_name || ""}`.trim().toLowerCase();
+        const slipEmpId = s.employee_id;
+        const currentEmpId = currentEmp?.id || currentEmp?.databaseId;
+        const currentEmpCode = (currentEmp?.employee_code || user?.employee_code || "").toUpperCase().trim();
+        const slipCode = (s.employee_code || "").toUpperCase().trim();
+
+        return (
+          (slipEmail && (slipEmail === userEmail || (user?.email && slipEmail === user.email.toLowerCase().trim()))) ||
+          (currentEmpId && slipEmpId && Number(slipEmpId) === Number(currentEmpId)) ||
+          (currentEmpCode && slipCode && currentEmpCode === slipCode) ||
+          (userName && slipName && (slipName === userName.toLowerCase().trim() || slipName.includes(userName.toLowerCase().trim()) || userName.toLowerCase().trim().includes(slipName)))
+        );
+      });
 
       if (currentEmp) {
         const resolvedBankName = currentEmp.bank_name || mySlips[0]?.bank_name || "";
@@ -473,10 +487,10 @@ function Profile() {
         <div>
           <p className="section-label">USER ACCOUNT</p>
           <h1>My Profile</h1>
-          <p>Personalize your name and profile picture, view security permissions, and manage credentials.</p>
+          <p style={{ fontSize: "13px", color: "#64748B", marginTop: "4px" }}>Personalize your name and profile picture, view security permissions, and manage credentials.</p>
         </div>
 
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
           <button
             className="primary-button"
             onClick={handleOpenEdit}
@@ -513,54 +527,46 @@ function Profile() {
           gap: "24px",
           marginBottom: "24px",
           padding: "26px 28px",
-          background: "linear-gradient(135deg, #FFFFFF 0%, #FFF8FC 100%)",
-          border: "1px solid #F3D3E7",
+          background: "#FFFFFF",
+          border: "1px solid #E2E8F0",
           borderRadius: "16px",
           color: "#0F172A",
-          boxShadow: "0 4px 20px rgba(219, 39, 119, 0.06)",
+          boxShadow: "0 4px 18px rgba(15, 23, 42, 0.04)",
           transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
           position: "relative",
           overflow: "hidden",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "translateY(-2px)";
-          e.currentTarget.style.boxShadow = "0 8px 28px rgba(219, 39, 119, 0.12)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "translateY(0)";
-          e.currentTarget.style.boxShadow = "0 4px 20px rgba(219, 39, 119, 0.06)";
+          flexWrap: "wrap",
         }}
       >
-
         <div style={{ position: "relative" }}>
           {userAvatar ? (
             <img
               src={userAvatar}
               alt={userName}
               style={{
-                width: "88px",
-                height: "88px",
+                width: "84px",
+                height: "84px",
                 borderRadius: "50%",
                 objectFit: "cover",
-                border: "3.5px solid #FFFFFF",
-                boxShadow: "0 4px 14px rgba(219, 39, 119, 0.2)",
+                border: "3px solid #FFFFFF",
+                boxShadow: "0 4px 12px rgba(15, 23, 42, 0.12)",
               }}
             />
           ) : (
             <div
               style={{
-                width: "88px",
-                height: "88px",
+                width: "84px",
+                height: "84px",
                 borderRadius: "50%",
-                background: "linear-gradient(135deg, #DB2777 0%, #BE185D 100%)",
+                background: "#1E293B",
                 color: "#FFFFFF",
-                border: "3.5px solid #FFFFFF",
+                border: "3px solid #FFFFFF",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: "30px",
-                fontWeight: "900",
-                boxShadow: "0 4px 14px rgba(219, 39, 119, 0.25)",
+                fontSize: "28px",
+                fontWeight: "800",
+                boxShadow: "0 4px 12px rgba(15, 23, 42, 0.15)",
                 flexShrink: 0,
               }}
             >
@@ -575,7 +581,7 @@ function Profile() {
               position: "absolute",
               bottom: "0",
               right: "0",
-              background: "#DB2777",
+              background: "#1E293B",
               color: "#FFFFFF",
               border: "2px solid #FFFFFF",
               borderRadius: "50%",
@@ -585,7 +591,7 @@ function Profile() {
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              boxShadow: "0 2px 8px rgba(219, 39, 119, 0.35)",
+              boxShadow: "0 2px 8px rgba(15, 23, 42, 0.25)",
               transition: "transform 0.15s ease",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.15)")}
@@ -595,10 +601,9 @@ function Profile() {
           </button>
         </div>
 
-
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: "240px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px", flexWrap: "wrap" }}>
-            <h2 style={{ margin: 0, fontSize: "24px", color: "#0F172A", fontWeight: "900", letterSpacing: "-0.5px" }}>
+            <h2 style={{ margin: 0, fontSize: "24px", color: "#0F172A", fontWeight: "800", letterSpacing: "-0.5px" }}>
               {userName}
             </h2>
             <span
@@ -609,11 +614,10 @@ function Profile() {
                 padding: "4px 12px",
                 borderRadius: "20px",
                 fontSize: "11.5px",
-                fontWeight: "800",
-                backgroundColor: "#FFF0F7",
-                color: "#DB2777",
-                border: "1px solid #FCE7F3",
-                letterSpacing: "0.5px",
+                fontWeight: "700",
+                backgroundColor: "#F1F5F9",
+                color: "#1E293B",
+                border: "1px solid #CBD5E1",
               }}
             >
               <Shield size={13} />
@@ -621,15 +625,15 @@ function Profile() {
             </span>
           </div>
 
-          <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", color: "#475569", fontSize: "13.5px", fontWeight: "600" }}>
+          <div style={{ display: "flex", gap: "18px", flexWrap: "wrap", color: "#475569", fontSize: "13.5px", fontWeight: "600" }}>
             <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <Mail size={15} style={{ color: "#DB2777" }} />
+              <Mail size={15} style={{ color: "#64748B" }} />
               {userEmail}
             </span>
 
             <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <Building2 size={15} style={{ color: "#DB2777" }} />
-              {employeeData?.department_name || "DCS Corporate Platform"}
+              <Building2 size={15} style={{ color: "#64748B" }} />
+              {employeeData?.department_name || "Corporate Platform"}
             </span>
 
             <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", color: "#059669", fontWeight: "700", backgroundColor: "#ECFDF5", padding: "2px 10px", borderRadius: "14px", border: "1px solid #A7F3D0" }}>
@@ -640,30 +644,26 @@ function Profile() {
         </div>
       </div>
 
-
-
-      {/* DETAILS GRID */}
-      <div style={{ display: "grid", gridTemplateColumns: isSuperAdminProfile ? "1fr" : "repeat(auto-fit, minmax(340px, 1fr))", gap: "24px" }}>
-
-        {/* CARD 1: ACCOUNT DETAILS */}
-        <div className="dashboard-card">
-          <div className="card-header" style={{ marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      {/* ACCOUNT DETAILS CARD (RESPONSIVE FULL WIDTH / CENTERED) */}
+      <div style={{ width: "100%" }}>
+        <div className="dashboard-card" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "24px" }}>
+          <div className="card-header" style={{ marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
             <div>
-              <h3>Account Details</h3>
-              <p>Personal profile and system identification.</p>
+              <h3 style={{ margin: 0, fontSize: "18px", color: "#0F172A", fontWeight: "800" }}>Account Details</h3>
+              <p style={{ margin: "3px 0 0", fontSize: "13px", color: "#64748B" }}>Personal profile and system identification.</p>
             </div>
             <button
               onClick={handleOpenEdit}
               style={{
                 background: "none",
                 border: "none",
-                color: "#A1238E",
-                fontSize: "13px",
-                fontWeight: "600",
+                color: "#1E293B",
+                fontSize: "13.5px",
+                fontWeight: "700",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
-                gap: "4px",
+                gap: "5px",
               }}
             >
               <Edit3 size={14} /> Edit Name
@@ -671,85 +671,35 @@ function Profile() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            <div style={{ padding: "12px 14px", background: "#f8fafc", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ padding: "14px 16px", background: "#F8FAFC", borderRadius: "10px", border: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
               <div>
-                <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: "700", textTransform: "uppercase" }}>Full Name (Editable)</span>
-                <div style={{ fontSize: "14.5px", color: "#1e293b", fontWeight: "600", marginTop: "2px" }}>{userName}</div>
+                <span style={{ fontSize: "11px", color: "#64748B", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.4px" }}>Full Name (Editable)</span>
+                <div style={{ fontSize: "15px", color: "#0F172A", fontWeight: "700", marginTop: "2px" }}>{userName}</div>
               </div>
-              <span style={{ fontSize: "11.5px", color: "#16a34a", fontWeight: "600", background: "#dcfce7", padding: "2px 8px", borderRadius: "10px" }}>Editable</span>
+              <span style={{ fontSize: "11.5px", color: "#059669", fontWeight: "700", background: "#ECFDF5", padding: "3px 10px", borderRadius: "12px", border: "1px solid #A7F3D0" }}>Editable</span>
             </div>
 
-            <div style={{ padding: "12px 14px", background: "#f8fafc", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ padding: "14px 16px", background: "#F8FAFC", borderRadius: "10px", border: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
               <div>
-                <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: "700", textTransform: "uppercase" }}>Email Address</span>
-                <div style={{ fontSize: "14.5px", color: "#1e293b", fontWeight: "600", marginTop: "2px" }}>{userEmail}</div>
+                <span style={{ fontSize: "11px", color: "#64748B", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.4px" }}>Email Address</span>
+                <div style={{ fontSize: "15px", color: "#0F172A", fontWeight: "700", marginTop: "2px" }}>{userEmail}</div>
               </div>
-              <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "600", display: "flex", alignItems: "center", gap: "3px" }}><Lock size={12} /> Fixed</span>
+              <span style={{ fontSize: "11.5px", color: "#64748B", fontWeight: "600", display: "flex", alignItems: "center", gap: "4px" }}><Lock size={12} /> Fixed</span>
             </div>
 
-            <div style={{ padding: "12px 14px", background: "#f8fafc", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ padding: "14px 16px", background: "#F8FAFC", borderRadius: "10px", border: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
               <div>
-                <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: "700", textTransform: "uppercase" }}>Assigned Role</span>
-                <div style={{ fontSize: "14.5px", color: "#A1238E", fontWeight: "700", marginTop: "2px" }}>{userRole}</div>
+                <span style={{ fontSize: "11px", color: "#64748B", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.4px" }}>Assigned Role</span>
+                <div style={{ fontSize: "15px", color: "#1E293B", fontWeight: "700", marginTop: "2px" }}>{userRole}</div>
               </div>
-              <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "600", display: "flex", alignItems: "center", gap: "3px" }}><Lock size={12} /> Fixed</span>
+              <span style={{ fontSize: "11.5px", color: "#64748B", fontWeight: "600", display: "flex", alignItems: "center", gap: "4px" }}><Lock size={12} /> Fixed</span>
             </div>
           </div>
         </div>
-
-        {/* CARD 2: ROLE PERMISSIONS (ONLY SHOWN FOR NON-SUPER-ADMIN PROFILES) */}
-        {!isSuperAdminProfile && (
-          <div className="dashboard-card">
-            <div className="card-header" style={{ marginBottom: "16px" }}>
-              <div>
-                <h3>Role Privileges & Access</h3>
-                <p>Capabilities configured for your account tier.</p>
-              </div>
-            </div>
-
-            <p style={{ fontSize: "13.5px", color: "#475569", lineHeight: "1.5", marginBottom: "16px" }}>
-              {currentRoleInfo.desc}
-            </p>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {currentRoleInfo.permissions.map((perm, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    fontSize: "13.5px",
-                    color: "#334155",
-                    padding: "6px 0",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "20px",
-                      height: "20px",
-                      borderRadius: "50%",
-                      backgroundColor: "#f0dced",
-                      color: "#A1238E",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <CheckCircle size={13} />
-                  </div>
-                  <span>{perm}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
       </div>
 
       {/* =========================================
-          SUPER ADMIN DEVELOPER CONSOLE OR EMPLOYEE COMPENSATION DETAILS
+          SUPER ADMIN / HEAD ADMIN EXECUTIVE CONSOLE OR EMPLOYEE COMPENSATION DETAILS
       ========================================= */}
       <div style={{ marginTop: "32px" }}>
         {(() => {
@@ -843,6 +793,233 @@ function Profile() {
                     </div>
                     <div style={{ fontSize: "22px", fontWeight: "900", color: "#18243A" }}>Super Admin</div>
                     <span style={{ fontSize: "12px", color: "#751460", marginTop: "4px", display: "block", fontWeight: "600" }}>Admin Provisioning Active</span>
+                  </div>
+                </div>
+              </>
+            );
+          }
+
+          if (userRole === "ADMIN") {
+            return (
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-end",
+                    marginBottom: "16px",
+                    flexWrap: "wrap",
+                    gap: "12px",
+                  }}
+                >
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: "800",
+                          color: "#DB2777",
+                          letterSpacing: "0.8px",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Executive Leadership & Governance
+                      </span>
+                      <span style={{ fontSize: "12px", color: "#BE185D", fontWeight: "700", display: "flex", alignItems: "center", gap: "4px" }}>
+                        <BadgeCheck size={14} /> Organization Head
+                      </span>
+                    </div>
+                    <h2 style={{ margin: "6px 0 2px 0", fontSize: "20px", color: "#0F172A", fontWeight: "800" }}>
+                      Executive Operations & Corporate Governance
+                    </h2>
+                    <p style={{ margin: 0, fontSize: "13px", color: "#64748B" }}>
+                      Head Administrator Command Console. Executive management across departments, personnel rosters, and corporate operations. (Exempt from employee compensation stubs)
+                    </p>
+                  </div>
+                </div>
+
+                {/* 4 EXECUTIVE KPI CARDS */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                    gap: "16px",
+                    marginBottom: "24px",
+                  }}
+                >
+                  <div className="dashboard-card" style={{ padding: "20px", borderTop: "4px solid #DB2777", background: "#FFFFFF", border: "1px solid #FCE7F3", borderRadius: "14px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                      <span style={{ fontSize: "11.5px", color: "#64748B", fontWeight: "700", textTransform: "uppercase" }}>Executive Role</span>
+                      <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#FDF2F8", color: "#DB2777", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Shield size={16} />
+                      </div>
+                    </div>
+                    <div style={{ fontSize: "20px", fontWeight: "900", color: "#0F172A" }}>Head Admin</div>
+                    <span style={{ fontSize: "12px", color: "#BE185D", marginTop: "4px", display: "block", fontWeight: "700" }}>Primary Office Boss</span>
+                  </div>
+
+                  <div className="dashboard-card" style={{ padding: "20px", borderTop: "4px solid #2563EB", background: "#FFFFFF", border: "1px solid #DBEAFE", borderRadius: "14px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                      <span style={{ fontSize: "11.5px", color: "#64748B", fontWeight: "700", textTransform: "uppercase" }}>Organization Scope</span>
+                      <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Building2 size={16} />
+                      </div>
+                    </div>
+                    <div style={{ fontSize: "20px", fontWeight: "900", color: "#0F172A" }}>All Departments</div>
+                    <span style={{ fontSize: "12px", color: "#2563EB", marginTop: "4px", display: "block", fontWeight: "700" }}>Enterprise Oversight</span>
+                  </div>
+
+                  <div className="dashboard-card" style={{ padding: "20px", borderTop: "4px solid #059669", background: "#FFFFFF", border: "1px solid #D1FAE5", borderRadius: "14px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                      <span style={{ fontSize: "11.5px", color: "#64748B", fontWeight: "700", textTransform: "uppercase" }}>Direct Authority</span>
+                      <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#ECFDF5", color: "#059669", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Users size={16} />
+                      </div>
+                    </div>
+                    <div style={{ fontSize: "20px", fontWeight: "900", color: "#0F172A" }}>HR & Finance</div>
+                    <span style={{ fontSize: "12px", color: "#059669", marginTop: "4px", display: "block", fontWeight: "700" }}>Approval Clearance</span>
+                  </div>
+
+                  <div className="dashboard-card" style={{ padding: "20px", borderTop: "4px solid #7C3AED", background: "#FFFFFF", border: "1px solid #EDE9FE", borderRadius: "14px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                      <span style={{ fontSize: "11.5px", color: "#64748B", fontWeight: "700", textTransform: "uppercase" }}>Platform Control</span>
+                      <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#F5F3FF", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <BadgeCheck size={16} />
+                      </div>
+                    </div>
+                    <div style={{ fontSize: "20px", fontWeight: "900", color: "#0F172A" }}>Full Clearance</div>
+                    <span style={{ fontSize: "12px", color: "#7C3AED", marginTop: "4px", display: "block", fontWeight: "700" }}>Direct Platform Head</span>
+                  </div>
+                </div>
+
+                {/* EXECUTIVE COMMAND CENTER TILES */}
+                <div
+                  className="dashboard-card"
+                  style={{
+                    background: "#FFFFFF",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: "16px",
+                    padding: "24px",
+                    marginBottom: "28px",
+                  }}
+                >
+                  <div style={{ marginBottom: "18px" }}>
+                    <h3 style={{ margin: 0, fontSize: "17px", color: "#0F172A", fontWeight: "800" }}>Executive Quick Actions</h3>
+                    <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#64748B" }}>Direct operational access across organization management modules.</p>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" }}>
+                    <button
+                      type="button"
+                      onClick={() => navigate("/departments")}
+                      style={{
+                        padding: "16px",
+                        borderRadius: "12px",
+                        border: "1.5px solid #FCE7F3",
+                        background: "#FFF8FB",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#DB2777", color: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Building2 size={18} />
+                        </div>
+                        <div>
+                          <strong style={{ display: "block", fontSize: "14px", color: "#0F172A" }}>Departments</strong>
+                          <span style={{ fontSize: "12px", color: "#64748B" }}>Manage all wings</span>
+                        </div>
+                      </div>
+                      <ArrowRight size={16} color="#DB2777" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => navigate("/user-management")}
+                      style={{
+                        padding: "16px",
+                        borderRadius: "12px",
+                        border: "1.5px solid #EDE9FE",
+                        background: "#FAF8FF",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#7C3AED", color: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Shield size={18} />
+                        </div>
+                        <div>
+                          <strong style={{ display: "block", fontSize: "14px", color: "#0F172A" }}>Roles & Users</strong>
+                          <span style={{ fontSize: "12px", color: "#64748B" }}>Team Leads, HR, Finance</span>
+                        </div>
+                      </div>
+                      <ArrowRight size={16} color="#7C3AED" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => navigate("/employees")}
+                      style={{
+                        padding: "16px",
+                        borderRadius: "12px",
+                        border: "1.5px solid #DBEAFE",
+                        background: "#F8FAFF",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#2563EB", color: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Users size={18} />
+                        </div>
+                        <div>
+                          <strong style={{ display: "block", fontSize: "14px", color: "#0F172A" }}>Employees</strong>
+                          <span style={{ fontSize: "12px", color: "#64748B" }}>Full directory</span>
+                        </div>
+                      </div>
+                      <ArrowRight size={16} color="#2563EB" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => navigate("/settings")}
+                      style={{
+                        padding: "16px",
+                        borderRadius: "12px",
+                        border: "1.5px solid #D1FAE5",
+                        background: "#F7FCFA",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        transition: "all 0.2s ease",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#059669", color: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Layers size={18} />
+                        </div>
+                        <div>
+                          <strong style={{ display: "block", fontSize: "14px", color: "#0F172A" }}>Company Settings</strong>
+                          <span style={{ fontSize: "12px", color: "#64748B" }}>System preferences</span>
+                        </div>
+                      </div>
+                      <ArrowRight size={16} color="#059669" />
+                    </button>
                   </div>
                 </div>
               </>
@@ -1234,54 +1411,95 @@ function Profile() {
       ========================================= */}
       {editModalOpen && (
         <div className="modal-overlay">
-          <div className="employee-modal" style={{ maxWidth: "480px" }}>
+          <div
+            className="employee-modal"
+            style={{
+              width: "min(500px, calc(100vw - 24px))",
+              maxHeight: "calc(100vh - 40px)",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            {/* ── HEADER ── */}
             <div className="modal-header">
               <div>
-                <p className="section-label">PERSONALIZATION</p>
-                <h2>Edit Profile</h2>
+                <p className="section-label" style={{ marginBottom: "4px" }}>PERSONALIZATION</p>
+                <h2 style={{ margin: 0, fontSize: "18px", fontWeight: "800", color: "#0F172A" }}>Edit Profile</h2>
               </div>
               <button className="modal-close" onClick={() => setEditModalOpen(false)}>
                 <X size={18} />
               </button>
             </div>
 
-            {editError && (
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 16px", backgroundColor: "#fee2e2", color: "#b91c1c", borderRadius: "8px", margin: "12px 24px 0", fontSize: "13px" }}>
-                <AlertCircle size={15} style={{ flexShrink: 0 }} />
-                <span>{editError}</span>
-              </div>
-            )}
+            {/* ── SCROLLABLE BODY ── */}
+            <form
+              onSubmit={handleSaveProfile}
+              style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minHeight: 0 }}
+            >
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  padding: "20px 22px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "18px",
+                }}
+              >
+                {editError && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", backgroundColor: "#fee2e2", color: "#b91c1c", borderRadius: "8px", fontSize: "13px" }}>
+                    <AlertCircle size={15} style={{ flexShrink: 0 }} />
+                    <span>{editError}</span>
+                  </div>
+                )}
 
-            {editSuccess && (
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 16px", backgroundColor: "#dcfce7", color: "#15803d", borderRadius: "8px", margin: "12px 24px 0", fontSize: "13px" }}>
-                <CheckCircle2 size={15} style={{ flexShrink: 0 }} />
-                <span>{editSuccess}</span>
-              </div>
-            )}
+                {editSuccess && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", backgroundColor: "#dcfce7", color: "#15803d", borderRadius: "8px", fontSize: "13px" }}>
+                    <CheckCircle2 size={15} style={{ flexShrink: 0 }} />
+                    <span>{editSuccess}</span>
+                  </div>
+                )}
 
-            <form onSubmit={handleSaveProfile}>
-              <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "18px" }}>
-
-                {/* PHOTO PICKER */}
+                {/* ── PHOTO PICKER ── */}
                 <div>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "8px" }}>
-                    Profile Picture
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#475569", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "10px" }}>
+                    PROFILE PICTURE
                   </label>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", marginBottom: "14px" }}>
                     {editAvatar ? (
                       <img
                         src={editAvatar}
                         alt="Preview"
-                        style={{ width: "64px", height: "64px", borderRadius: "50%", objectFit: "cover", border: "2px solid #A1238E" }}
+                        style={{
+                          width: "64px",
+                          height: "64px",
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                          border: "2.5px solid #A1238E",
+                          flexShrink: 0,
+                        }}
                       />
                     ) : (
-                      <div style={{ width: "64px", height: "64px", borderRadius: "50%", backgroundColor: "#f0dced", color: "#A1238E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", fontWeight: "700" }}>
+                      <div style={{
+                        width: "64px",
+                        height: "64px",
+                        borderRadius: "50%",
+                        backgroundColor: "#f0dced",
+                        color: "#A1238E",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "22px",
+                        fontWeight: "700",
+                        flexShrink: 0,
+                      }}>
                         {getInitials(editName || userName)}
                       </div>
                     )}
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px", flex: 1, minWidth: 0 }}>
                       <input
                         type="file"
                         accept=".jpg,.jpeg,image/jpeg"
@@ -1292,10 +1510,10 @@ function Profile() {
                       <button
                         type="button"
                         className="secondary-button"
-                        style={{ padding: "6px 12px", fontSize: "12.5px" }}
+                        style={{ padding: "8px 14px", fontSize: "13px", width: "100%", justifyContent: "center" }}
                         onClick={() => fileInputRef.current?.click()}
                       >
-                        <Camera size={14} />
+                        <Camera size={15} />
                         Upload Device Photo
                       </button>
 
@@ -1303,7 +1521,7 @@ function Profile() {
                         <button
                           type="button"
                           onClick={() => setEditAvatar("")}
-                          style={{ background: "none", border: "none", color: "#dc2626", fontSize: "12px", cursor: "pointer", textAlign: "left" }}
+                          style={{ background: "none", border: "none", color: "#dc2626", fontSize: "12px", cursor: "pointer", textAlign: "center" }}
                         >
                           Remove photo
                         </button>
@@ -1313,10 +1531,10 @@ function Profile() {
 
                   {/* AVATAR PRESETS */}
                   <div>
-                    <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "500", display: "block", marginBottom: "6px" }}>
+                    <span style={{ fontSize: "11.5px", color: "#64748b", fontWeight: "500", display: "block", marginBottom: "8px" }}>
                       Or choose a preset avatar:
                     </span>
-                    <div style={{ display: "flex", gap: "8px" }}>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                       {AVATAR_PRESETS.map((preset, index) => (
                         <img
                           key={index}
@@ -1324,12 +1542,13 @@ function Profile() {
                           alt={`Preset ${index + 1}`}
                           onClick={() => setEditAvatar(preset)}
                           style={{
-                            width: "36px",
-                            height: "36px",
+                            width: "40px",
+                            height: "40px",
                             borderRadius: "50%",
                             objectFit: "cover",
                             cursor: "pointer",
-                            border: editAvatar === preset ? "2px solid #A1238E" : "2px solid transparent",
+                            border: editAvatar === preset ? "2.5px solid #A1238E" : "2px solid transparent",
+                            outline: editAvatar === preset ? "2px solid #FBCFE8" : "none",
                             transition: "all 0.15s ease",
                           }}
                         />
@@ -1338,23 +1557,25 @@ function Profile() {
                   </div>
                 </div>
 
-                {/* NAME INPUT */}
+                {/* ── NAME INPUT ── */}
                 <div className="form-field">
-                  <label>Full Name</label>
+                  <label>FULL NAME</label>
                   <input
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     placeholder="Enter your full name"
                     required
+                    autoComplete="name"
                   />
-                  <small style={{ color: "#64748b", fontSize: "11.5px", marginTop: "4px", display: "block" }}>
+                  <small style={{ color: "#64748b", fontSize: "11.5px", marginTop: "5px", display: "block" }}>
                     All other parameters (Email, Role, ID) are managed by Administration.
                   </small>
                 </div>
 
-              </div>
+              </div>{/* end scrollable body */}
 
+              {/* ── FOOTER ── */}
               <div className="modal-footer">
                 <button
                   type="button"

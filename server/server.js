@@ -38,6 +38,7 @@ const auditRoutes = require("./routes/auditRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const userRoutes = require("./routes/userRoutes");
 const reportRoutes = require("./routes/reportRoutes");
+const systemRoutes = require("./routes/systemRoutes");
 
 // ==========================================
 // INITIALIZE EXPRESS APP & PORT
@@ -120,6 +121,7 @@ app.use("/api/audit-logs", auditRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/system", systemRoutes);
 
 // ==========================================
 // 404 CATCH-ALL ROUTE

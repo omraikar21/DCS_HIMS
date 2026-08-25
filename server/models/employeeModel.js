@@ -22,6 +22,15 @@ const getAllEmployees =
         FROM employees e
         LEFT JOIN departments d
           ON e.department_id = d.id
+        LEFT JOIN users u
+          ON e.user_id = u.id
+        WHERE LOWER(e.email) NOT IN ('omraikar2128@gmail.com', 'omraikar2128@gamil.com')
+          AND (u.role IS NULL OR u.role != 'ADMIN')
+          AND (u.is_super_admin IS NULL OR u.is_super_admin = false)
+          AND (e.designation IS NULL OR LOWER(e.designation) NOT LIKE '%administrator%')
+          AND e.email NOT IN (
+            SELECT email FROM users WHERE role = 'ADMIN' OR is_super_admin = true
+          )
         ORDER BY e.id ASC
       `);
 

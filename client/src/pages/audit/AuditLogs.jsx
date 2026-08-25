@@ -48,9 +48,6 @@ function AuditLogs() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedRole, setSelectedRole] = useState("ALL");
-  const [selectedCategory, setSelectedCategory] = useState("ALL");
-  const [timeRange, setTimeRange] = useState("ALL"); // "2DAYS", "7DAYS", "30DAYS", "ALL"
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
@@ -72,12 +69,10 @@ function AuditLogs() {
     fetchLogs();
   }, []);
 
-  // Filter logs based on search, role, category, and date range
+  // Filter logs based on search term
   const filteredLogs = useMemo(() => {
-    const now = Date.now();
-    const twoDaysMs = 2 * 24 * 60 * 60 * 1000;
-    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+    if (!searchTerm.trim()) return logs;
+    const term = searchTerm.toLowerCase().trim();
 
     return logs.filter((log) => {
       const code = log.logCode || `LOG-${log.id}`;
@@ -86,35 +81,20 @@ function AuditLogs() {
       const email = log.actorEmail || "";
       const details = typeof log.details === "string" ? log.details : JSON.stringify(log.details || "");
 
-      const matchesSearch =
-        !searchTerm ||
-        code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        actor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        details.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesRole = selectedRole === "ALL" || log.role === selectedRole;
-      const matchesCategory = selectedCategory === "ALL" || log.category === selectedCategory;
-
-      // Time Filter (e.g. Last 2 Days fresh page)
-      let matchesTime = true;
-      if (timeRange !== "ALL") {
-        const logDate = new Date(log.createdAt || log.created_at || Date.now()).getTime();
-        const diff = now - logDate;
-        if (timeRange === "2DAYS") matchesTime = diff <= twoDaysMs;
-        else if (timeRange === "7DAYS") matchesTime = diff <= sevenDaysMs;
-        else if (timeRange === "30DAYS") matchesTime = diff <= thirtyDaysMs;
-      }
-
-      return matchesSearch && matchesRole && matchesCategory && matchesTime;
+      return (
+        code.toLowerCase().includes(term) ||
+        action.toLowerCase().includes(term) ||
+        actor.toLowerCase().includes(term) ||
+        email.toLowerCase().includes(term) ||
+        details.toLowerCase().includes(term)
+      );
     });
-  }, [logs, searchTerm, selectedRole, selectedCategory, timeRange]);
+  }, [logs, searchTerm]);
 
-  // Reset to page 1 whenever filters change
+  // Reset to page 1 whenever search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedRole, selectedCategory, timeRange]);
+  }, [searchTerm]);
 
   // Pagination calculation
   const totalPages = Math.max(1, Math.ceil(filteredLogs.length / pageSize));
@@ -125,7 +105,7 @@ function AuditLogs() {
 
   // Export CSV
   const handleExportCSV = () => {
-    const headers = "Log ID,Event Action,Category,Actor,Email,Role,Audit Details,Date & Time,Status\n";
+    const headers = "Log ID,Action,Category,User,Email,Role,Details,Date & Time,Status\n";
     const rows = filteredLogs
       .map(
         (l) =>
@@ -137,14 +117,14 @@ function AuditLogs() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `DCS_Audit_Logs_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", `DCS_User_Logs_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    notification.success("Audit Log CSV exported successfully!");
+    notification.success("User Logs CSV exported successfully!");
   };
 
-  // Export Clean Branded PDF with Company Name and Proper Content Table
+  // Export Clean Branded PDF
   const handleExportPDF = () => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
@@ -153,64 +133,63 @@ function AuditLogs() {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>DCS Official Security Audit Trail - ${settings.companyName || "DHARAM CONSULTANCY SERVICES"}</title>
+          <title>User Logs Report - ${settings.companyName || "DCS Office Management"}</title>
           <style>
             @page { size: A4 landscape; margin: 12mm; }
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #18243A; margin: 0; padding: 15px; background: #FFFFFF; }
-            .audit-container { width: 100%; max-width: 1050px; margin: 0 auto; border: 2px solid #DDD2E2; border-radius: 8px; padding: 25px; }
-            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #A51D8D; padding-bottom: 14px; margin-bottom: 18px; }
-            .brand h1 { margin: 0; color: #A51D8D; font-size: 22px; font-weight: 900; }
-            .brand p { margin: 2px 0 0 0; color: #7B2A9B; font-size: 13px; font-weight: 700; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #0F172A; margin: 0; padding: 15px; background: #FFFFFF; }
+            .audit-container { width: 100%; max-width: 1050px; margin: 0 auto; border: 1px solid #E2E8F0; border-radius: 8px; padding: 25px; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E293B; padding-bottom: 14px; margin-bottom: 18px; }
+            .brand h1 { margin: 0; color: #0F172A; font-size: 22px; font-weight: 800; }
+            .brand p { margin: 2px 0 0 0; color: #64748B; font-size: 13px; font-weight: 600; }
             .title-box { text-align: right; }
-            .title-box h2 { margin: 0; font-size: 17px; color: #18243A; font-weight: 800; }
-            .title-box p { margin: 2px 0 0 0; font-size: 12px; color: #64748b; }
+            .title-box h2 { margin: 0; font-size: 17px; color: #0F172A; font-weight: 800; }
+            .title-box p { margin: 2px 0 0 0; font-size: 12px; color: #64748B; }
             
-            .meta-banner { background: #F8F2FA; border: 1px solid #DDD2E2; border-radius: 6px; padding: 10px 14px; margin-bottom: 18px; font-size: 12.5px; }
-            .meta-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-            .meta-grid span { color: #64748b; display: block; font-size: 11px; text-transform: uppercase; font-weight: 700; }
-            .meta-grid strong { color: #A51D8D; font-size: 13px; }
+            .meta-banner { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 10px 14px; margin-bottom: 18px; font-size: 12.5px; }
+            .meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+            .meta-grid span { color: #64748B; display: block; font-size: 11px; text-transform: uppercase; font-weight: 700; }
+            .meta-grid strong { color: #0F172A; font-size: 13px; }
 
             table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12.5px; }
-            th { text-align: left; background: #F8F2FA; padding: 9px 10px; border-bottom: 2px solid #DDD2E2; color: #18243A; font-weight: 800; font-size: 12px; }
-            td { padding: 9px 10px; border-bottom: 1px solid #DDD2E2; vertical-align: top; word-break: break-word; }
+            th { text-align: left; background: #F8FAFC; padding: 9px 10px; border-bottom: 2px solid #E2E8F0; color: #0F172A; font-weight: 800; font-size: 12px; }
+            td { padding: 9px 10px; border-bottom: 1px solid #E2E8F0; vertical-align: top; word-break: break-word; }
             .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10.5px; font-weight: 700; }
-            .badge-success { background: #EDF9F2; color: #2E9B67; border: 1px solid #A3E4C3; }
-            .badge-purple { background: #F8F2FA; color: #7B2A9B; border: 1px solid #DDD2E2; }
+            .badge-success { background: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; }
+            .badge-purple { background: #F1F5F9; color: #1E293B; border: 1px solid #CBD5E1; }
             
-            .footer { text-align: center; font-size: 11px; color: #8492A6; border-top: 1px solid #DDD2E2; padding-top: 14px; margin-top: 18px; }
+            .footer { text-align: center; font-size: 11px; color: #64748B; border-top: 1px solid #E2E8F0; padding-top: 14px; margin-top: 18px; }
           </style>
         </head>
         <body>
           <div class="audit-container">
             <div class="header">
               <div class="brand">
-                <h1>${settings.companyName || "DHARAM CONSULTANCY SERVICES"}</h1>
-                <p>Enterprise Security, Compliance & Governance Hub</p>
+                <h1>${settings.companyName || "DCS Office Management"}</h1>
+                <p>System User Logs Report</p>
               </div>
               <div class="title-box">
-                <h2>Official Audit Trail Statement</h2>
-                <p>Generated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} · Confidential Record</p>
+                <h2>User Logs Statement</h2>
+                <p>Generated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
               </div>
             </div>
 
             <div class="meta-banner">
               <div class="meta-grid">
-                <div><span>Total Records:</span> <strong>${filteredLogs.length} Events</strong></div>
-                <div><span>Compliance Standard:</span> <strong>ISO 27001 / SOC 2</strong></div>
-                <div><span>Audit Scope:</span> <strong>Enterprise Ledger</strong></div>
-                <div><span>Integrity Status:</span> <strong>Cryptographically Verified</strong></div>
+                <div><span>Total Records:</span> <strong>${filteredLogs.length} Records</strong></div>
+                <div><span>Scope:</span> <strong>System User Activity</strong></div>
+                <div><span>Status:</span> <strong>Verified Logs</strong></div>
               </div>
             </div>
 
             <table>
               <thead>
                 <tr>
-                  <th>Log Code</th>
-                  <th>Event Action</th>
+                  <th>Log ID</th>
+                  <th>Action</th>
                   <th>Category</th>
-                  <th>Actor & Email</th>
+                  <th>User & Email</th>
                   <th>Role</th>
-                  <th>Audit Details</th>
+                  <th>Details</th>
                   <th>Date & Time</th>
                   <th>Status</th>
                 </tr>
@@ -220,7 +199,7 @@ function AuditLogs() {
         .map(
           (l) => `
                   <tr>
-                    <td><strong style="color: #A51D8D;">${l.logCode || `LOG-${l.id}`}</strong></td>
+                    <td><strong style="color: #1E293B;">${l.logCode || `LOG-${l.id}`}</strong></td>
                     <td><strong>${l.eventAction}</strong></td>
                     <td><span class="badge badge-purple">${l.category}</span></td>
                     <td>
@@ -229,7 +208,7 @@ function AuditLogs() {
                     </td>
                     <td><span class="badge badge-purple">${l.role}</span></td>
                     <td style="max-width: 250px; color: #475569;">${formatAuditDetails(l.details)}</td>
-                    <td style="white-space: nowrap; color: #18243A; font-weight: 600;">${l.formattedTimestamp || l.createdAt || "2026-08-21"}</td>
+                    <td style="white-space: nowrap; color: #0F172A; font-weight: 600;">${l.formattedTimestamp || l.createdAt || "2026-08-21"}</td>
                     <td><span class="badge badge-success">${l.status}</span></td>
                   </tr>
                 `
@@ -239,7 +218,7 @@ function AuditLogs() {
             </table>
 
             <div class="footer">
-              <p>CONFIDENTIAL & PROPRIETARY — Official Audit Trail issued by <strong>${settings.companyName || "Dharam Consultancy Services"}</strong>. Cryptographically locked against unauthorized modifications.</p>
+              <p>Official User Logs Report issued by <strong>${settings.companyName || "DCS Office Management"}</strong>.</p>
             </div>
           </div>
           <script>
@@ -249,7 +228,7 @@ function AuditLogs() {
       </html>
     `);
     printWindow.document.close();
-    notification.success("Audit Log PDF preview opened for printing/download!");
+    notification.success("User Logs PDF preview opened!");
   };
 
   return (
@@ -257,12 +236,12 @@ function AuditLogs() {
       {/* PAGE HEADER */}
       <div className="module-heading" style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "16px", marginBottom: "20px" }}>
         <div>
-          <p className="section-label">SECURITY, COMPLIANCE & GOVERNANCE</p>
-          <h1 style={{ margin: "4px 0", fontSize: "24px", fontWeight: "800", color: "#18243A" }}>
-            Enterprise Audit Trail
+          <p className="section-label">LOGS</p>
+          <h1 style={{ margin: "4px 0", fontSize: "24px", fontWeight: "800", color: "#0F172A" }}>
+            User Logs
           </h1>
-          <p style={{ margin: 0, fontSize: "13.5px", color: "#64748b" }}>
-            Live chronological tracking of system mutations, enrollments, reports, and administrative authorizations.
+          <p style={{ margin: 0, fontSize: "13.5px", color: "#64748B" }}>
+            Track user activities and system actions in real time.
           </p>
         </div>
 
@@ -276,8 +255,8 @@ function AuditLogs() {
               alignItems: "center",
               gap: "6px",
               padding: "8px 14px",
-              borderColor: "#DDD2E2",
-              color: "#18243A",
+              borderColor: "#CBD5E1",
+              color: "#0F172A",
               fontSize: "13px",
               borderRadius: "8px",
               cursor: "pointer",
@@ -295,8 +274,8 @@ function AuditLogs() {
               alignItems: "center",
               gap: "6px",
               padding: "8px 14px",
-              borderColor: "#DDD2E2",
-              color: "#18243A",
+              borderColor: "#CBD5E1",
+              color: "#0F172A",
               fontSize: "13px",
               borderRadius: "8px",
               cursor: "pointer",
@@ -315,9 +294,12 @@ function AuditLogs() {
               gap: "6px",
               padding: "8px 16px",
               fontSize: "13px",
-              background: "linear-gradient(135deg, #A51D8D 0%, #7B2A9B 100%)",
+              backgroundColor: "#1E293B",
+              borderColor: "#1E293B",
+              color: "#FFFFFF",
               borderRadius: "8px",
               cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(15, 23, 42, 0.12)",
             }}
           >
             <Printer size={14} />
@@ -330,111 +312,66 @@ function AuditLogs() {
               alignItems: "center",
               gap: "6px",
               padding: "7px 12px",
-              backgroundColor: "#EDF9F2",
-              color: "#2E9B67",
-              border: "1px solid #A3E4C3",
+              backgroundColor: "#ECFDF5",
+              color: "#059669",
+              border: "1px solid #A7F3D0",
               borderRadius: "20px",
               fontSize: "12px",
               fontWeight: "800",
             }}
           >
             <ShieldCheck size={15} />
-            ISO 27001 / SOC 2 Active
+            Security Verified
           </span>
         </div>
       </div>
 
-      {/* FILTERS & SEARCH BAR */}
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "12px",
-          marginBottom: "18px",
-          backgroundColor: "#FFFFFF",
-          padding: "14px 18px",
-          borderRadius: "12px",
-          border: "1px solid #DDD2E2",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, minWidth: "240px" }}>
-          <div className="input-wrapper" style={{ flex: 1, display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
-            <Search size={16} color="#8492A6" />
-            <input
-              type="text"
-              placeholder="Search by Actor, Event, Log Code, or Details..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: "100%", border: "none", background: "transparent", fontSize: "13.5px", color: "#18243A", outline: "none" }}
-            />
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
-          {/* Time Range Filter (2 Days Fresh Page) */}
-          <div className="input-wrapper" style={{ padding: "6px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
-            <select
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value)}
-              style={{ border: "none", background: "transparent", fontSize: "13px", color: "#18243A", outline: "none", fontWeight: "700" }}
-            >
-              <option value="ALL">All Recorded Logs</option>
-              <option value="2DAYS">Last 2 Days (Fresh Logs)</option>
-              <option value="7DAYS">Last 7 Days</option>
-              <option value="30DAYS">Last 30 Days</option>
-            </select>
-          </div>
-
-          {/* Category Filter */}
-          <div className="input-wrapper" style={{ padding: "6px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              style={{ border: "none", background: "transparent", fontSize: "13px", color: "#18243A", outline: "none", fontWeight: "600" }}
-            >
-              <option value="ALL">All Event Types</option>
-              <option value="AUTH">Authentication & Sign-in</option>
-              <option value="FINANCE">Finance & Payroll</option>
-              <option value="EMPLOYEE">Employee Lifecycle</option>
-              <option value="LEAVE">Leave Management</option>
-              <option value="SECURITY">Security & Passwords</option>
-              <option value="REPORT">Reports & Intelligence</option>
-            </select>
-          </div>
-
-          {/* Role Filter */}
-          <div className="input-wrapper" style={{ padding: "6px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-              style={{ border: "none", background: "transparent", fontSize: "13px", color: "#18243A", outline: "none", fontWeight: "600" }}
-            >
-              <option value="ALL">All Roles</option>
-              <option value="ADMIN">ADMIN</option>
-              <option value="HR">HR</option>
-              <option value="FINANCE">FINANCE</option>
-              <option value="EMPLOYEE">EMPLOYEE</option>
-              <option value="SYSTEM">SYSTEM</option>
-            </select>
-          </div>
+      {/* SEARCH BAR ONLY (FULL WIDTH & RESPONSIVE) */}
+      <div style={{ marginBottom: "20px", width: "100%" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            padding: "10px 16px",
+            borderRadius: "10px",
+            border: "1.5px solid #CBD5E1",
+            backgroundColor: "#FFFFFF",
+            boxShadow: "0 1px 3px rgba(15, 23, 42, 0.05)",
+            width: "100%",
+          }}
+        >
+          <Search size={18} color="#64748B" style={{ flexShrink: 0 }} />
+          <input
+            type="text"
+            placeholder="Search by User, Action, Log ID, or Details..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: "100%",
+              border: "none",
+              background: "transparent",
+              fontSize: "14px",
+              color: "#0F172A",
+              outline: "none",
+            }}
+          />
         </div>
       </div>
 
       {/* AUDIT LOG TABLE CARD */}
-      <section className="dashboard-card" style={{ background: "#FFFFFF", border: "1px solid #DDD2E2", borderRadius: "12px", overflow: "hidden", padding: 0 }}>
-        <div className="card-header" style={{ padding: "16px 20px", borderBottom: "1px solid #DDD2E2", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", backgroundColor: "#fafbfc" }}>
+      <section className="dashboard-card" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "12px", overflow: "hidden", padding: 0 }}>
+        <div className="card-header" style={{ padding: "16px 20px", borderBottom: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", backgroundColor: "#F8FAFC" }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: "16px", color: "#18243A", fontWeight: "800" }}>
-              Active Security Log Stream ({filteredLogs.length} Records)
+            <h3 style={{ margin: 0, fontSize: "16px", color: "#0F172A", fontWeight: "800" }}>
+              User Logs ({filteredLogs.length} Records)
             </h3>
-            <p style={{ margin: "2px 0 0", fontSize: "12.5px", color: "#64748b" }}>
-              {timeRange === "2DAYS" ? "Showing fresh logs generated within the last 2 days." : "Database-backed audit chain tracking all operations with 10 records per page."}
+            <p style={{ margin: "2px 0 0", fontSize: "12.5px", color: "#64748B" }}>
+              Showing 10 records per page.
             </p>
           </div>
 
-          <div style={{ fontSize: "12.5px", fontWeight: "700", color: "#9B2282" }}>
+          <div style={{ fontSize: "12.5px", fontWeight: "700", color: "#1E293B" }}>
             Page {currentPage} of {totalPages}
           </div>
         </div>
@@ -443,13 +380,13 @@ function AuditLogs() {
         <div style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           <table style={{ width: "100%", minWidth: "960px", borderCollapse: "collapse", textAlign: "left" }}>
             <thead>
-              <tr style={{ backgroundColor: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", width: "110px" }}>Log Code</th>
-                <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", width: "160px" }}>Event Action</th>
+              <tr style={{ backgroundColor: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
+                <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", width: "110px" }}>Log ID</th>
+                <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", width: "160px" }}>Action</th>
                 <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", width: "100px" }}>Category</th>
-                <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", width: "180px" }}>Actor & Email</th>
+                <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", width: "180px" }}>User & Email</th>
                 <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", width: "90px" }}>Role</th>
-                <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", minWidth: "240px", maxWidth: "340px" }}>Audit Details</th>
+                <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", minWidth: "240px", maxWidth: "340px" }}>Details</th>
                 <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", width: "180px", whiteSpace: "nowrap" }}>Date & Time</th>
                 <th style={{ padding: "12px 16px", fontSize: "12px", fontWeight: "800", color: "#475569", width: "90px" }}>Status</th>
               </tr>
@@ -458,13 +395,13 @@ function AuditLogs() {
               {loading ? (
                 <tr>
                   <td colSpan="8" style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
-                    Loading audit stream...
+                    Loading user logs...
                   </td>
                 </tr>
               ) : paginatedLogs.length === 0 ? (
                 <tr>
                   <td colSpan="8" style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
-                    No audit records found matching your filters.
+                    No logs found matching your search.
                   </td>
                 </tr>
               ) : (
@@ -475,16 +412,16 @@ function AuditLogs() {
                       borderBottom: "1px solid #f1f5f9",
                       transition: "background-color 0.15s ease",
                     }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#faf5f9")}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f8fafc")}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                   >
                     <td style={{ padding: "12px 16px", verticalAlign: "middle" }}>
-                      <strong style={{ color: "#A51D8D", fontSize: "12px", fontFamily: "monospace" }}>
+                      <strong style={{ color: "#1E293B", fontSize: "12px", fontFamily: "monospace" }}>
                         {log.logCode || `LOG-${log.id}`}
                       </strong>
                     </td>
                     <td style={{ padding: "12px 16px", verticalAlign: "middle" }}>
-                      <strong style={{ color: "#18243A", fontSize: "13px", display: "block" }}>
+                      <strong style={{ color: "#0F172A", fontSize: "13px", display: "block" }}>
                         {log.eventAction}
                       </strong>
                     </td>
@@ -492,12 +429,12 @@ function AuditLogs() {
                       <span
                         style={{
                           padding: "2px 8px",
-                          backgroundColor: "#F8F2FA",
-                          border: "1px solid #DDD2E2",
+                          backgroundColor: "#F1F5F9",
+                          border: "1px solid #CBD5E1",
                           borderRadius: "4px",
                           fontSize: "11px",
                           fontWeight: "700",
-                          color: "#7B2A9B",
+                          color: "#1E293B",
                           display: "inline-block",
                         }}
                       >
@@ -506,8 +443,8 @@ function AuditLogs() {
                     </td>
                     <td style={{ padding: "12px 16px", verticalAlign: "middle" }}>
                       <div style={{ display: "flex", flexDirection: "column" }}>
-                        <strong style={{ fontSize: "13px", color: "#18243A" }}>{log.actorName}</strong>
-                        <span style={{ fontSize: "11.5px", color: "#64748b" }}>{log.actorEmail}</span>
+                        <strong style={{ fontSize: "13px", color: "#0F172A" }}>{log.actorName}</strong>
+                        <span style={{ fontSize: "11.5px", color: "#64748B" }}>{log.actorEmail}</span>
                       </div>
                     </td>
                     <td style={{ padding: "12px 16px", verticalAlign: "middle" }}>
@@ -517,9 +454,9 @@ function AuditLogs() {
                           fontWeight: "700",
                           padding: "2px 8px",
                           borderRadius: "4px",
-                          backgroundColor: log.role === "ADMIN" ? "#F8F2FA" : "#EDF9F2",
-                          color: log.role === "ADMIN" ? "#A51D8D" : "#2E9B67",
-                          border: `1px solid ${log.role === "ADMIN" ? "#DDD2E2" : "#A3E4C3"}`,
+                          backgroundColor: log.role === "ADMIN" ? "#F1F5F9" : "#ECFDF5",
+                          color: log.role === "ADMIN" ? "#1E293B" : "#059669",
+                          border: `1px solid ${log.role === "ADMIN" ? "#CBD5E1" : "#A7F3D0"}`,
                           display: "inline-block",
                         }}
                       >
@@ -549,9 +486,9 @@ function AuditLogs() {
                     <td style={{ padding: "12px 16px", verticalAlign: "middle" }}>
                       <span
                         style={{
-                          backgroundColor: "#EDF9F2",
-                          color: "#2E9B67",
-                          border: "1px solid #A3E4C3",
+                          backgroundColor: "#ECFDF5",
+                          color: "#059669",
+                          border: "1px solid #A7F3D0",
                           fontSize: "11px",
                           fontWeight: "800",
                           padding: "3px 8px",
@@ -569,17 +506,17 @@ function AuditLogs() {
           </table>
         </div>
 
-        {/* PAGINATION TOOLBAR (10 LOGS PER PAGE) */}
+        {/* PAGINATION TOOLBAR */}
         <div
           style={{
             padding: "14px 20px",
-            borderTop: "1px solid #e2e8f0",
+            borderTop: "1px solid #E2E8F0",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             flexWrap: "wrap",
             gap: "12px",
-            backgroundColor: "#ffffff",
+            backgroundColor: "#FFFFFF",
           }}
         >
           <div style={{ fontSize: "13px", color: "#64748b" }}>
@@ -596,9 +533,9 @@ function AuditLogs() {
               style={{
                 padding: "6px 12px",
                 borderRadius: "6px",
-                border: "1px solid #cbd5e1",
-                backgroundColor: currentPage === 1 ? "#f8fafc" : "#ffffff",
-                color: currentPage === 1 ? "#94a3b8" : "#1e293b",
+                border: "1px solid #CBD5E1",
+                backgroundColor: currentPage === 1 ? "#F8FAFC" : "#FFFFFF",
+                color: currentPage === 1 ? "#94A3B8" : "#0F172A",
                 fontSize: "12.5px",
                 fontWeight: "600",
                 cursor: currentPage === 1 ? "not-allowed" : "pointer",
@@ -628,9 +565,9 @@ function AuditLogs() {
                         style={{
                           padding: "6px 11px",
                           borderRadius: "6px",
-                          border: pageNum === currentPage ? "1px solid #9B2282" : "1px solid #cbd5e1",
-                          backgroundColor: pageNum === currentPage ? "#9B2282" : "#ffffff",
-                          color: pageNum === currentPage ? "#ffffff" : "#334155",
+                          border: pageNum === currentPage ? "1px solid #1E293B" : "1px solid #CBD5E1",
+                          backgroundColor: pageNum === currentPage ? "#1E293B" : "#FFFFFF",
+                          color: pageNum === currentPage ? "#FFFFFF" : "#334155",
                           fontSize: "12.5px",
                           fontWeight: pageNum === currentPage ? "700" : "500",
                           cursor: "pointer",
@@ -650,9 +587,9 @@ function AuditLogs() {
               style={{
                 padding: "6px 12px",
                 borderRadius: "6px",
-                border: "1px solid #cbd5e1",
-                backgroundColor: currentPage === totalPages || totalPages === 0 ? "#f8fafc" : "#ffffff",
-                color: currentPage === totalPages || totalPages === 0 ? "#94a3b8" : "#1e293b",
+                border: "1px solid #CBD5E1",
+                backgroundColor: currentPage === totalPages || totalPages === 0 ? "#F8FAFC" : "#FFFFFF",
+                color: currentPage === totalPages || totalPages === 0 ? "#94A3B8" : "#0F172A",
                 fontSize: "12.5px",
                 fontWeight: "600",
                 cursor: currentPage === totalPages || totalPages === 0 ? "not-allowed" : "pointer",

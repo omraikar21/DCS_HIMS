@@ -36,6 +36,7 @@ const monthNames = [
 function Payslips() {
   const { user, role } = useAuth();
   const notification = useNotification();
+  const isFinance = (role || "").toUpperCase() === "FINANCE";
   const isEmployee = (role || "").toUpperCase() === "EMPLOYEE";
 
   const [records, setRecords] =
@@ -82,13 +83,26 @@ function Payslips() {
       payrollId: rec.payroll_id,
       employeeId: rec.employee_code || `EMP-${rec.employee_id}`,
       employeeName: name,
+      name,
       department: rec.department_name || "General",
       month: monthStr,
       basicSalary: basic,
-      grossSalary: gross,
-      deductions: deductions,
-      netSalary: net,
+      grossSalary: `₹${gross.toLocaleString("en-IN")}`,
+      deductions: `₹${deductions.toLocaleString("en-IN")}`,
+      netSalary: `₹${net.toLocaleString("en-IN")}`,
       status: "Generated",
+      rawDate: rec.payroll_month && rec.payroll_year
+        ? `${rec.payroll_year}-${String(rec.payroll_month).padStart(2, "0")}`
+        : "",
+      allowances,
+      totalDeductions: deductions,
+      netSalaryNum: net,
+      grossSalaryNum: gross,
+      bankName: rec.bank_name || "-",
+      bankAccount: rec.bank_account || "-",
+      ifscCode: rec.ifsc_code || "-",
+      designation: rec.designation || "Staff",
+      email: rec.email || "",
     };
   };
 
@@ -111,59 +125,31 @@ function Payslips() {
     loadPayslipsData();
   }, []);
 
-  const filteredRecords =
-    useMemo(() => {
+  const filteredRecords = useMemo(() => {
+    return records.filter((rec) => {
+      // If regular employee, only show their own payslips
+      if (isEmployee) {
+        const userEmail = (user?.email || "").toLowerCase().trim();
+        const userName = (user?.name || "").toLowerCase().trim();
+        const matchesMyEmail = rec.email && rec.email.toLowerCase().trim() === userEmail;
+        const matchesMyName = rec.name && rec.name.toLowerCase().trim() === userName;
+        if (!matchesMyEmail && !matchesMyName) return false;
+      }
 
-      return records.filter(
-        (record) => {
-          // If logged in as employee, only show matching employee records
-          if (isEmployee && user) {
-            const userNameLower = (user.name || "").toLowerCase();
-            const recordNameLower = record.employeeName.toLowerCase();
+      const matchesSearch =
+        !search ||
+        rec.name.toLowerCase().includes(search.toLowerCase()) ||
+        rec.id.toLowerCase().includes(search.toLowerCase());
 
-            const isMatch = recordNameLower.includes(userNameLower) ||
-                            userNameLower.includes(recordNameLower) ||
-                            record.employeeName.includes("Om Raikar") || // default employee demo
-                            record.employeeId === "DCS-EMP-001";
-            if (!isMatch) return false;
-          }
+      const matchesDepartment =
+        department === "All Departments" || rec.department === department;
 
-          const searchText =
-            search.toLowerCase();
+      const matchesMonth =
+        !month || rec.rawDate === month;
 
-
-          const matchesSearch =
-            record.employeeName
-              .toLowerCase()
-              .includes(searchText) ||
-
-            record.employeeId
-              .toLowerCase()
-              .includes(searchText);
-
-
-          const matchesDepartment =
-            department ===
-              "All Departments" ||
-            record.department ===
-              department;
-
-
-          return (
-            matchesSearch &&
-            matchesDepartment
-          );
-
-        }
-      );
-
-    }, [
-      records,
-      search,
-      department,
-      isEmployee,
-      user,
-    ]);
+      return matchesSearch && matchesDepartment && matchesMonth;
+    });
+  }, [records, search, department, month, isEmployee, user]);
 
 
   const handleView = (
@@ -180,23 +166,20 @@ function Payslips() {
   const handleDownload = (record) => {
     setSelectedRecord(record);
     setModalOpen(true);
+    notification.info(`Opening payslip for ${record.name} - you can print or save as PDF.`);
   };
 
   const handleGeneratePayslips = async () => {
+    if (!isFinance) {
+      notification?.error?.("Only Finance Executives are authorized to generate monthly payslips.");
+      return;
+    }
+
     try {
       setGenerating(true);
 
-      // Parse month filter  e.g. "2026-08" → month=8, year=2026
-      const [yearStr, monthStr] = month.split("-");
-      const yearNum  = Number(yearStr);
-      const monthNum = Number(monthStr);
-
-      if (!yearNum || !monthNum) {
-        notification?.error?.("Please select a valid month first.");
-        return;
-      }
-
-      const result = await generatePayslipsForMonth(monthNum, yearNum);
+      const [year, monthNum] = month.split("-").map(Number);
+      const result = await generatePayslipsForMonth(monthNum, year);
 
       if (result.generated.length === 0 && result.skipped.length === 0) {
         notification?.warning
@@ -240,14 +223,14 @@ function Payslips() {
           </h1>
 
           <p>
-            {isEmployee
-              ? "Access and download your verified monthly salary statements."
-              : "Generate, review, and distribute structured employee salary slips."}
+            {isFinance
+              ? "Generate, review, and distribute structured employee salary slips."
+              : "Access and review generated monthly salary statements."}
           </p>
 
         </div>
 
-        {!isEmployee && (
+        {isFinance && (
           <button
             className="primary-button"
             onClick={handleGeneratePayslips}
@@ -345,4 +328,4 @@ function Payslips() {
   );
 }
 
-export default Payslips;
+export default Payslips;

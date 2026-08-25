@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 
 import {
   ArrowLeft,
@@ -19,6 +19,7 @@ import ConfirmDialog from "../../components/common/ConfirmDialog";
 function EmployeeProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { role } = useAuth();
   const notification = useNotification();
   const canManage = ["ADMIN", "HR"].includes((role || "").toUpperCase());
@@ -45,6 +46,7 @@ function EmployeeProfile() {
           setEmployee({
             id: data.employee_code || `DCS-EMP-${String(data.id).padStart(3, "0")}`,
             databaseId: data.id,
+            departmentId: data.department_id || null,
             name: fullName,
             email: data.email || "",
             phone: data.phone || "",
@@ -126,18 +128,33 @@ function EmployeeProfile() {
     .join("")
     .slice(0, 2);
 
+  const fromDepartment = location.state?.fromDepartment;
+  const backDeptId = location.state?.departmentId || employee.departmentId;
+  const backDeptName = location.state?.departmentName || employee.department;
+
+  const handleBack = () => {
+    if (fromDepartment && backDeptId) {
+      navigate(`/departments/${backDeptId}`);
+    } else if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/employees");
+    }
+  };
+
   return (
     <div className="employee-profile-page">
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
         <button
           className="back-button"
-          onClick={() =>
-            navigate("/employees")
-          }
+          type="button"
+          onClick={handleBack}
         >
           <ArrowLeft size={16} />
-          Back to Employees
+          {fromDepartment
+            ? `Back to ${backDeptName || "Department"}`
+            : "Back to Employees"}
         </button>
 
         {canManage && (

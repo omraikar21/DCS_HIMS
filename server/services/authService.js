@@ -58,11 +58,11 @@ const loginUser =
     }
 
     // --------------------------------------
-    // CHECK ACTIVE STATUS
+    // CHECK ACTIVE / SUSPENDED STATUS
     // --------------------------------------
 
-    if (!user.is_active) {
-      throw new Error("User account is inactive. Please contact administrator.");
+    if (user.is_active === false || user.is_active === 0) {
+      throw new Error("Account Suspended: Your account is currently inactive or suspended. Access denied. Please contact your system administrator.");
     }
 
     // --------------------------------------
@@ -133,10 +133,16 @@ const loginUser =
       token,
       user: {
         id: user.id,
+        employee_id: user.employee_id || user.id,
         name: user.name,
         email: user.email,
         role: user.role,
         avatar: user.avatar || "",
+        is_super_admin: user.is_super_admin || false,
+        employee_code: user.employee_code || (user.id ? `DCS-EMP-${String(user.id).padStart(3, "0")}` : "DCS-EMP-001"),
+        department_name: user.department_name || (user.role === "HR" ? "Human Resources" : user.role === "FINANCE" ? "Finance" : user.role === "TEAM_LEAD" ? "AIML" : "Development"),
+        department_id: user.department_id || null,
+        designation: user.designation || (user.role === "TEAM_LEAD" ? "Team Lead" : user.role === "HR" ? "HR Manager" : user.role === "FINANCE" ? "Finance Executive" : "Software Engineer"),
       },
     };
   };

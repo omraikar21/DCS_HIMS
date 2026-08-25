@@ -15,6 +15,7 @@ import {
   approveLeave,
   rejectLeave,
   holdLeave,
+  deleteLeave,
 } from "../../services/leaveService";
 
 import {
@@ -63,40 +64,29 @@ const leaveStatusToUI = {
 function LeaveManagement() {
   const { role, user } = useAuth();
   const notification = useNotification();
-  const isAdminOrHr = ["ADMIN", "HR"].includes((role || "").toUpperCase());
+  const userRole = (role || user?.role || "EMPLOYEE").toUpperCase();
+  const isSuperAdmin = Boolean(
+    user?.is_super_admin ||
+    (user?.email && user.email.toLowerCase().trim() === "omraikar2128@gmail.com")
+  );
+  const isAdmin = userRole === "ADMIN";
+  const isHR = userRole === "HR";
+  const isAdminOrHr = isAdmin || isHR || isSuperAdmin;
   const canApprove = isAdminOrHr;
+  const userDept = user?.department_name || user?.department || "";
 
-  const [records, setRecords] =
-    useState([]);
+  const [records, setRecords] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [_loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [department, setDepartment] = useState("All Departments");
+  const [leaveType, setLeaveType] = useState("All Leave Types");
+  const [status, setStatus] = useState("All Status");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
-  const [employees, setEmployees] =
-    useState([]);
-
-  const [_loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState("");
-
-  const [search, setSearch] =
-    useState("");
-
-  const [department, setDepartment] =
-    useState("All Departments");
-
-  const [leaveType, setLeaveType] =
-    useState("All Leave Types");
-
-  const [status, setStatus] =
-    useState("All Status");
-
-  const [modalOpen, setModalOpen] =
-    useState(false);
-
-  const [selectedRecord, setSelectedRecord] =
-    useState(null);
-
-  const mapLeaveToUI = (rec) => {
+  const mapLeaveToUI = (rec, empList = []) => {
     const fromDate = rec.start_date ? String(rec.start_date).slice(0, 10) : "";
     const toDate = rec.end_date ? String(rec.end_date).slice(0, 10) : "";
     let days = 1;
@@ -104,14 +94,37 @@ function LeaveManagement() {
       const diff = new Date(toDate) - new Date(fromDate);
       days = Math.max(1, Math.round(diff / (1000 * 60 * 60 * 24)) + 1);
     }
-    const name = `${rec.first_name || ""} ${rec.last_name || ""}`.trim() || "Employee";
+    const name = `${rec.first_name || ""} ${rec.last_name || ""}`.trim() || rec.applicant_name || "Employee";
+
+    const empMatch = (empList || []).find(
+      e => e.id === rec.employee_id ||
+           (e.employee_code && rec.employee_code && e.employee_code === rec.employee_code) ||
+           `${e.first_name || ""} ${e.last_name || ""}`.trim().toLowerCase() === name.toLowerCase()
+    );
+
+    const empCode = (rec.employee_code || empMatch?.employee_code || "").toUpperCase();
+    const deptName = (rec.department_name || empMatch?.department_name || "").toLowerCase();
+    const desig = (empMatch?.designation || rec.designation || "").toLowerCase();
+    let rawRole = (rec.applicant_role || rec.role || empMatch?.role || "").toUpperCase();
+
+    let applicantRole = "EMPLOYEE";
+    if (rawRole === "HR" || empCode.includes("-HR-") || empCode.includes("HR") || deptName.includes("human resources") || desig.includes("hr")) {
+      applicantRole = "HR";
+    } else if (rawRole === "FINANCE" || empCode.includes("-FIN-") || empCode.includes("FIN") || deptName.includes("finance") || desig.includes("finance") || desig.includes("accountant")) {
+      applicantRole = "FINANCE";
+    } else if (rawRole === "TEAM_LEAD" || empCode.includes("-TL-") || empCode.includes("-TL") || desig.includes("team lead") || desig.includes("lead")) {
+      applicantRole = "TEAM_LEAD";
+    } else if (rawRole === "ADMIN" || rawRole === "SUPER_ADMIN" || empCode.includes("-ADM-") || empCode.includes("ADMIN")) {
+      applicantRole = "ADMIN";
+    }
+
     return {
       id: `LV-${String(rec.id).padStart(3, "0")}`,
       databaseId: rec.id,
-      employeeId: rec.employee_code || `EMP-${rec.employee_id}`,
+      employeeId: rec.employee_code || empMatch?.employee_code || `EMP-${rec.employee_id}`,
       employeeDatabaseId: rec.employee_id,
       employeeName: name,
-      department: rec.department_name || "Development",
+      department: rec.department_name || empMatch?.department_name || "Development",
       leaveType: leaveTypeToUI[rec.leave_type] || rec.leave_type || "Casual Leave",
       fromDate,
       toDate,
@@ -119,6 +132,7 @@ function LeaveManagement() {
       reason: rec.reason || "",
       appliedOn: rec.created_at ? String(rec.created_at).slice(0, 10) : fromDate,
       status: leaveStatusToUI[rec.status] || rec.status || "Pending",
+      applicantRole,
     };
   };
 
@@ -130,7 +144,7 @@ function LeaveManagement() {
         getLeaves(),
         getEmployees().catch(() => []),
       ]);
-      const mapped = (leavesData || []).map(mapLeaveToUI);
+      const mapped = (leavesData || []).map((rec) => mapLeaveToUI(rec, empData));
       setRecords(mapped);
       setEmployees(empData || []);
     } catch (err) {
@@ -145,76 +159,85 @@ function LeaveManagement() {
     loadLeaveData();
   }, []);
 
-
-  /* FILTER */
-
-  const filteredRecords =
-    useMemo(() => {
-
-      return records.filter(
-        (record) => {
-
-          // If not Admin or HR (i.e. Employee or Finance), ONLY show own leave records
-          if (!isAdminOrHr && user?.name) {
-            const isMyLeave =
-              record.employeeName.toLowerCase().includes(user.name.toLowerCase()) ||
-              user.name.toLowerCase().includes(record.employeeName.toLowerCase());
-            if (!isMyLeave) return false;
-          }
-
-          const searchText =
-            search.toLowerCase();
-
-
-          const matchesSearch =
-            record.employeeName
-              .toLowerCase()
-              .includes(searchText) ||
-
-            record.employeeId
-              .toLowerCase()
-              .includes(searchText);
-
-
-          const matchesDepartment =
-            department ===
-              "All Departments" ||
-            record.department ===
-              department;
-
-
-          const matchesLeaveType =
-            leaveType ===
-              "All Leave Types" ||
-            record.leaveType ===
-              leaveType;
-
-
-          const matchesStatus =
-            status === "All Status" ||
-            record.status ===
-              status;
-
-
-          return (
-            matchesSearch &&
-            matchesDepartment &&
-            matchesLeaveType &&
-            matchesStatus
-          );
-
-        }
+  /* FILTERING & ROLE PERMISSION SCOPING */
+  const filteredRecords = useMemo(() => {
+    return records.map((record) => {
+      const applicantRole = (record.applicantRole || "EMPLOYEE").toUpperCase();
+      const applicantName = (record.employeeName || "").toLowerCase().trim();
+      const currentName = (user?.name || "").toLowerCase().trim();
+      const applicantCode = (record.employeeId || "").toUpperCase().trim();
+      const userCode = (user?.employee_code || user?.employee_id || "").toUpperCase().trim();
+      const isMyOwnLeave = Boolean(
+        (applicantCode && userCode && applicantCode === userCode) ||
+        (applicantName && currentName && (applicantName === currentName || applicantName.includes(currentName) || currentName.includes(applicantName)))
       );
 
-    }, [
-      records,
-      search,
-      department,
-      leaveType,
-      status,
-      isAdminOrHr,
-      user,
-    ]);
+      // EXACT APPROVAL RULES:
+      // 1. ADMIN approves leave for HR & FINANCE
+      // 2. HR approves leave for TEAM_LEAD & EMPLOYEE
+      // 3. TEAM_LEAD approves leave for EMPLOYEE only
+      let canApproveThis = false;
+      if (!isMyOwnLeave) {
+        if (isAdmin || isSuperAdmin) {
+          canApproveThis = applicantRole === "HR" || applicantRole === "FINANCE";
+        } else if (isHR) {
+          canApproveThis = applicantRole === "TEAM_LEAD" || applicantRole === "EMPLOYEE";
+        } else if (userRole === "TEAM_LEAD") {
+          canApproveThis = applicantRole === "EMPLOYEE";
+        }
+      }
+
+      return {
+        ...record,
+        canApproveThisRecord: canApproveThis,
+        canDeleteThisRecord: isMyOwnLeave,
+      };
+    }).filter((record) => {
+      const applicantName = (record.employeeName || "").toLowerCase().trim();
+      const currentName = (user?.name || "").toLowerCase().trim();
+      const applicantCode = (record.employeeId || "").toUpperCase().trim();
+      const userCode = (user?.employee_code || user?.employee_id || "").toUpperCase().trim();
+      const isMyOwnLeave = Boolean(
+        (applicantCode && userCode && applicantCode === userCode) ||
+        (applicantName && currentName && (applicantName === currentName || applicantName.includes(currentName) || currentName.includes(applicantName)))
+      );
+
+      // Scope visibility per role:
+      if (!isSuperAdmin) {
+        if (isAdmin) {
+          // Admin oversees all leave applications across the enterprise
+        } else if (isHR) {
+          // HR sees own leaves and regular Employee / Team Lead leaves
+          const isEmployeeOrLead = record.applicantRole === "EMPLOYEE" || record.applicantRole === "TEAM_LEAD";
+          if (!isMyOwnLeave && !isEmployeeOrLead) return false;
+        } else if (userRole === "TEAM_LEAD") {
+          // Team Lead sees own leaves and Employee leaves in department
+          const isDeptEmployee = record.applicantRole === "EMPLOYEE" && (!userDept || record.department === userDept);
+          if (!isMyOwnLeave && !isDeptEmployee) return false;
+        } else {
+          // Employee ONLY sees their own leaves
+          if (!isMyOwnLeave) return false;
+        }
+      }
+
+      const searchText = search.toLowerCase();
+      const matchesSearch =
+        !search ||
+        record.employeeName.toLowerCase().includes(searchText) ||
+        record.employeeId.toLowerCase().includes(searchText);
+
+      const matchesDepartment =
+        department === "All Departments" || record.department === department;
+
+      const matchesLeaveType =
+        leaveType === "All Leave Types" || record.leaveType === leaveType;
+
+      const matchesStatus =
+        status === "All Status" || record.status === status;
+
+      return matchesSearch && matchesDepartment && matchesLeaveType && matchesStatus;
+    });
+  }, [records, search, department, leaveType, status, isSuperAdmin, isAdmin, isHR, userRole, user, userDept]);
 
 
   /* APPLY LEAVE */
@@ -354,6 +377,33 @@ function LeaveManagement() {
     }
   };
 
+  /* DELETE */
+
+  const handleDelete = async (record) => {
+    if (!record) return;
+    const leaveId = record.databaseId || (typeof record.id === "string" ? record.id.replace("LV-", "") : record.id);
+    if (!window.confirm(`Are you sure you want to delete leave application for ${record.employeeName}?`)) {
+      return;
+    }
+    try {
+      setLoading(true);
+      await deleteLeave(leaveId);
+      if (notification?.success) {
+        notification.success("Leave application deleted successfully");
+      }
+      setRecords((prev) => prev.filter((r) => r.databaseId !== record.databaseId && r.id !== record.id));
+      setModalOpen(false);
+      setSelectedRecord(null);
+    } catch (err) {
+      console.error("Delete leave error:", err);
+      if (notification?.error) {
+        notification.error(err.message || "Failed to delete leave request");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   return (
     <div className="leave-page">
@@ -373,24 +423,24 @@ function LeaveManagement() {
           </h1>
 
           <p>
-            {isAdminOrHr
-              ? "Review and manage all employee leave requests and approvals."
+            {isAdmin
+              ? "Review and approve HR & Finance leaves, and monitor department team leaves."
+              : isHR
+              ? "Review and manage employee leave requests and approvals."
               : "View your leave applications, balance, and submit new time-off requests."}
           </p>
 
         </div>
 
-
-        <button
-          className="primary-button"
-          onClick={handleAdd}
-        >
-
-          <Plus size={17} />
-
-          Apply Leave
-
-        </button>
+        {!isAdmin && !isSuperAdmin && (
+          <button
+            className="primary-button"
+            onClick={handleAdd}
+          >
+            <Plus size={17} />
+            Apply Leave
+          </button>
+        )}
 
       </div>
 
@@ -462,6 +512,7 @@ function LeaveManagement() {
           onApprove={handleApprove}
           onReject={handleReject}
           onHold={handleHold}
+          onDelete={handleDelete}
           canApprove={canApprove}
         />
 
@@ -480,6 +531,7 @@ function LeaveManagement() {
 
         }}
         onSave={handleSave}
+        onDelete={handleDelete}
         record={selectedRecord}
       />
 
@@ -487,4 +539,4 @@ function LeaveManagement() {
   );
 }
 
-export default LeaveManagement;
+export default LeaveManagement;

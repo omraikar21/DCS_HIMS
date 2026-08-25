@@ -385,7 +385,7 @@ function Navbar({
                       }}
                     >
                       <ScrollText size={16} />
-                      <span>Audit Logs</span>
+                      <span>User Logs</span>
                     </button>
                   </>
                 )}

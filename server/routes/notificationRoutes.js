@@ -44,18 +44,18 @@ router.get("/announcements", authenticateToken, getAnnouncements);
 router.post(
   "/announcements",
   authenticateToken,
-  authorizeRoles("ADMIN", "HR"),
+  authorizeRoles("ADMIN", "HR", "TEAM_LEAD"),
   createAnnouncement
 );
 
 // ------------------------------------------
 // DELETE COMPANY ANNOUNCEMENT
-// ADMIN + HR
+// ADMIN + HR + TEAM_LEAD
 // ------------------------------------------
 router.delete(
   "/announcements/:id",
   authenticateToken,
-  authorizeRoles("ADMIN", "HR"),
+  authorizeRoles("ADMIN", "HR", "TEAM_LEAD"),
   deleteAnnouncement
 );
 

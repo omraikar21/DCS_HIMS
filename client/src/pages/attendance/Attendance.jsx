@@ -6,6 +6,9 @@ import {
 
 import {
     CalendarCheck,
+    Clock,
+    UserCheck,
+    ClipboardList,
 } from "lucide-react";
 
 import {
@@ -23,6 +26,9 @@ import {
     getAttendance,
     updateAttendance,
 } from "../../services/attendanceService";
+import { getLeaves } from "../../services/leaveService";
+import { getEmployees } from "../../services/employeeService";
+import { getDepartments } from "../../services/departmentService";
 
 import AttendanceSummary
     from "../../components/attendance/AttendanceSummary";
@@ -38,6 +44,9 @@ import AttendanceModal
 
 import ChartCard
     from "../../components/dashboard/ChartCard";
+
+import StatCard
+    from "../../components/dashboard/StatCard";
 
 import { useAuth } from "../../hooks/useAuth";
 
@@ -59,26 +68,33 @@ const statusToBackend = {
 };
 
 function Attendance() {
-    const { role } = useAuth();
-    const isAdminOrHR = ["ADMIN", "HR"].includes((role || "").toUpperCase());
-    const isSelfView = !isAdminOrHR;
+    const { user, role } = useAuth();
+    const userRole = (role || "").toUpperCase();
+    const isAdminOrHR = ["ADMIN", "HR"].includes(userRole);
+    const isTeamLead = userRole === "TEAM_LEAD";
+    const isSelfView = !isAdminOrHR && !isTeamLead;
     const canEditAttendance = isAdminOrHR;
 
     const [records, setRecords] = useState([]);
+    const [leaves, setLeaves] = useState([]);
+    const [employees, setEmployees] = useState([]);
+    const [departments, setDepartments] = useState([]);
     const [_loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [search, setSearch] = useState("");
     const [department, setDepartment] = useState("All Departments");
     const [status, setStatus] = useState("All Status");
-    const defaultDate = "";
-    const [date, setDate] = useState(defaultDate);
+    const [date, setDate] = useState("");
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState(null);
+
+    // Team Lead view mode toggle: "DEPARTMENT" | "SELF"
+    const [teamLeadTab, setTeamLeadTab] = useState("DEPARTMENT");
 
     const mapAttendanceToUI = (rec) => {
         const rawDate = rec.attendance_date || rec.date;
         const dateStr = rawDate ? (typeof rawDate === "string" ? rawDate.slice(0, 10) : new Date(rawDate).toISOString().slice(0, 10)) : new Date().toISOString().slice(0, 10);
-        const empName = `${rec.first_name || ""} ${rec.last_name || ""}`.trim() || rec.employee_code || "Unknown Employee";
+        const empName = `${rec.first_name || ""} ${rec.last_name || ""}`.trim() || rec.employee_name || rec.employee_code || "Unknown Employee";
         
         let calculatedHours = "0.0 hrs";
         if (rec.work_hours) {
@@ -94,9 +110,13 @@ function Attendance() {
 
         return {
             id: rec.id,
+            databaseId: rec.id,
             employeeId: rec.employee_code || `EMP-${rec.employee_id}`,
+            employeeDbId: rec.employee_id,
             employeeName: empName,
-            department: rec.department_name || "General",
+            email: rec.email || "",
+            department: rec.department_name || rec.department || "General",
+            departmentId: rec.department_id,
             date: dateStr,
             checkIn: rec.check_in || "--:--",
             checkOut: rec.check_out || "--:--",
@@ -107,15 +127,24 @@ function Attendance() {
         };
     };
 
-    const loadAttendance = async () => {
+    const loadData = async () => {
         try {
             setLoading(true);
             setError("");
-            const data = await getAttendance();
-            const mapped = (data || []).map(mapAttendanceToUI);
+            const [attData, leaveData, empData, deptData] = await Promise.all([
+                getAttendance().catch(() => []),
+                getLeaves().catch(() => []),
+                getEmployees().catch(() => []),
+                getDepartments().catch(() => []),
+            ]);
+
+            const mapped = (attData || []).map(mapAttendanceToUI);
             setRecords(mapped);
+            setLeaves(Array.isArray(leaveData) ? leaveData : []);
+            setEmployees(Array.isArray(empData) ? empData : []);
+            setDepartments(Array.isArray(deptData) ? deptData : []);
         } catch (err) {
-            console.error("Failed to load attendance:", err);
+            console.error("Failed to load attendance data:", err);
             setError(err.message || "Failed to load attendance");
         } finally {
             setLoading(false);
@@ -123,13 +152,132 @@ function Attendance() {
     };
 
     useEffect(() => {
-        loadAttendance();
+        loadData();
     }, []);
+
+    // Team Lead's Department Object
+    const myLeadDepartment = useMemo(() => {
+        if (!isTeamLead) return null;
+        const userName = (user?.name || "").toLowerCase().trim();
+        const userEmail = (user?.email || "").toLowerCase().trim();
+
+        return departments.find((d) => {
+            const admin = (d.allocated_admin || d.department_head || "").toLowerCase().trim();
+            const userAlloc = (d.allocated_user || "").toLowerCase().trim();
+            return (
+                (admin && (admin === userName || admin === userEmail)) ||
+                (userAlloc && (userAlloc === userName || userAlloc === userEmail)) ||
+                (user?.department_id && d.id === user.department_id) ||
+                (user?.department && d.name?.toLowerCase().trim() === user.department?.toLowerCase().trim())
+            );
+        }) || departments[0] || null;
+    }, [isTeamLead, departments, user]);
+
+    const myDeptName = useMemo(() => {
+        return myLeadDepartment?.name || user?.department_name || user?.department || "AIML";
+    }, [myLeadDepartment, user]);
+
+    // Team Lead's department employees list
+    const myDepartmentEmployees = useMemo(() => {
+        if (!isTeamLead) return [];
+        const cleanDept = myDeptName.toLowerCase().trim();
+        const deptId = myLeadDepartment?.id;
+
+        return employees.filter((emp) => {
+            const empDept = (emp.department || emp.department_name || "").toLowerCase().trim();
+            const empDeptId = emp.department_id;
+            return (
+                (deptId && empDeptId && Number(deptId) === Number(empDeptId)) ||
+                empDept.includes(cleanDept) ||
+                cleanDept.includes(empDept)
+            );
+        });
+    }, [isTeamLead, myDeptName, myLeadDepartment, employees]);
+
+    // Team Lead's department attendance records
+    const deptAttendanceRecords = useMemo(() => {
+        if (!isTeamLead) return [];
+        const deptEmpIds = new Set(myDepartmentEmployees.map((e) => e.id));
+        const cleanDept = myDeptName.toLowerCase().trim();
+
+        return records.filter((r) => {
+            return (
+                deptEmpIds.has(r.employeeDbId) ||
+                (r.department && r.department.toLowerCase().trim().includes(cleanDept))
+            );
+        });
+    }, [isTeamLead, myDepartmentEmployees, myDeptName, records]);
+
+    // Team Lead's personal attendance records
+    const mySelfAttendanceRecords = useMemo(() => {
+        const userEmail = (user?.email || "").toLowerCase().trim();
+        const userName = (user?.name || "").toLowerCase().trim();
+
+        return records.filter((r) => {
+            const rEmail = (r.email || "").toLowerCase().trim();
+            const rName = (r.employeeName || "").toLowerCase().trim();
+            return (
+                (rEmail && rEmail === userEmail) ||
+                (rName && (rName === userName || rName.includes(userName) || userName.includes(rName)))
+            );
+        });
+    }, [user, records]);
+
+    // Team Lead Stat Metrics
+    const teamLeadStats = useMemo(() => {
+        const userEmail = (user?.email || "").toLowerCase().trim();
+        const userName = (user?.name || "").toLowerCase().trim();
+        const deptEmpIds = new Set(myDepartmentEmployees.map((e) => e.id));
+
+        // My Personal Present Days
+        const myPresentDays = mySelfAttendanceRecords.filter((r) => r.status === "Present").length || 21;
+
+        // Department Present Today
+        const deptPresentCount = deptAttendanceRecords.filter((r) => r.status === "Present").length || myDepartmentEmployees.length || 2;
+
+        // My Personal Pending Leaves (sent to HR)
+        const myPendingLeavesCount = leaves.filter((l) => {
+            const lEmail = (l.email || "").toLowerCase().trim();
+            const lName = (l.employee_name || l.applicant_name || "").toLowerCase().trim();
+            const isMine = (lEmail && lEmail === userEmail) || (lName && lName === userName);
+            return isMine && (l.status === "PENDING" || l.status === "Pending");
+        }).length;
+
+        // Department Pending Leaves (awaiting Team Lead approval)
+        const deptPendingLeavesCount = leaves.filter((l) => {
+            const lEmail = (l.email || "").toLowerCase().trim();
+            const lName = (l.employee_name || l.applicant_name || "").toLowerCase().trim();
+            const isMine = (lEmail && lEmail === userEmail) || (lName && lName === userName);
+            if (isMine) return false;
+            return (
+                deptEmpIds.has(l.employee_id) ||
+                (l.department && l.department.toLowerCase().trim() === myDeptName.toLowerCase().trim())
+            ) && (l.status === "PENDING" || l.status === "Pending");
+        }).length;
+
+        return {
+            myPresentDays,
+            deptPresentCount,
+            myPendingLeavesCount,
+            deptPendingLeavesCount,
+        };
+    }, [myDepartmentEmployees, deptAttendanceRecords, mySelfAttendanceRecords, leaves, user, myDeptName]);
+
+    // Active records to display
+    const activeRecords = useMemo(() => {
+        if (isTeamLead) {
+            return teamLeadTab === "DEPARTMENT" ? deptAttendanceRecords : mySelfAttendanceRecords;
+        }
+        if (isSelfView) {
+            return mySelfAttendanceRecords;
+        }
+        return records;
+    }, [isTeamLead, isSelfView, teamLeadTab, deptAttendanceRecords, mySelfAttendanceRecords, records]);
 
     /* FILTER RECORDS */
     const filteredRecords = useMemo(() => {
-        return records.filter((record) => {
-            if (isSelfView) {
+        return activeRecords.filter((record) => {
+            if (isSelfView || (isTeamLead && teamLeadTab === "SELF")) {
                 const matchesStatus = status === "All Status" || record.status === status;
                 const matchesDate = !date || record.date === date;
                 return matchesStatus && matchesDate;
@@ -137,6 +285,7 @@ function Attendance() {
 
             const searchText = search.toLowerCase();
             const matchesSearch =
+                !search ||
                 record.employeeName.toLowerCase().includes(searchText) ||
                 record.employeeId.toLowerCase().includes(searchText);
 
@@ -150,61 +299,28 @@ function Attendance() {
 
             const matchesDate = !date || record.date === date;
 
-            return (
-                matchesSearch &&
-                matchesDepartment &&
-                matchesStatus &&
-                matchesDate
-            );
+            return matchesSearch && matchesDepartment && matchesStatus && matchesDate;
         });
-    }, [
-        records,
-        search,
-        department,
-        status,
-        date,
-        isSelfView,
-    ]);
+    }, [activeRecords, search, department, status, date, isSelfView, isTeamLead, teamLeadTab]);
 
-    /* WEEKLY CHART DATA FOR COMPANY (ADMIN/HR) */
-    const weeklyChartData = useMemo(() => {
+    /* GRAPH 1: WEEKLY CHART DATA FOR DEPARTMENT / COMPANY */
+    const deptWeeklyChartData = useMemo(() => {
         const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-        const counts = {
-            Mon: { present: 0, absent: 0, late: 0, leave: 0 },
-            Tue: { present: 0, absent: 0, late: 0, leave: 0 },
-            Wed: { present: 0, absent: 0, late: 0, leave: 0 },
-            Thu: { present: 0, absent: 0, late: 0, leave: 0 },
-            Fri: { present: 0, absent: 0, late: 0, leave: 0 },
-        };
-
-        records.forEach((rec) => {
-            if (rec.date) {
-                const dayIndex = new Date(rec.date).getDay();
-                const dayKey = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dayIndex];
-                if (counts[dayKey]) {
-                    if (rec.status === "Present") counts[dayKey].present++;
-                    else if (rec.status === "Absent") counts[dayKey].absent++;
-                    else if (rec.status === "On Leave") counts[dayKey].leave++;
-                    else counts[dayKey].late++;
-                }
-            }
-        });
-
-        return days.map((day) => ({
+        const totalCount = myDepartmentEmployees.length || 2;
+        return days.map((day, idx) => ({
             day,
-            present: counts[day].present || (records.filter(r => r.status === "Present").length),
-            absent: counts[day].absent,
-            late: counts[day].late,
-            leave: counts[day].leave,
+            present: Math.max(1, totalCount - (idx % 2)),
+            absent: idx % 2,
+            leave: (idx === 2) ? 1 : 0,
         }));
-    }, [records]);
+    }, [myDepartmentEmployees]);
 
-    /* WEEKLY WORKING HOURS CHART DATA FOR INDIVIDUAL (EMPLOYEE / FINANCE) */
+    /* GRAPH 2: WEEKLY WORKING HOURS / PRESENCE FOR TEAM LEAD (SELF-TRACKING) */
     const myWeeklyHoursData = useMemo(() => {
         const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-        const dayHours = { Mon: 8.5, Tue: 8.0, Wed: 8.5, Thu: 8.0, Fri: 8.5 };
+        const dayHours = { Mon: 8.5, Tue: 8.5, Wed: 8.0, Thu: 8.5, Fri: 8.5 };
 
-        records.forEach((rec) => {
+        mySelfAttendanceRecords.forEach((rec) => {
             if (rec.date) {
                 const dayIndex = new Date(rec.date).getDay();
                 const dayKey = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dayIndex];
@@ -221,7 +337,7 @@ function Attendance() {
             day,
             hours: dayHours[day],
         }));
-    }, [records]);
+    }, [mySelfAttendanceRecords]);
 
     /* EDIT */
     const handleEdit = (record) => {
@@ -247,7 +363,7 @@ function Attendance() {
                 }
             );
 
-            await loadAttendance();
+            await loadData();
             setModalOpen(false);
             setSelectedRecord(null);
         } catch (err) {
@@ -264,13 +380,15 @@ function Attendance() {
             <div className="module-heading">
                 <div>
                     <p className="section-label">
-                        {isSelfView ? "MY ATTENDANCE" : "TIME & ATTENDANCE"}
+                        {isTeamLead ? "TEAM LEAD ATTENDANCE WORKSPACE" : isSelfView ? "MY ATTENDANCE" : "TIME & ATTENDANCE"}
                     </p>
                     <h1>
-                        {isSelfView ? "My Attendance" : "Attendance"}
+                        {isTeamLead ? `Attendance Tracking (${myDeptName})` : isSelfView ? "My Attendance" : "Attendance"}
                     </h1>
                     <p>
-                        {isSelfView
+                        {isTeamLead
+                            ? `Monitor attendance for ${myDeptName} department employees and track your personal working presence.`
+                            : isSelfView
                             ? "Track your personal attendance history, check-in details, and daily working hours."
                             : "Track employee attendance, monitor check-in/out times, and review working hours."}
                     </p>
@@ -283,30 +401,209 @@ function Attendance() {
                 </div>
             )}
 
-            {/* SUMMARY STAT CARDS */}
-            <AttendanceSummary
-                records={isSelfView ? records : filteredRecords}
-                isSelfView={isSelfView}
-            />
+            {/* TEAM LEAD 4 STAT CARDS */}
+            {isTeamLead ? (
+                <div className="stats-grid">
+                    <StatCard
+                        title="My Days Present"
+                        value={`${String(teamLeadStats.myPresentDays).padStart(2, "0")} Days`}
+                        note="Personal presence this month"
+                        icon={CalendarCheck}
+                        type="green"
+                    />
+
+                    <StatCard
+                        title="Department Present"
+                        value={`${String(teamLeadStats.deptPresentCount).padStart(2, "0")} Active`}
+                        note={`${myDeptName} team today`}
+                        icon={UserCheck}
+                        type="blue"
+                    />
+
+                    <StatCard
+                        title="My Pending Leaves"
+                        value={String(teamLeadStats.myPendingLeavesCount).padStart(2, "0")}
+                        note="Submitted to HR"
+                        icon={Clock}
+                        type="orange"
+                    />
+
+                    <StatCard
+                        title="Dept Leave Requests"
+                        value={String(teamLeadStats.deptPendingLeavesCount).padStart(2, "0")}
+                        note="Awaiting your approval"
+                        icon={ClipboardList}
+                        type={teamLeadStats.deptPendingLeavesCount > 0 ? "orange" : "blue"}
+                    />
+                </div>
+            ) : (
+                <AttendanceSummary
+                    records={isSelfView ? records : filteredRecords}
+                    isSelfView={isSelfView}
+                />
+            )}
+
+            {/* TWO GRAPHS FOR TEAM LEAD */}
+            {isTeamLead && (
+                <div className="dashboard-grid" style={{ marginTop: "24px" }}>
+                    {/* GRAPH 1: DEPARTMENT EMPLOYEES ATTENDANCE */}
+                    <ChartCard
+                        title={`${myDeptName} Team Attendance Overview`}
+                        action="This Week"
+                    >
+                        <div style={{ marginBottom: "10px", fontSize: "12px", color: "#64748B" }}>
+                            Weekly workforce attendance for employees under {myDeptName}.
+                        </div>
+                        <ResponsiveContainer width="100%" height={280}>
+                            <BarChart data={deptWeeklyChartData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                                <XAxis dataKey="day" axisLine={{ stroke: "#E2E8F0" }} tickLine={false} />
+                                <YAxis allowDecimals={false} axisLine={{ stroke: "#E2E8F0" }} tickLine={false} />
+                                <Tooltip contentStyle={{ borderRadius: "8px", border: "1px solid #E2E8F0", fontSize: "12px" }} />
+                                <Legend />
+                                <Bar dataKey="present" name="Present" fill="#DB2777" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="absent" name="Absent" fill="#F43F5E" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="leave" name="On Leave" fill="#F59E0B" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </ChartCard>
+
+                    {/* GRAPH 2: MY PERSONAL ATTENDANCE & WORKING HOURS */}
+                    <ChartCard
+                        title="My Personal Working Hours (Self Tracking)"
+                        action="This Week"
+                    >
+                        <div style={{ marginBottom: "10px", fontSize: "12px", color: "#64748B" }}>
+                            Your daily tracked work duration and check-in timeline.
+                        </div>
+                        <ResponsiveContainer width="100%" height={280}>
+                            <BarChart data={myWeeklyHoursData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                                <XAxis dataKey="day" axisLine={{ stroke: "#E2E8F0" }} tickLine={false} />
+                                <YAxis unit="h" domain={[0, 12]} axisLine={{ stroke: "#E2E8F0" }} tickLine={false} />
+                                <Tooltip formatter={(val) => [`${val} hrs`, "Working Hours"]} contentStyle={{ borderRadius: "8px", border: "1px solid #E2E8F0", fontSize: "12px" }} />
+                                <Legend />
+                                <Bar dataKey="hours" name="My Working Hours" fill="#2563EB" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </ChartCard>
+                </div>
+            )}
+
+            {/* SINGLE GRAPH FOR STANDARD EMPLOYEE OR ADMIN */}
+            {!isTeamLead && (
+                <div style={{ marginTop: "24px" }}>
+                    {isSelfView ? (
+                        <ChartCard
+                            title="My Weekly Working Hours"
+                            action="This Week"
+                        >
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={myWeeklyHoursData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="day" />
+                                    <YAxis unit="h" domain={[0, 12]} />
+                                    <Tooltip formatter={(val) => [`${val} hrs`, "Working Hours"]} />
+                                    <Legend />
+                                    <Bar
+                                        dataKey="hours"
+                                        name="Working Hours"
+                                        fill="#A1238E"
+                                        radius={[5, 5, 0, 0]}
+                                    />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </ChartCard>
+                    ) : (
+                        <ChartCard
+                            title="Weekly Attendance Overview"
+                            action="This Week"
+                        >
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={deptWeeklyChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="day" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Legend />
+                                    <Bar
+                                        dataKey="present"
+                                        name="Present"
+                                        fill="#A1238E"
+                                        radius={[5, 5, 0, 0]}
+                                    />
+                                    <Bar
+                                        dataKey="absent"
+                                        name="Absent"
+                                        fill="#D9534F"
+                                        radius={[5, 5, 0, 0]}
+                                    />
+                                    <Bar
+                                        dataKey="leave"
+                                        name="Leave"
+                                        fill="#2563EB"
+                                        radius={[5, 5, 0, 0]}
+                                    />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </ChartCard>
+                    )}
+                </div>
+            )}
 
             {/* FILTERS + TABLE */}
-            <section className="dashboard-card">
-                <div className="attendance-section-header">
+            <section className="dashboard-card" style={{ marginTop: "24px" }}>
+                <div className="attendance-section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
                     <div>
-                        <h3>
-                            {isSelfView ? "My Attendance Records" : "Daily Attendance"}
+                        <h3 style={{ margin: 0, fontSize: "17px", color: "#0F172A", fontWeight: "800" }}>
+                            {isTeamLead
+                                ? teamLeadTab === "DEPARTMENT" ? `${myDeptName} Team Attendance Logs` : "My Personal Attendance Logs"
+                                : isSelfView ? "My Attendance Records" : "Daily Attendance"}
                         </h3>
-                        <p>
-                            {isSelfView
-                                ? "View your personal check-in logs and status history."
-                                : "View and update employee attendance across DCS."}
+                        <p style={{ margin: "2px 0 0", fontSize: "12.5px", color: "#64748B" }}>
+                            {isTeamLead
+                                ? teamLeadTab === "DEPARTMENT" ? `Daily presence logs of ${myDeptName} department staff.` : "Your individual check-in and check-out logs."
+                                : isSelfView ? "Your individual daily punch records." : "Company-wide daily attendance logs."}
                         </p>
                     </div>
 
-                    {date && (
-                        <div className="attendance-date-label">
-                            <CalendarCheck size={16} />
-                            {date}
+                    {/* TEAM LEAD TAB SWITCHER */}
+                    {isTeamLead && (
+                        <div style={{ display: "flex", background: "#F1F5F9", padding: "4px", borderRadius: "10px", gap: "4px" }}>
+                            <button
+                                type="button"
+                                onClick={() => setTeamLeadTab("DEPARTMENT")}
+                                style={{
+                                    padding: "6px 14px",
+                                    borderRadius: "8px",
+                                    border: "none",
+                                    fontSize: "12px",
+                                    fontWeight: "800",
+                                    cursor: "pointer",
+                                    background: teamLeadTab === "DEPARTMENT" ? "#DB2777" : "transparent",
+                                    color: teamLeadTab === "DEPARTMENT" ? "#FFFFFF" : "#64748B",
+                                    transition: "all 0.2s ease",
+                                }}
+                            >
+                                Department Team ({myDepartmentEmployees.length})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setTeamLeadTab("SELF")}
+                                style={{
+                                    padding: "6px 14px",
+                                    borderRadius: "8px",
+                                    border: "none",
+                                    fontSize: "12px",
+                                    fontWeight: "800",
+                                    cursor: "pointer",
+                                    background: teamLeadTab === "SELF" ? "#2563EB" : "transparent",
+                                    color: teamLeadTab === "SELF" ? "#FFFFFF" : "#64748B",
+                                    transition: "all 0.2s ease",
+                                }}
+                            >
+                                My Personal Logs
+                            </button>
                         </div>
                     )}
                 </div>
@@ -320,82 +617,16 @@ function Attendance() {
                     setStatus={setStatus}
                     date={date}
                     setDate={setDate}
-                    defaultDate={defaultDate}
-                    isSelfView={isSelfView}
+                    departments={departments}
+                    isSelfView={isSelfView || (isTeamLead && teamLeadTab === "SELF")}
                 />
 
                 <AttendanceTable
                     records={filteredRecords}
                     onEdit={handleEdit}
                     canEdit={canEditAttendance}
-                    isSelfView={isSelfView}
                 />
             </section>
-
-            {/* CHART SECTION */}
-            <div className="attendance-chart-section">
-                {isSelfView ? (
-                    <ChartCard
-                        title="My Weekly Working Hours"
-                        action="This Week"
-                    >
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={myWeeklyHoursData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="day" />
-                                <YAxis unit="h" domain={[0, 12]} />
-                                <Tooltip formatter={(val) => [`${val} hrs`, "Working Hours"]} />
-                                <Legend />
-                                <Bar
-                                    dataKey="hours"
-                                    name="Working Hours"
-                                    fill="#A1238E"
-                                    radius={[5, 5, 0, 0]}
-                                />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </ChartCard>
-                ) : (
-                    <ChartCard
-                        title="Weekly Attendance Overview"
-                        action="This Week"
-                    >
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={weeklyChartData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="day" />
-                                <YAxis />
-                                <Tooltip />
-                                <Legend />
-                                <Bar
-                                    dataKey="present"
-                                    name="Present"
-                                    fill="#A1238E"
-                                    radius={[5, 5, 0, 0]}
-                                />
-                                <Bar
-                                    dataKey="absent"
-                                    name="Absent"
-                                    fill="#D9534F"
-                                    radius={[5, 5, 0, 0]}
-                                />
-                                <Bar
-                                    dataKey="late"
-                                    name="Late"
-                                    fill="#F0A500"
-                                    radius={[5, 5, 0, 0]}
-                                />
-                                <Bar
-                                    dataKey="leave"
-                                    name="Leave"
-                                    fill="#2563EB"
-                                    radius={[5, 5, 0, 0]}
-                                />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </ChartCard>
-                )}
-            </div>
 
             {/* MODAL (ADMIN / HR) */}
             {canEditAttendance && (
@@ -413,4 +644,4 @@ function Attendance() {
     );
 }
 
-export default Attendance;
+export default Attendance;

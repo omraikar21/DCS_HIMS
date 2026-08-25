@@ -197,32 +197,51 @@ const editEmployeeCompensation =
 
 
 // ------------------------------------------
-// DELETE EMPLOYEE
+// DELETE EMPLOYEE & CASCADE CONNECTED TABLES
 // ------------------------------------------
 
-const removeEmployee =
-  async (id) => {
+const removeEmployee = async (id) => {
+  const existing = await getEmployeeById(id);
+  if (!existing) {
+    throw new Error("Employee not found");
+  }
 
-    const existing =
-      await getEmployeeById(id);
+  const { pool } = require("../config/database");
 
-
-    if (!existing) {
-
-      throw new Error(
-        "Employee not found"
+  // 1. Delete associated user login account from users table
+  if (existing.user_id || existing.email) {
+    try {
+      await pool.query(
+        "DELETE FROM users WHERE id = $1 OR LOWER(email) = LOWER($2)",
+        [existing.user_id || -1, (existing.email || "").toLowerCase().trim()]
       );
-
+    } catch (uErr) {
+      console.warn("Associated user account deletion notice:", uErr.message);
     }
+  }
 
+  // 2. Clear department team lead and department head references
+  try {
+    const fullName = `${existing.first_name || ""} ${existing.last_name || ""}`.trim();
+    if (existing.user_id) {
+      await pool.query("UPDATE departments SET team_lead_id = NULL WHERE team_lead_id = $1", [existing.user_id]);
+    }
+    if (fullName) {
+      await pool.query(
+        `UPDATE departments 
+         SET allocated_admin = NULL, allocated_user = NULL, department_head = NULL 
+         WHERE LOWER(TRIM(department_head)) = LOWER(TRIM($1)) OR LOWER(TRIM(allocated_admin)) = LOWER(TRIM($1))`,
+        [fullName]
+      );
+    }
+  } catch (dErr) {
+    console.warn("Department unlinking notice:", dErr.message);
+  }
 
-    const employee =
-      await deleteEmployee(id);
-
-
-    return employee;
-
-  };
+  // 3. Delete employee record (attendance, leaves, payroll cascade via FK)
+  const employee = await deleteEmployee(id);
+  return employee;
+};
 
 
 module.exports = {

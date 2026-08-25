@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Megaphone, Calendar, ArrowRight, PlusCircle, X, Send } from "lucide-react";
+import { Megaphone, Calendar, PlusCircle, X, Send } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useNotification } from "../../hooks/useNotification";
 import { getAnnouncements, createAnnouncement } from "../../services/notificationService";
@@ -84,91 +83,114 @@ function CompanyAnnouncementsCard({ limit = 3 }) {
   const displayList = announcements.slice(0, limit);
 
   return (
-    <section className="dashboard-card" style={{ display: "flex", flexDirection: "column" }}>
-      <div className="card-header" style={{ marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+    <section className="dashboard-card" style={{ background: "#FFFFFF", border: "1.5px solid #E2E8F0", borderRadius: "16px", padding: "24px", display: "flex", flexDirection: "column" }}>
+      <div className="card-header" style={{ marginBottom: "16px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
         <div>
-          <h3 style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
-            <Megaphone size={18} color="#DB2777" />
-            Company Notices & Announcements
-          </h3>
-          <p style={{ margin: "4px 0 0 0", color: "#64748b", fontSize: "13px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div
+              style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "8px",
+                background: "#FFF0F7",
+                color: "#DB2777",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Megaphone size={16} />
+            </div>
+            <h3 style={{ margin: 0, fontSize: "17px", fontWeight: "800", color: "#0F172A" }}>
+              Company Notices & Announcements
+            </h3>
+          </div>
+          <p style={{ margin: "4px 0 0 0", color: "#64748b", fontSize: "12.5px" }}>
             {isSuperAdmin
-              ? "Read-only view of internal company announcements posted by Secondary Administrators and HR managers."
-              : "Live circulars, policy updates, and executive broadcasts"}
+              ? "Read-only view of internal company announcements."
+              : "Live circulars, policy updates, and executive broadcasts."}
           </p>
         </div>
 
-        {!isSuperAdmin && (
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            {canPublish && (
-              <button
-                type="button"
-                onClick={() => setModalOpen(true)}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "6px 12px",
-                  borderRadius: "8px",
-                  border: "1px solid #F3D3E7",
-                  background: "#FFF0F7",
-                  color: "#DB2777",
-                  fontSize: "12px",
-                  fontWeight: "700",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#DB2777";
-                  e.currentTarget.style.color = "#FFFFFF";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#FFF0F7";
-                  e.currentTarget.style.color = "#DB2777";
-                }}
-              >
-                <PlusCircle size={14} />
-                <span>Post Announcement</span>
-              </button>
-            )}
-
-            <Link
-              to="/reports"
-              style={{
-                color: "#DB2777",
-                fontSize: "13px",
-                fontWeight: "700",
-                textDecoration: "none",
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              View Reports <ArrowRight size={14} />
-            </Link>
-          </div>
+        {!isSuperAdmin && canPublish && (
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => setModalOpen(true)}
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "34px", padding: "0 14px", fontSize: "12px", fontWeight: "700" }}
+          >
+            <PlusCircle size={14} color="#DB2777" />
+            <span>Post Announcement</span>
+          </button>
         )}
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "12px", flex: 1 }}>
         {loading ? (
-          <p style={{ color: "#94a3b8", fontSize: "13.5px", padding: "16px 0" }}>Loading notices...</p>
+          <div style={{ padding: "30px", textAlign: "center", color: "#94A3B8", fontSize: "13px" }}>
+            Loading announcements...
+          </div>
         ) : displayList.length === 0 ? (
-          <p style={{ color: "#94a3b8", fontSize: "13.5px", padding: "16px 0" }}>No announcements posted yet.</p>
+          <div
+            style={{
+              padding: "36px 20px",
+              textAlign: "center",
+              background: "#F8FAFC",
+              borderRadius: "12px",
+              border: "1px dashed #CBD5E1",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+            }}
+          >
+            <div
+              style={{
+                width: "44px",
+                height: "44px",
+                borderRadius: "12px",
+                background: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#94A3B8",
+              }}
+            >
+              <Megaphone size={22} />
+            </div>
+            <strong style={{ fontSize: "14px", color: "#1E293B", fontWeight: "800" }}>
+              No Active Announcements
+            </strong>
+            <p style={{ margin: "0 0 10px 0", fontSize: "12.5px", color: "#64748B", maxWidth: "340px", lineHeight: "1.4" }}>
+              Broadcast executive notices, holiday schedules, and corporate policy updates to all employees.
+            </p>
+            {!isSuperAdmin && canPublish && (
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => setModalOpen(true)}
+                style={{ height: "34px", fontSize: "12px", padding: "0 14px" }}
+              >
+                <PlusCircle size={14} />
+                <span>+ Broadcast Announcement</span>
+              </button>
+            )}
+          </div>
         ) : (
           displayList.map((item) => (
             <div
               key={item.id}
               style={{
-                padding: "14px 16px",
-                borderRadius: "10px",
+                padding: "16px",
+                borderRadius: "12px",
                 backgroundColor: "#FFFFFF",
-                border: "1px solid #F3D3E7",
-                boxShadow: "0 2px 8px rgba(219, 39, 119, 0.04)",
-                position: "relative",
+                border: "1px solid #F1F5F9",
+                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
                 display: "flex",
                 flexDirection: "column",
-                gap: "6px",
+                gap: "8px",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -219,7 +241,7 @@ function CompanyAnnouncementsCard({ limit = 3 }) {
                 {item.message || item.content}
               </p>
 
-              <div style={{ fontSize: "12px", color: "#64748B", marginTop: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px", display: "flex", alignItems: "center", gap: "6px" }}>
                 Deployed by: <strong style={{ color: "#0F172A" }}>{item.sender_name || item.sender_role}</strong>
               </div>
             </div>

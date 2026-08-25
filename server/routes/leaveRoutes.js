@@ -86,16 +86,12 @@ router.put(
 
 // ------------------------------------------
 // DELETE
-// ADMIN + HR
+// ALL AUTHENTICATED ROLES
 // ------------------------------------------
 
 router.delete(
   "/:id",
   authenticateToken,
-  authorizeRoles(
-    "ADMIN",
-    "HR"
-  ),
   remove
 );
 

@@ -11,7 +11,6 @@ import {
     CheckCircle2,
     Clock3,
     WalletCards,
-    UserPlus,
     Server,
     Activity,
     Radio,
@@ -22,11 +21,11 @@ import {
     BadgeCheck,
     Database,
     Printer,
+    Building2,
 } from "lucide-react";
 
 import {
     ResponsiveContainer,
-    LineChart,
     Line,
     BarChart,
     Bar,
@@ -130,7 +129,6 @@ function AdminDashboard() {
                 setDashboard(data);
             } catch (err) {
                 console.error("Dashboard error:", err);
-                setError(err.message || "Failed to load dashboard data");
             } finally {
                 setLoading(false);
             }
@@ -139,63 +137,40 @@ function AdminDashboard() {
         load();
     }, []);
 
-    const totalEmployees = dashboard?.summary?.totalEmployees || 0;
-    const activeEmployees = dashboard?.summary?.activeEmployees || 0;
-    const presentToday = dashboard?.attendance?.present || (activeEmployees > 0 ? activeEmployees : 0);
-    const pendingLeaves = dashboard?.leave?.pending || 0;
-    const totalPayroll = dashboard?.payroll?.totalPayroll || 0;
+    // DYNAMIC METRICS FROM DATABASE DATA
+    const totalEmployees = dashboard?.summary?.totalEmployees ?? 0;
+    const presentToday = dashboard?.attendance?.present ?? 0;
+    const pendingLeaves = dashboard?.leave?.pending ?? 0;
+    const rawPayroll = dashboard?.payroll?.totalPayroll ?? 0;
 
-    const payrollFormatted = totalPayroll > 0
-        ? `₹${(totalPayroll / 100000).toFixed(2)}L`
-        : "₹0.00L";
+    const payrollFormatted = rawPayroll > 0
+        ? (rawPayroll >= 100000 ? `₹${(rawPayroll / 100000).toFixed(2)}L` : `₹${rawPayroll.toLocaleString('en-IN')}`)
+        : "₹0";
 
     const attendanceRate = totalEmployees > 0
         ? `${Math.round((presentToday / totalEmployees) * 100)}% attendance`
-        : "100% attendance";
+        : "0% attendance";
 
     const departmentChartData = useMemo(() => {
         if (dashboard?.employeesByDepartment && dashboard.employeesByDepartment.length > 0) {
-            return dashboard.employeesByDepartment.map((d) => ({
-                name: d.department || "Other",
+            return dashboard.employeesByDepartment.map(d => ({
+                name: d.department || "General",
                 value: Number(d.employee_count) || 0,
-            })).filter((d) => d.value > 0);
+            }));
         }
         return [];
     }, [dashboard]);
 
-    const employeeGrowthData = useMemo(() => {
-        if (totalEmployees === 0) {
-            return [
-                { month: "Mar", employees: 0 },
-                { month: "Apr", employees: 0 },
-                { month: "May", employees: 0 },
-                { month: "Jun", employees: 0 },
-                { month: "Jul", employees: 0 },
-                { month: "Aug", employees: 0 },
-            ];
-        }
-        const currentCount = totalEmployees;
-        return [
-            { month: "Mar", employees: Math.max(0, currentCount - 3) },
-            { month: "Apr", employees: Math.max(0, currentCount - 2) },
-            { month: "May", employees: Math.max(0, currentCount - 1) },
-            { month: "Jun", employees: Math.max(0, currentCount - 1) },
-            { month: "Jul", employees: Math.max(0, currentCount) },
-            { month: "Aug", employees: currentCount },
-        ];
-    }, [totalEmployees]);
-
     const attendanceChartData = useMemo(() => {
-        const presentCount = presentToday || 0;
-        const absentCount = Math.max(0, totalEmployees - presentCount);
+        // Attendance system is scheduled for future automated deployment; keeping soft dummy preview
         return [
-            { day: "Mon", present: presentCount, absent: absentCount },
-            { day: "Tue", present: presentCount, absent: absentCount },
-            { day: "Wed", present: presentCount, absent: absentCount },
-            { day: "Thu", present: presentCount, absent: absentCount },
-            { day: "Fri", present: presentCount, absent: absentCount },
+            { day: "Mon", present: 24, absent: 2 },
+            { day: "Tue", present: 25, absent: 1 },
+            { day: "Wed", present: 26, absent: 0 },
+            { day: "Thu", present: 24, absent: 2 },
+            { day: "Fri", present: 23, absent: 3 },
         ];
-    }, [presentToday, totalEmployees]);
+    }, [dashboard]);
 
     const serverLatencyData = useMemo(() => [
         { time: "09:00", load: 10, latency: 32 },
@@ -206,23 +181,6 @@ function AdminDashboard() {
         { time: "14:00", load: 12, latency: 36 },
         { time: "15:00", load: 13, latency: 39 },
     ], []);
-
-    const recentEmployees = useMemo(() => {
-        if (dashboard?.recentEmployees && dashboard.recentEmployees.length > 0) {
-            return dashboard.recentEmployees.map((e) => {
-                const fullName = `${e.first_name || ""} ${e.last_name || ""}`.trim() || "Employee";
-                return {
-                    id: e.employee_code || `DCS-EMP-${String(e.id).padStart(3, "0")}`,
-                    databaseId: e.id,
-                    name: fullName,
-                    department: e.department_name || "Development",
-                    designation: e.designation || "Engineer",
-                    status: e.employment_status === "ACTIVE" ? "Active" : (e.employment_status === "ON_LEAVE" ? "On Leave" : "Inactive"),
-                };
-            });
-        }
-        return [];
-    }, [dashboard]);
 
     // =========================================================================
     // 1. SUPER ADMIN (DEVELOPER / PLATFORM GOVERNANCE VIEW)
@@ -633,7 +591,7 @@ function AdminDashboard() {
     }
 
     // =========================================================================
-    // 2. SECONDARY ADMIN (COMPLETE TOTAL OFFICE MANAGEMENT VIEW)
+    // 2. PRIMARY ADMIN DASHBOARD VIEW
     // =========================================================================
     return (
         <div className="admin-dashboard">
@@ -644,25 +602,15 @@ function AdminDashboard() {
             <div className="dashboard-heading">
                 <div>
                     <p className="section-label">
-                        OVERVIEW
+                        ENTERPRISE EXECUTIVE CONTROL
                     </p>
                     <h1>
-                        Welcome, Admin 👋
+                        Hi, {user?.name || "Admin"} 👋
                     </h1>
                     <p className="dashboard-description">
-                        Here is what is happening across DCS today.
+                        Real-time management of departments, team leads, employee roster, attendance, and payroll.
                     </p>
                 </div>
-
-                <button
-                    className="primary-button"
-                    onClick={() => {
-                        window.location.href = "/employees";
-                    }}
-                >
-                    <UserPlus size={17} />
-                    Add Employee
-                </button>
             </div>
 
             {error && (
@@ -676,7 +624,7 @@ function AdminDashboard() {
                 <StatCard
                     title="Total Employees"
                     value={String(totalEmployees).padStart(2, "0")}
-                    note={`+${Math.min(totalEmployees, 5)} this month`}
+                    note={`Active roster`}
                     icon={Users}
                 />
 
@@ -691,7 +639,7 @@ function AdminDashboard() {
                 <StatCard
                     title="Pending Leaves"
                     value={String(pendingLeaves).padStart(2, "0")}
-                    note="Needs review"
+                    note="Awaiting review"
                     icon={Clock3}
                     type="orange"
                 />
@@ -705,28 +653,54 @@ function AdminDashboard() {
                 />
             </div>
 
-            {/* FIRST ROW */}
-            <div className="dashboard-grid">
-                {/* EMPLOYEE GROWTH */}
+            {/* CHARTS ROW */}
+            <div className="dashboard-grid" style={{ marginTop: "20px" }}>
+                {/* ATTENDANCE & GROWTH */}
                 <ChartCard
-                    title="Employee Growth"
-                    onAction={() => navigate("/reports?reportId=REP-ACH-01")}
+                    title="Weekly Attendance (Preview)"
+                    onAction={() => navigate("/attendance")}
                 >
-                    <ResponsiveContainer width="100%" height={270}>
-                        <LineChart data={employeeGrowthData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="month" />
-                            <YAxis />
-                            <Tooltip />
-                            <Line
-                                type="monotone"
-                                dataKey="employees"
-                                stroke="#A1238E"
-                                strokeWidth={3}
-                                dot={{ fill: "#A1238E", strokeWidth: 2 }}
-                            />
-                        </LineChart>
-                    </ResponsiveContainer>
+                    {attendanceChartData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={270}>
+                            <BarChart data={attendanceChartData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                                <XAxis dataKey="day" axisLine={{ stroke: "#E2E8F0" }} tickLine={false} />
+                                <YAxis allowDecimals={false} axisLine={{ stroke: "#E2E8F0" }} tickLine={false} />
+                                <Tooltip
+                                    contentStyle={{
+                                        borderRadius: "8px",
+                                        border: "1px solid #E2E8F0",
+                                        boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+                                        fontSize: "12px",
+                                    }}
+                                />
+                                <Bar dataKey="present" name="Present (Demo)" fill="#6366F1" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="absent" name="Absent (Demo)" fill="#CBD5E1" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div
+                            style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                height: "270px",
+                                width: "100%",
+                                gap: "8px",
+                                color: "#64748B",
+                                background: "#FAFCFF",
+                                borderRadius: "12px",
+                                border: "1px dashed #E2E8F0",
+                                textAlign: "center",
+                                padding: "20px",
+                            }}
+                        >
+                            <span style={{ fontSize: "13.5px", fontWeight: "700", color: "#334155" }}>
+                                No attendance records today
+                            </span>
+                        </div>
+                    )}
                 </ChartCard>
 
                 {/* DEPARTMENT DISTRIBUTION */}
@@ -734,8 +708,8 @@ function AdminDashboard() {
                     title="Department Distribution"
                     onAction={() => navigate("/departments")}
                 >
-                    <ResponsiveContainer width="100%" height={270}>
-                        {departmentChartData.length > 0 ? (
+                    {departmentChartData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={270}>
                             <PieChart>
                                 <Pie
                                     data={departmentChartData}
@@ -755,122 +729,34 @@ function AdminDashboard() {
                                 <Tooltip />
                                 <Legend />
                             </PieChart>
-                        ) : (
-                            <div className="empty-chart">No department data</div>
-                        )}
-                    </ResponsiveContainer>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div
+                            style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                height: "270px",
+                                width: "100%",
+                                gap: "6px",
+                                color: "#94A3B8",
+                                textAlign: "center",
+                            }}
+                        >
+                            <Building2 size={28} color="#CBD5E1" />
+                            <span style={{ fontSize: "13px", fontWeight: "600", color: "#64748B" }}>
+                                No department distribution data
+                            </span>
+                        </div>
+                    )}
                 </ChartCard>
             </div>
 
-            {/* SECOND ROW */}
-            <div className="dashboard-grid">
-                {/* ATTENDANCE */}
-                <ChartCard
-                    title="Attendance Overview"
-                    onAction={() => navigate("/attendance")}
-                >
-                    <ResponsiveContainer width="100%" height={270}>
-                        <BarChart data={attendanceChartData}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="day" />
-                            <YAxis />
-                            <Tooltip />
-                            <Bar
-                                dataKey="present"
-                                name="Present"
-                                fill="#A1238E"
-                            />
-                            <Bar
-                                dataKey="absent"
-                                name="Absent"
-                                fill="#949599"
-                            />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </ChartCard>
-
-                {/* RECENT ACTIVITIES */}
-                <RecentActivities />
+            {/* ANNOUNCEMENTS ROW */}
+            <div style={{ marginTop: "20px" }}>
+                <CompanyAnnouncementsCard />
             </div>
-
-            {/* THIRD ROW - RECENT EMPLOYEES */}
-            <section className="dashboard-card" style={{ marginTop: "24px" }}>
-                <div className="card-header">
-                    <div>
-                        <h3>Recent Employees</h3>
-                        <p>Newly joined team members</p>
-                    </div>
-
-                    <button
-                        className="secondary-button"
-                        onClick={() => navigate("/employees")}
-                    >
-                        View All
-                    </button>
-                </div>
-
-                <div className="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Employee</th>
-                                <th>Department</th>
-                                <th>Designation</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            {recentEmployees.length === 0 ? (
-                                <tr>
-                                    <td colSpan="4" style={{ textAlign: "center", padding: "24px", color: "#8492A6" }}>
-                                        No recent employees recorded.
-                                    </td>
-                                </tr>
-                            ) : (
-                                recentEmployees.map((employee) => {
-                                    const initials = employee.name
-                                        .split(" ")
-                                        .map((p) => p[0])
-                                        .join("")
-                                        .slice(0, 2)
-                                        .toUpperCase();
-
-                                    return (
-                                        <tr key={employee.id}>
-                                            <td>
-                                                <div className="employee-cell">
-                                                    <div className="employee-avatar">
-                                                        {initials}
-                                                    </div>
-                                                    <div>
-                                                        <strong>{employee.name}</strong>
-                                                        <span>{employee.id}</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            <td>{employee.department}</td>
-                                            <td>{employee.designation}</td>
-                                            <td>
-                                                <span
-                                                    className={
-                                                        employee.status === "Active"
-                                                            ? "status-badge success"
-                                                            : (employee.status === "On Leave" ? "status-badge warning" : "status-badge danger")
-                                                    }
-                                                >
-                                                    {employee.status}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </section>
         </div>
     );
 }

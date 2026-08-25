@@ -35,7 +35,7 @@ const getUsers = async (req, res) => {
 // ------------------------------------------
 const createUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, department, departmentName } = req.body;
     const requester = req.user;
 
     const user = await createNewUser(
@@ -44,6 +44,8 @@ const createUser = async (req, res) => {
         email,
         password,
         role,
+        department: departmentName || department,
+        departmentName: departmentName || department,
       },
       requester
     );
@@ -68,12 +70,18 @@ const createUser = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, role, isActive } = req.body;
+    const { name, role, department, departmentName, isActive } = req.body;
     const requester = req.user;
 
     const user = await modifyUser(
       id,
-      { name, role, isActive },
+      {
+        name,
+        role,
+        department: departmentName || department,
+        departmentName: departmentName || department,
+        isActive,
+      },
       requester
     );
 

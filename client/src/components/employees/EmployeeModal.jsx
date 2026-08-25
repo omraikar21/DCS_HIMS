@@ -129,46 +129,139 @@ function EmployeeModal({
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="employee-modal" style={{ maxWidth: "660px", width: "100%" }}>
-        <div className="modal-header">
+    <div
+      className="modal-overlay"
+      style={{
+        position: "fixed",
+        inset: 0,
+        backgroundColor: "rgba(15, 23, 42, 0.65)",
+        backdropFilter: "blur(6px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 10000,
+        padding: "16px",
+        boxSizing: "border-box",
+        overflowY: "auto",
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="employee-modal"
+        style={{
+          backgroundColor: "#FFFFFF",
+          borderRadius: "18px",
+          width: "100%",
+          maxWidth: "640px",
+          maxHeight: "92vh",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          border: "1px solid #E2E8F0",
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.28)",
+          boxSizing: "border-box",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* HEADER */}
+        <div
+          className="modal-header"
+          style={{
+            padding: "18px 24px",
+            borderBottom: "1px solid #F1F5F9",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexShrink: 0,
+            background: "linear-gradient(135deg, #FFFFFF 0%, #FFF8FC 100%)",
+          }}
+        >
           <div>
-            <p className="section-label">EMPLOYEE MANAGEMENT</p>
-            <h2>{employee ? "Edit Employee Profile" : "Add New Employee"}</h2>
+            <p className="section-label" style={{ margin: 0, fontSize: "11px", fontWeight: "800", color: "#DB2777", letterSpacing: "0.8px", textTransform: "uppercase" }}>
+              EMPLOYEE MANAGEMENT
+            </p>
+            <h2 style={{ margin: "4px 0 0", fontSize: "19px", color: "#0F172A", fontWeight: "800" }}>
+              {employee ? "Edit Employee Profile" : "Add New Employee"}
+            </h2>
           </div>
 
-          <button className="modal-close" onClick={onClose}>
-            <X size={20} />
+          <button
+            type="button"
+            className="modal-close"
+            onClick={onClose}
+            style={{
+              width: "32px",
+              height: "32px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "1px solid #CBD5E1",
+              borderRadius: "50%",
+              background: "#FFFFFF",
+              color: "#64748B",
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            <X size={16} />
           </button>
         </div>
 
         {generalError && (
-          <div style={{ padding: "12px 16px", backgroundColor: "#fee2e2", color: "#b91c1c", borderRadius: "8px", margin: "10px 20px 0", fontSize: "13.5px", fontWeight: "500" }}>
+          <div
+            style={{
+              padding: "12px 16px",
+              backgroundColor: "#FEE2E2",
+              color: "#B91C1C",
+              borderRadius: "8px",
+              margin: "12px 24px 0",
+              fontSize: "13px",
+              fontWeight: "600",
+              flexShrink: 0,
+            }}
+          >
             {generalError}
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-grid" style={{ padding: "20px 24px" }}>
+        {/* SCROLLABLE FORM BODY */}
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", flex: "1 1 auto", overflow: "hidden" }}>
+          <div
+            style={{
+              padding: "20px 24px",
+              overflowY: "auto",
+              flex: "1 1 auto",
+              overscrollBehavior: "contain",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gap: "16px",
+              boxSizing: "border-box",
+            }}
+          >
             {/* ROW 1: FULL NAME & EMAIL */}
             <div className="form-field">
-              <label>Full Name *</label>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "11.5px", fontWeight: "800", color: "#475569", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Full Name *
+              </label>
               <input
                 name="name"
                 value={form.name}
                 onChange={handleChange}
                 placeholder="Enter full name"
                 required
+                style={{ width: "100%", height: "42px", padding: "0 14px", border: "1.5px solid #CBD5E1", borderRadius: "10px", fontSize: "13.5px", outline: "none", boxSizing: "border-box" }}
               />
               {errors.name && (
-                <span style={{ color: "#e11d48", fontSize: "12px", marginTop: "4px" }}>
+                <span style={{ color: "#E11D48", fontSize: "12px", marginTop: "4px" }}>
                   {errors.name}
                 </span>
               )}
             </div>
 
             <div className="form-field">
-              <label>Email Address *</label>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "11.5px", fontWeight: "800", color: "#475569", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Email Address *
+              </label>
               <input
                 type="email"
                 name="email"
@@ -176,17 +269,20 @@ function EmployeeModal({
                 onChange={handleChange}
                 placeholder="e.g. alex@dcs.com"
                 required
+                style={{ width: "100%", height: "42px", padding: "0 14px", border: "1.5px solid #CBD5E1", borderRadius: "10px", fontSize: "13.5px", outline: "none", boxSizing: "border-box" }}
               />
               {errors.email && (
-                <span style={{ color: "#e11d48", fontSize: "12px", marginTop: "4px" }}>
+                <span style={{ color: "#E11D48", fontSize: "12px", marginTop: "4px" }}>
                   {errors.email}
                 </span>
               )}
             </div>
 
-            {/* ROW 2: PHONE (EXACTLY 10 DIGITS) & DEPARTMENT (FROM DATABASE) */}
+            {/* ROW 2: PHONE & DEPARTMENT */}
             <div className="form-field">
-              <label>Phone Number (10 Digits) *</label>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "11.5px", fontWeight: "800", color: "#475569", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Phone Number (10 Digits) *
+              </label>
               <input
                 type="tel"
                 name="phone"
@@ -195,22 +291,26 @@ function EmployeeModal({
                 placeholder="e.g. 9876543210"
                 maxLength={10}
                 required
+                style={{ width: "100%", height: "42px", padding: "0 14px", border: "1.5px solid #CBD5E1", borderRadius: "10px", fontSize: "13.5px", outline: "none", boxSizing: "border-box" }}
               />
               {errors.phone && (
-                <span style={{ color: "#e11d48", fontSize: "12px", marginTop: "4px" }}>
+                <span style={{ color: "#E11D48", fontSize: "12px", marginTop: "4px" }}>
                   {errors.phone}
                 </span>
               )}
             </div>
 
             <div className="form-field">
-              <label>Department *</label>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "11.5px", fontWeight: "800", color: "#475569", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Department *
+              </label>
               {departments.length > 0 ? (
                 <select
                   name="department"
                   value={form.department}
                   onChange={handleChange}
                   required
+                  style={{ width: "100%", height: "42px", padding: "0 14px", border: "1.5px solid #CBD5E1", borderRadius: "10px", fontSize: "13.5px", outline: "none", backgroundColor: "#FFFFFF", boxSizing: "border-box" }}
                 >
                   <option value="">-- Select Department * --</option>
                   {departments.map((dept) => (
@@ -226,10 +326,11 @@ function EmployeeModal({
                   onChange={handleChange}
                   placeholder="Type department name *"
                   required
+                  style={{ width: "100%", height: "42px", padding: "0 14px", border: "1.5px solid #CBD5E1", borderRadius: "10px", fontSize: "13.5px", outline: "none", boxSizing: "border-box" }}
                 />
               )}
               {errors.department && (
-                <span style={{ color: "#e11d48", fontSize: "12px", marginTop: "4px" }}>
+                <span style={{ color: "#E11D48", fontSize: "12px", marginTop: "4px" }}>
                   {errors.department}
                 </span>
               )}
@@ -237,54 +338,80 @@ function EmployeeModal({
 
             {/* ROW 3: DESIGNATION & JOINING DATE */}
             <div className="form-field">
-              <label>Designation / Role *</label>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "11.5px", fontWeight: "800", color: "#475569", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Designation / Role *
+              </label>
               <input
                 name="designation"
                 value={form.designation}
                 onChange={handleChange}
                 placeholder="e.g. Senior Software Engineer"
                 required
+                style={{ width: "100%", height: "42px", padding: "0 14px", border: "1.5px solid #CBD5E1", borderRadius: "10px", fontSize: "13.5px", outline: "none", boxSizing: "border-box" }}
               />
               {errors.designation && (
-                <span style={{ color: "#e11d48", fontSize: "12px", marginTop: "4px" }}>
+                <span style={{ color: "#E11D48", fontSize: "12px", marginTop: "4px" }}>
                   {errors.designation}
                 </span>
               )}
             </div>
 
             <div className="form-field">
-              <label>Joining Date</label>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "11.5px", fontWeight: "800", color: "#475569", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Joining Date
+              </label>
               <input
                 type="date"
                 name="joiningDate"
                 value={form.joiningDate}
                 onChange={handleChange}
+                style={{ width: "100%", height: "42px", padding: "0 14px", border: "1.5px solid #CBD5E1", borderRadius: "10px", fontSize: "13.5px", outline: "none", backgroundColor: "#FFFFFF", boxSizing: "border-box" }}
               />
             </div>
 
             {/* ROW 4: OFFICE LOCATION & DETAILED ADDRESS */}
             <div className="form-field">
-              <label>Office / Work Location</label>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "11.5px", fontWeight: "800", color: "#475569", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Office / Work Location
+              </label>
               <input
                 name="officeLocation"
                 value={form.officeLocation || form.location || ""}
                 onChange={(e) => setForm({ ...form, officeLocation: e.target.value, location: e.target.value })}
                 placeholder="e.g. Belagavi Branch / Bangalore Office"
+                style={{ width: "100%", height: "42px", padding: "0 14px", border: "1.5px solid #CBD5E1", borderRadius: "10px", fontSize: "13.5px", outline: "none", boxSizing: "border-box" }}
               />
             </div>
 
             <div className="form-field">
-              <label>Office / Residential Address</label>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "11.5px", fontWeight: "800", color: "#475569", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Office / Residential Address
+              </label>
               <input
                 name="address"
                 value={form.address || ""}
                 onChange={handleChange}
                 placeholder="e.g. 4th Floor, Tech Hub, MG Road"
+                style={{ width: "100%", height: "42px", padding: "0 14px", border: "1.5px solid #CBD5E1", borderRadius: "10px", fontSize: "13.5px", outline: "none", boxSizing: "border-box" }}
               />
             </div>
           </div>
 
-          <div className="modal-footer" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          {/* FOOTER */}
+          <div
+            className="modal-footer"
+            style={{
+              padding: "16px 24px",
+              borderTop: "1px solid #F1F5F9",
+              background: "#FAFCFF",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "10px",
+              flexShrink: 0,
+            }}
+          >
             <div>
               {employee && onDelete && (
                 <button
@@ -293,12 +420,13 @@ function EmployeeModal({
                     onDelete(employee);
                   }}
                   style={{
-                    backgroundColor: "#fff1f2",
-                    color: "#e11d48",
-                    border: "1px solid #fecdd3",
-                    padding: "8px 14px",
-                    borderRadius: "8px",
-                    fontWeight: "600",
+                    backgroundColor: "#FFF1F2",
+                    color: "#E11D48",
+                    border: "1px solid #FECDD3",
+                    height: "40px",
+                    padding: "0 16px",
+                    borderRadius: "10px",
+                    fontWeight: "700",
                     fontSize: "13px",
                     cursor: "pointer",
                   }}
@@ -308,12 +436,23 @@ function EmployeeModal({
               )}
             </div>
 
-            <div style={{ display: "flex", gap: "10px" }}>
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
               <button
                 type="button"
                 className="secondary-button"
                 onClick={onClose}
                 disabled={saving}
+                style={{
+                  height: "40px",
+                  padding: "0 18px",
+                  borderRadius: "10px",
+                  border: "1.5px solid #CBD5E1",
+                  background: "#FFFFFF",
+                  color: "#475569",
+                  fontSize: "13px",
+                  fontWeight: "700",
+                  cursor: "pointer",
+                }}
               >
                 Cancel
               </button>
@@ -322,6 +461,18 @@ function EmployeeModal({
                 type="submit"
                 className="primary-button"
                 disabled={saving}
+                style={{
+                  height: "40px",
+                  padding: "0 22px",
+                  borderRadius: "10px",
+                  border: "none",
+                  background: "linear-gradient(135deg, #DB2777 0%, #BE185D 100%)",
+                  color: "#FFFFFF",
+                  fontSize: "13px",
+                  fontWeight: "800",
+                  cursor: saving ? "not-allowed" : "pointer",
+                  boxShadow: "0 4px 14px rgba(219, 39, 119, 0.3)",
+                }}
               >
                 {saving
                   ? "Saving..."
@@ -335,4 +486,4 @@ function EmployeeModal({
   );
 }
 
-export default EmployeeModal;
+export default EmployeeModal;

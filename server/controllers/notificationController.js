@@ -35,11 +35,12 @@ const getNotifications = async (req, res) => {
 };
 
 // ------------------------------------------
-// GET COMPANY ANNOUNCEMENTS
+// GET COMPANY & DEPARTMENT ANNOUNCEMENTS
 // ------------------------------------------
 const getAnnouncements = async (req, res) => {
   try {
-    const announcements = await fetchCompanyAnnouncements();
+    const user = req.user;
+    const announcements = await fetchCompanyAnnouncements(user);
     return res.status(200).json({
       success: true,
       message: "Announcements fetched successfully",
@@ -55,11 +56,22 @@ const getAnnouncements = async (req, res) => {
 };
 
 // ------------------------------------------
-// POST ANNOUNCEMENT (HR / ADMIN)
+// POST ANNOUNCEMENT (HR / ADMIN / TEAM LEAD)
 // ------------------------------------------
 const createAnnouncement = async (req, res) => {
   try {
-    const { title, message, priority, category } = req.body;
+    const {
+      title,
+      message,
+      priority,
+      category,
+      targetDepartment,
+      targetUserEmail,
+      targetUserName,
+      targetUserId,
+      audienceType,
+      reason,
+    } = req.body;
     const sender = req.user;
 
     const result = await deployAnnouncement({
@@ -68,11 +80,17 @@ const createAnnouncement = async (req, res) => {
       priority,
       category,
       sender,
+      targetDepartment,
+      targetUserEmail,
+      targetUserName,
+      targetUserId,
+      audienceType,
+      reason,
     });
 
     return res.status(201).json({
       success: true,
-      message: "Company-wide announcement deployed successfully",
+      message: "Announcement deployed successfully",
       data: result,
     });
   } catch (error) {

@@ -19,23 +19,21 @@ const getAllLeaves =
       await pool.query(`
         SELECT
           l.*,
-
           e.employee_code,
           e.first_name,
-          e.last_name
-
+          e.last_name,
+          e.email AS employee_email,
+          COALESCE(d.name, 'General') AS department_name,
+          COALESCE(l.applicant_role, u.role, 'EMPLOYEE') AS applicant_role,
+          COALESCE(u.name, CONCAT(e.first_name, ' ', e.last_name)) AS applicant_name
         FROM leaves l
-
-        JOIN employees e
-          ON l.employee_id = e.id
-
-        ORDER BY
-          l.created_at DESC
+        LEFT JOIN employees e ON l.employee_id = e.id
+        LEFT JOIN users u ON u.id = e.user_id OR LOWER(TRIM(e.email)) = LOWER(TRIM(u.email))
+        LEFT JOIN departments d ON d.id = COALESCE(l.department_id, e.department_id)
+        ORDER BY l.created_at DESC
       `);
 
-
     return result.rows;
-
   };
 
 
@@ -51,24 +49,23 @@ const getLeaveById =
         `
         SELECT
           l.*,
-
           e.employee_code,
           e.first_name,
-          e.last_name
-
+          e.last_name,
+          e.email AS employee_email,
+          COALESCE(d.name, 'General') AS department_name,
+          COALESCE(l.applicant_role, u.role, 'EMPLOYEE') AS applicant_role,
+          COALESCE(u.name, CONCAT(e.first_name, ' ', e.last_name)) AS applicant_name
         FROM leaves l
-
-        JOIN employees e
-          ON l.employee_id = e.id
-
+        LEFT JOIN employees e ON l.employee_id = e.id
+        LEFT JOIN users u ON u.id = e.user_id OR LOWER(TRIM(e.email)) = LOWER(TRIM(u.email))
+        LEFT JOIN departments d ON d.id = COALESCE(l.department_id, e.department_id)
         WHERE l.id = $1
         `,
         [id]
       );
 
-
     return result.rows[0];
-
   };
 
 
@@ -83,6 +80,8 @@ const createLeave =
     startDate,
     endDate,
     reason,
+    departmentId,
+    applicantRole,
   }) => {
 
     const result =
@@ -95,11 +94,12 @@ const createLeave =
           start_date,
           end_date,
           reason,
+          department_id,
+          applicant_role,
           status,
           created_at,
           updated_at
         )
-
         VALUES
         (
           $1,
@@ -107,11 +107,12 @@ const createLeave =
           $3,
           $4,
           $5,
+          $6,
+          $7,
           'PENDING',
           CURRENT_TIMESTAMP,
           CURRENT_TIMESTAMP
         )
-
         RETURNING *
         `,
         [
@@ -120,12 +121,12 @@ const createLeave =
           startDate,
           endDate,
           reason,
+          departmentId || null,
+          applicantRole || "EMPLOYEE",
         ]
       );
 
-
     return result.rows[0];
-
   };
 
 

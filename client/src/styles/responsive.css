@@ -1,85 +1,87 @@
 /* ==========================================================================
-   DCS HIMS - ENTERPRISE RESPONSIVE DESIGN & FLUID ANIMATION SYSTEM
-   Unified Cross-Platform Mobile, Tablet, and Desktop Support
+   DCS HIMS — ENTERPRISE RESPONSIVE DESIGN SYSTEM  v3.0
+   Breakpoints: 320px · 480px · 640px · 768px · 1024px · 1180px · 1366px · 1600px+
    ========================================================================== */
 
-/* --------------------------------------------------------------------------
-   1. KEYFRAME ANIMATIONS & MICRO-INTERACTIONS
-   -------------------------------------------------------------------------- */
-
-@keyframes modalOverlayFadeIn {
-  from {
-    opacity: 0;
-    backdrop-filter: blur(0px);
-  }
-  to {
-    opacity: 1;
-    backdrop-filter: blur(6px);
-  }
+/* ──────────────────────────────────────────────────────────────────────────
+   0.  CSS CUSTOM PROPERTIES  (mobile-first fluid tokens)
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+  --page-pad-x:      24px;
+  --page-pad-top:    28px;
+  --sidebar-w:       260px;
+  --navbar-h:        72px;
+  --content-max:     1720px;
+  --card-radius:     14px;
+  --gap-section:     20px;
+  --gap-grid:        16px;
+  --font-scale:      1;
 }
 
-@keyframes modalSlideUp {
-  0% {
-    opacity: 0;
-    transform: translateY(28px) scale(0.96);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+@media (max-width: 1366px) { :root { --page-pad-x: 20px; } }
+@media (max-width: 1024px) { :root { --page-pad-x: 18px; --gap-grid: 14px; } }
+@media (max-width: 768px)  { :root { --page-pad-x: 14px; --page-pad-top: 16px; --gap-grid: 12px; --gap-section: 14px; } }
+@media (max-width: 480px)  { :root { --page-pad-x: 12px; --page-pad-top: 12px; --gap-grid: 10px; --gap-section: 12px; } }
+@media (max-width: 360px)  { :root { --page-pad-x: 10px; --gap-grid: 8px; } }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   1.  GLOBAL BOX-MODEL & OVERFLOW SAFETY
+   ────────────────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box !important;
 }
 
-@keyframes modalSlideUpMobile {
-  0% {
-    opacity: 0;
-    transform: translateY(100%);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
+html, body {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden !important;
+  overscroll-behavior-x: none !important;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
 }
 
-@keyframes popoverDropdown {
-  0% {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.97);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+/* prevent any single element from blowing out the viewport */
+img, video, iframe, canvas, svg {
+  max-width: 100%;
 }
 
-@keyframes fadeInSmooth {
-  0% {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+/* ──────────────────────────────────────────────────────────────────────────
+   2.  KEYFRAME ANIMATIONS
+   ────────────────────────────────────────────────────────────────────────── */
+@keyframes spin            { to { transform: rotate(360deg); } }
+@keyframes fadeInSmooth    { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes modalOverlayIn  { from { opacity: 0; backdrop-filter: blur(0); } to { opacity: 1; backdrop-filter: blur(6px); } }
+@keyframes modalSlideUp    { from { opacity: 0; transform: translateY(28px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes modalSheetUp    { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: none; } }
+@keyframes popoverDrop     { from { opacity: 0; transform: translateY(-8px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes pulseGlow       { 0%,100% { box-shadow: 0 0 0 0 rgba(219,39,119,.25); } 50% { box-shadow: 0 0 0 6px rgba(219,39,119,0); } }
 
-@keyframes pulseGlow {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(219, 39, 119, 0.25);
-  }
-  50% {
-    box-shadow: 0 0 0 6px rgba(219, 39, 119, 0);
-  }
-}
+/* Page content fade-in */
+.content > * { animation: fadeInSmooth .3s cubic-bezier(.16,1,.3,1); }
 
-/* Global Animation Hooks */
-.content > * {
-  animation: fadeInSmooth 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
+/* Spinner utility */
+@keyframes spin { to { transform: rotate(360deg); } }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   3.  MODAL OVERLAY
+   ────────────────────────────────────────────────────────────────────────── */
 .modal-overlay {
-  animation: modalOverlayFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  position: fixed !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 16px !important;
+  background: rgba(15,23,42,.55) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+  z-index: 9000 !important;
+  overflow-y: auto !important;
+  animation: modalOverlayIn .22s cubic-bezier(.16,1,.3,1) forwards !important;
+  box-sizing: border-box !important;
 }
 
+/* All modal types share this animation */
 .employee-modal,
 .department-modal,
 .payroll-modal,
@@ -91,84 +93,81 @@
 .onboarding-modal,
 .user-modal,
 .modal-card {
-  animation: modalSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  animation: modalSlideUp .28s cubic-bezier(.16,1,.3,1) forwards !important;
   will-change: transform, opacity;
+  max-height: calc(100vh - 40px) !important;
+  overflow-y: auto !important;
+  border-radius: 16px !important;
+  width: min(540px, calc(100vw - 32px)) !important;
+  margin: auto !important;
 }
 
-.navbar-popover,
-.notification-popover,
-.profile-popover {
-  animation: popoverDropdown 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+/* Popovers */
+.navbar-popover, .notification-popover, .profile-popover {
+  animation: popoverDrop .2s cubic-bezier(.16,1,.3,1) forwards !important;
   transform-origin: top right;
 }
 
-/* Button & Tap Micro-Interactions */
-.primary-button,
-.secondary-button,
-.action-button,
-.filter-button,
-.export-button,
-.sidebar-item,
-.action-icon-button {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+/* ──────────────────────────────────────────────────────────────────────────
+   4.  MICRO-INTERACTIONS
+   ────────────────────────────────────────────────────────────────────────── */
+.primary-button, .secondary-button, .action-button, .filter-button,
+.export-button, .sidebar-item, .action-icon-button, .quick-action {
+  transition: all .2s cubic-bezier(.16,1,.3,1) !important;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
+.primary-button:active,  .secondary-button:active,
+.action-button:active,   .sidebar-item:active,
+.quick-action:active     { transform: scale(0.96) !important; }
+.primary-button:hover    { box-shadow: 0 4px 12px rgba(15,23,42,.15) !important; }
 
-.primary-button:active,
-.secondary-button:active,
-.action-button:active,
-.sidebar-item:active {
-  transform: scale(0.97) !important;
+.stat-card, .dashboard-card, .kpi-card, .summary-card {
+  transition: box-shadow .25s ease, border-color .25s ease !important;
+}
+.stat-card:hover, .dashboard-card:hover { box-shadow: 0 4px 14px rgba(0,0,0,.06) !important; }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   5.  APP LAYOUT  (sidebar + main area)
+   ────────────────────────────────────────────────────────────────────────── */
+.app-layout,
+.main-area,
+.content,
+.container,
+.admin-dashboard,
+.announcements-page,
+.employees-page,
+.user-management-page,
+.department-profile-page {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
 }
 
-.primary-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(158, 38, 130, 0.28) !important;
+/* ─── Content area padding ─── */
+.content {
+  padding: var(--page-pad-top) var(--page-pad-x) 48px !important;
 }
 
-.stat-card,
-.dashboard-card,
-.kpi-card,
-.summary-card,
-.employee-card,
-.department-card {
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease !important;
-}
-
-.stat-card:hover,
-.dashboard-card:hover,
-.kpi-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
-}
-
-/* --------------------------------------------------------------------------
-   2. MOBILE SIDEBAR BACKDROP & DRAWER
-   -------------------------------------------------------------------------- */
-
-.sidebar-backdrop {
-  display: none;
-}
+/* ──────────────────────────────────────────────────────────────────────────
+   6.  MOBILE SIDEBAR DRAWER  (≤ 992 px)
+   ────────────────────────────────────────────────────────────────────────── */
+.sidebar-backdrop { display: none; }
 
 @media (max-width: 992px) {
   .sidebar-backdrop {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.5);
+    background: rgba(15,23,42,.5);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
     z-index: 998;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity .3s cubic-bezier(.16,1,.3,1);
   }
-
-  .sidebar-backdrop.active {
-    opacity: 1;
-    pointer-events: auto;
-  }
+  .sidebar-backdrop.active { opacity: 1; pointer-events: auto; }
 
   .sidebar {
     position: fixed !important;
@@ -179,13 +178,12 @@
     max-width: 85vw !important;
     z-index: 999 !important;
     transform: translateX(-100%) !important;
-    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease !important;
+    transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s ease !important;
     box-shadow: none !important;
   }
-
   .sidebar.sidebar-open {
     transform: translateX(0) !important;
-    box-shadow: 12px 0 40px rgba(0, 0, 0, 0.22) !important;
+    box-shadow: 12px 0 40px rgba(0,0,0,.22) !important;
   }
 
   .sidebar-close {
@@ -214,223 +212,193 @@
     width: 40px;
     height: 40px;
     border-radius: 10px;
-    background: #FFFFFF;
+    background: #fff;
     border: 1.5px solid #E2E8F0;
     color: #334155;
-    transition: all 0.2s ease;
+    transition: all .2s ease;
   }
-
-  .mobile-menu-button:active {
-    transform: scale(0.94);
-    background: #F8FAFC;
-  }
+  .mobile-menu-button:active { transform: scale(0.94); background: #F8FAFC; }
 }
 
-/* --------------------------------------------------------------------------
-   3. RESPONSIVE NAVBAR & POPOVERS
-   -------------------------------------------------------------------------- */
-
+/* ──────────────────────────────────────────────────────────────────────────
+   7.  NAVBAR  (≤ 768 px)
+   ────────────────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .navbar {
-    height: 64px !important;
-    padding: 0 14px !important;
-    border-bottom: 1px solid #E2E8F0;
+    height: 60px !important;
+    padding: 0 12px !important;
   }
+  .navbar-left       { gap: 8px !important; }
+  .navbar-label      { font-size: 8px !important; letter-spacing: .8px !important; }
+  .navbar h3         { font-size: 14px !important; max-width: 140px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+  .navbar-profile-info { display: none !important; }
+  .navbar-profile    { padding: 3px !important; gap: 0 !important; }
+  .navbar-profile .avatar-circle { width: 32px !important; height: 32px !important; font-size: 11px !important; }
 
-  .navbar-left {
-    gap: 10px !important;
-  }
-
-  .navbar-label {
-    font-size: 8.5px !important;
-    letter-spacing: 0.8px !important;
-  }
-
-  .navbar h3 {
-    font-size: 15px !important;
-    max-width: 150px !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    line-height: 1.2 !important;
-  }
-
-  .navbar-profile-info {
-    display: none !important;
-  }
-
-  .navbar-profile {
-    padding: 3px !important;
-    gap: 0 !important;
-  }
-
-  .navbar-profile .avatar-circle {
-    width: 34px !important;
-    height: 34px !important;
-    font-size: 12px !important;
-  }
-
+  /* Popovers: fullwidth from top */
   .notification-popover {
     position: fixed !important;
-    top: 68px !important;
-    left: 12px !important;
-    right: 12px !important;
+    top: 64px !important;
+    left: 10px !important;
+    right: 10px !important;
     width: auto !important;
     max-width: none !important;
-    max-height: 72vh !important;
+    max-height: 70vh !important;
     border-radius: 16px !important;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important;
+    box-shadow: 0 20px 40px rgba(0,0,0,.2) !important;
     z-index: 1000 !important;
   }
-
   .profile-popover {
     position: fixed !important;
-    top: 68px !important;
-    right: 12px !important;
+    top: 64px !important;
+    right: 10px !important;
     left: auto !important;
     width: 270px !important;
-    max-width: 90vw !important;
+    max-width: 92vw !important;
     border-radius: 16px !important;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2) !important;
+    box-shadow: 0 20px 40px rgba(0,0,0,.2) !important;
     z-index: 1000 !important;
   }
 }
 
-/* --------------------------------------------------------------------------
-   4. CONTENT & HEADER PADDING
-   -------------------------------------------------------------------------- */
-
+/* ──────────────────────────────────────────────────────────────────────────
+   8.  PAGE HEADINGS  (module-heading / dashboard-heading)
+   ────────────────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .content {
-    padding: 14px 12px 40px !important;
-  }
-
   .module-heading,
   .dashboard-heading,
-  .department-profile-header,
   .attendance-section-header,
   .leave-section-header,
   .payroll-section-header,
-  .document-section-header,
   .payslip-section-header,
   .recruitment-section-header,
   .onboarding-section-header,
   .user-management-header {
     flex-direction: column !important;
     align-items: stretch !important;
-    gap: 12px !important;
-    margin-bottom: 16px !important;
+    gap: 10px !important;
+    margin-bottom: 14px !important;
   }
 
   .module-heading h1,
-  .dashboard-heading h1,
-  .department-profile-header h1,
-  .page-title {
+  .dashboard-heading h1 {
     font-size: 20px !important;
     line-height: 1.25 !important;
   }
 
   .module-heading .primary-button,
   .dashboard-heading .primary-button,
-  .department-profile-header .primary-button,
   .header-actions .primary-button {
     width: 100% !important;
     justify-content: center !important;
   }
 }
 
-/* --------------------------------------------------------------------------
-   5. STATS & CARD GRIDS
-   -------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+  .module-heading h1,
+  .dashboard-heading h1 { font-size: 18px !important; }
+  .section-label        { font-size: 9px !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   9.  STATS GRID
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Large desktop: 4 cols */
+.stats-grid { grid-template-columns: repeat(4, 1fr) !important; }
 
 @media (max-width: 1200px) {
-  .stats-grid,
-  .kpi-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-  }
+  .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
 }
-
-@media (max-width: 640px) {
-  .stats-grid,
-  .kpi-grid,
-  .quick-action-grid,
-  .dashboard-grid {
-    grid-template-columns: 1fr !important;
-    gap: 12px !important;
-  }
-
-  .stat-card {
-    padding: 16px !important;
-  }
-}
-
-/* --------------------------------------------------------------------------
-   6. HORIZONTAL FILTER TOOLBARS (ADAPTIVE ON MOBILE)
-   -------------------------------------------------------------------------- */
-
 @media (max-width: 768px) {
-  .department-filters,
-  .employee-filters,
-  .attendance-filters,
-  .leave-filters,
-  .payroll-filters,
-  .document-filters,
-  .payslip-filters,
-  .recruitment-filters,
-  .onboarding-filters,
+  .stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+  .stat-card  { padding: 14px !important; }
+  .stat-value { font-size: 20px !important; }
+}
+@media (max-width: 400px) {
+  .stats-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   10. DASHBOARD GRID  (2-col chart layout)
+   ────────────────────────────────────────────────────────────────────────── */
+.dashboard-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+@media (max-width: 1180px) {
+  .dashboard-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   11. DASHBOARD CARDS
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .dashboard-card {
+    padding: 14px !important;
+    border-radius: 12px !important;
+  }
+  .card-header h3 { font-size: 15px !important; }
+  .card-header p  { font-size: 12px !important; }
+}
+@media (max-width: 480px) {
+  .dashboard-card { padding: 12px !important; border-radius: 10px !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   12. QUICK ACTION GRID
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .quick-action-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 10px !important; }
+}
+@media (max-width: 480px) {
+  .quick-action-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+  .quick-action      { padding: 12px 8px !important; font-size: 12px !important; }
+}
+@media (max-width: 340px) {
+  .quick-action-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   13. FILTER TOOLBARS
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .department-filters, .employee-filters, .attendance-filters,
+  .leave-filters, .payroll-filters, .document-filters,
+  .payslip-filters, .recruitment-filters, .onboarding-filters,
   .filter-bar {
     flex-direction: column !important;
     align-items: stretch !important;
-    gap: 10px !important;
-    padding: 12px !important;
-    border-radius: 12px !important;
+    gap: 8px !important;
+    padding: 10px !important;
+    border-radius: 10px !important;
   }
 
-  .search-wrapper,
-  .department-search,
-  .employee-search,
-  .attendance-search,
-  .leave-search,
-  .payroll-search,
-  .document-search,
-  .payslip-search,
-  .recruitment-search,
-  .onboarding-search,
-  .filter-search {
+  .search-wrapper, .department-search, .employee-search,
+  .attendance-search, .leave-search, .payroll-search,
+  .document-search, .payslip-search, .recruitment-search,
+  .onboarding-search, .filter-search {
     width: 100% !important;
     min-width: 0 !important;
     flex: 1 1 100% !important;
   }
 
-  .department-dropdown,
-  .filter-dropdown,
-  .filter-select,
-  .attendance-dropdown,
-  .leave-dropdown,
-  .payroll-dropdown,
-  .document-dropdown,
-  .payslip-dropdown,
-  .recruitment-dropdown,
-  .onboarding-dropdown,
-  .attendance-date,
-  .payroll-month,
-  .payslip-month {
+  .department-dropdown, .filter-dropdown, .filter-select,
+  .attendance-dropdown, .leave-dropdown, .payroll-dropdown,
+  .document-dropdown, .payslip-dropdown, .recruitment-dropdown,
+  .onboarding-dropdown, .attendance-date, .payroll-month, .payslip-month {
     width: 100% !important;
     min-width: 0 !important;
     flex: 1 1 100% !important;
   }
 
-  .clear-filter-button,
-  .filter-action-btn {
+  .clear-filter-button, .filter-action-btn {
     width: 100% !important;
     justify-content: center !important;
   }
 }
 
-/* --------------------------------------------------------------------------
-   7. TOUCH-OPTIMIZED RESPONSIVE DATA TABLES
-   -------------------------------------------------------------------------- */
-
+/* ──────────────────────────────────────────────────────────────────────────
+   14. DATA TABLES  — horizontal scroll on small screens
+   ────────────────────────────────────────────────────────────────────────── */
 .department-table-wrapper,
 .table-wrapper,
 .employee-table-wrapper,
@@ -445,11 +413,9 @@
   overflow-x: auto !important;
   -webkit-overflow-scrolling: touch !important;
   border-radius: 12px !important;
-  position: relative;
 }
 
-/* Prevent table columns from squishing on mobile screens */
-@media (max-width: 800px) {
+@media (max-width: 900px) {
   .department-table-wrapper table,
   .table-wrapper table,
   .employee-table,
@@ -459,106 +425,405 @@
   .leaves-table,
   .payslip-table,
   .audit-table,
-  .custom-table {
-    min-width: 680px !important;
+  .custom-table,
+  .leave-table,
+  .user-table {
+    min-width: 700px !important;
   }
 
   .department-table-wrapper th,
   .department-table-wrapper td,
   .table-wrapper th,
-  .table-wrapper td {
-    padding: 12px 14px !important;
+  .table-wrapper td,
+  th, td {
+    padding: 10px 12px !important;
     font-size: 13px !important;
+    white-space: nowrap !important;
   }
 }
 
-/* --------------------------------------------------------------------------
-   8. MOBILE MODAL SYSTEM (BOTTOM SHEET ON SMALL SCREENS)
-   -------------------------------------------------------------------------- */
+/* ──────────────────────────────────────────────────────────────────────────
+   15. MODAL SYSTEM  — bottom-sheet on phones, centred otherwise
+   ────────────────────────────────────────────────────────────────────────── */
 
-@media (max-width: 640px) {
+/* === Centred modal on mid-screen (< 820px height) === */
+@media (max-height: 820px) {
+  .modal-overlay {
+    padding: 12px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow-y: auto !important;
+  }
+  .employee-modal, .department-modal, .payroll-modal, .attendance-modal,
+  .leave-modal, .document-modal, .payslip-modal, .recruitment-modal,
+  .onboarding-modal, .user-modal, .modal-card {
+    max-height: calc(100vh - 28px) !important;
+  }
+}
+
+/* === Bottom-sheet on very small phones === */
+@media (max-width: 560px) {
   .modal-overlay {
     padding: 0 !important;
     align-items: flex-end !important;
+    justify-content: center !important;
   }
-
-  .employee-modal,
-  .department-modal,
-  .payroll-modal,
-  .attendance-modal,
-  .leave-modal,
-  .document-modal,
-  .payslip-modal,
-  .recruitment-modal,
-  .onboarding-modal,
-  .user-modal,
-  .modal-card {
+  .employee-modal, .department-modal, .payroll-modal, .attendance-modal,
+  .leave-modal, .document-modal, .payslip-modal, .recruitment-modal,
+  .onboarding-modal, .user-modal, .modal-card {
     width: 100% !important;
     max-width: 100vw !important;
-    max-height: 90vh !important;
+    max-height: 92vh !important;
     border-radius: 20px 20px 0 0 !important;
     margin: 0 !important;
-    animation: modalSlideUpMobile 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+    animation: modalSheetUp .3s cubic-bezier(.16,1,.3,1) forwards !important;
   }
-
-  .modal-header {
-    padding: 16px 20px !important;
-  }
-
-  .modal-body {
-    padding: 16px 20px !important;
-    max-height: 70vh !important;
-    overflow-y: auto !important;
-  }
-
-  .modal-actions {
-    padding: 14px 20px !important;
+  .modal-header { padding: 14px 18px !important; }
+  .modal-footer {
     flex-direction: column-reverse !important;
     gap: 8px !important;
+    padding: 12px 18px !important;
   }
-
-  .modal-actions button {
+  .modal-footer button, .modal-footer > div {
     width: 100% !important;
     justify-content: center !important;
-    height: 44px !important;
   }
+}
 
-  .form-grid,
-  .modal-body > div[style*="gridTemplateColumns"] {
+/* Form grids inside modals collapse to 1 col on small screens */
+@media (max-width: 640px) {
+  .form-grid {
     grid-template-columns: 1fr !important;
     gap: 12px !important;
   }
 }
 
-/* --------------------------------------------------------------------------
-   9. AUTH & LOGIN MOBILE ENHANCEMENT
-   -------------------------------------------------------------------------- */
+/* ──────────────────────────────────────────────────────────────────────────
+   16. FORM FIELDS  (universal)
+   ────────────────────────────────────────────────────────────────────────── */
+.form-field {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+.form-field input,
+.form-field select,
+.form-field textarea {
+  width: 100% !important;
+  min-width: 0 !important;
+}
 
-@media (max-width: 850px) {
-  .login-page {
+@media (max-width: 768px) {
+  .form-field label { font-size: 11.5px !important; }
+  .form-field input,
+  .form-field select { font-size: 14px !important; }        /* prevent iOS zoom on focus */
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   17. RECHARTS RESPONSIVE CONTAINER
+   ────────────────────────────────────────────────────────────────────────── */
+.recharts-responsive-container {
+  width: 100% !important;
+  min-height: 200px !important;
+  max-width: 100% !important;
+}
+
+@media (max-width: 640px) {
+  .recharts-responsive-container { min-height: 180px !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   18. PROFILE PAGE
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .profile-details-grid,
+  .profile-grid {
     grid-template-columns: 1fr !important;
   }
+}
 
-  .login-brand-section {
-    display: none !important;
+@media (max-width: 768px) {
+  .profile-card-header     { flex-direction: column !important; align-items: flex-start !important; gap: 14px !important; }
+  .profile-avatar-section  { flex-direction: column !important; align-items: center !important; text-align: center !important; }
+  .profile-info-columns    { grid-template-columns: 1fr !important; gap: 12px !important; }
+  .profile-actions         { flex-direction: column !important; width: 100% !important; gap: 8px !important; }
+  .profile-actions button  { width: 100% !important; justify-content: center !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   19. PAYSLIP / PAYROLL CARDS
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .payslip-card-grid,
+  .payroll-summary-grid {
+    grid-template-columns: 1fr !important;
   }
+}
 
+/* ──────────────────────────────────────────────────────────────────────────
+   20. ANNOUNCEMENTS PAGE
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .announcements-page .dashboard-card { padding: 14px 12px !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   21. ATTENDANCE PAGE  — dual-graph layout
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .attendance-dual-graph { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 768px) {
+  .attendance-stat-cards { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 400px) {
+  .attendance-stat-cards { grid-template-columns: 1fr !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   22. AUTH / LOGIN PAGE
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .login-page {
+    grid-template-columns: 1fr !important;
+    position: fixed !important;
+    inset: 0 !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+  }
+  .login-brand-section { display: none !important; }
   .login-form-section {
-    min-height: 100vh !important;
-    padding: 30px 20px !important;
+    height: 100vh !important;
+    padding: 28px 20px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    overflow-y: auto !important;
   }
+  .mobile-logo { display: flex !important; flex-direction: column !important; align-items: center !important; margin-bottom: 18px !important; }
+  .login-card  { width: 100% !important; max-width: 440px !important; }
+}
 
-  .mobile-logo {
-    display: flex !important;
-    justify-content: center !important;
-    margin-bottom: 28px !important;
+/* ──────────────────────────────────────────────────────────────────────────
+   23. SCROLLBARS  (thin & styled)
+   ────────────────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar              { height: 5px; width: 5px; }
+::-webkit-scrollbar-track        { background: #F1F5F9; }
+::-webkit-scrollbar-thumb        { background: #CBD5E1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover  { background: #94A3B8; }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   24. LARGE DISPLAY / 4K  (≥ 1600 px)
+   ────────────────────────────────────────────────────────────────────────── */
+@media (min-width: 1600px) {
+  .content, .container {
+    max-width: var(--content-max) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
   }
+  .stats-grid     { grid-template-columns: repeat(4, 1fr) !important; gap: 22px !important; }
+  .dashboard-grid { gap: 24px !important; }
+}
 
-  .login-card {
+/* ──────────────────────────────────────────────────────────────────────────
+   25. TABLET RANGE  (768 – 1180 px)
+   ────────────────────────────────────────────────────────────────────────── */
+@media (min-width: 768px) and (max-width: 1180px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   26. DEPARTMENT & EMPLOYEE CARDS GRID
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .departments-grid,
+  .employees-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
+    gap: 12px !important;
+  }
+}
+@media (max-width: 560px) {
+  .departments-grid,
+  .employees-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   27. BUTTON RESPONSIVENESS
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .primary-button, .secondary-button, .danger-button {
+    padding: 9px 14px !important;
+    font-size: 13px !important;
+    gap: 6px !important;
+  }
+  .primary-button svg, .secondary-button svg { width: 15px !important; height: 15px !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   28. CONFIRM DIALOG
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .confirm-dialog {
+    padding: 22px 16px !important;
+    margin: 12px !important;
+    border-radius: 16px !important;
+  }
+  .confirm-actions {
+    flex-direction: column !important;
     width: 100% !important;
-    max-width: 440px !important;
+    gap: 8px !important;
+  }
+  .confirm-actions button { width: 100% !important; justify-content: center !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   29. SECTION HEADER  (inline flex → column on mobile)
+   ────────────────────────────────────────────────────────────────────────── */
+.section-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 480px) {
+  .section-header-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .section-header-row button { width: 100% !important; justify-content: center !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   30. VERY SMALL SCREENS  (< 360 px — e.g. Galaxy A01, Moto E)
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 360px) {
+  .stats-grid             { grid-template-columns: 1fr !important; }
+  .quick-action-grid      { grid-template-columns: repeat(2, 1fr) !important; }
+  .navbar h3              { font-size: 12px !important; max-width: 110px !important; }
+  .stat-value             { font-size: 18px !important; }
+  .dashboard-card         { padding: 10px !important; }
+  .primary-button,
+  .secondary-button       { padding: 8px 12px !important; font-size: 12px !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   31. PRINT STYLES  (hide nav, sidebar, modals)
+   ────────────────────────────────────────────────────────────────────────── */
+@media print {
+  .sidebar, .navbar, .modal-overlay,
+  .quick-action-grid, .sidebar-backdrop { display: none !important; }
+  .main-area { margin: 0 !important; }
+  .content   { padding: 0 !important; }
+  .dashboard-card, .stat-card {
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #E2E8F0 !important;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   32. iOS SAFARI SAFE-AREA (notch / home indicator)
+   ────────────────────────────────────────────────────────────────────────── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .modal-overlay { padding-bottom: max(16px, env(safe-area-inset-bottom)) !important; }
+  .sidebar       { padding-bottom: env(safe-area-inset-bottom) !important; }
+  .content       { padding-bottom: calc(48px + env(safe-area-inset-bottom)) !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   33. HR DASHBOARD  — specific responsive fixes
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .hr-dashboard-grid    { grid-template-columns: 1fr !important; }
+  .hr-stats-grid        { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+}
+@media (max-width: 480px) {
+  .hr-stats-grid        { grid-template-columns: 1fr !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   34. TEAM LEAD DASHBOARD
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .tl-dual-graph        { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 768px) {
+  .tl-stat-cards        { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+}
+@media (max-width: 420px) {
+  .tl-stat-cards        { grid-template-columns: 1fr !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   35. EMPLOYEE DASHBOARD
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Leave form 2-col date grid → 1-col */
+  .emp-leave-date-grid  { grid-template-columns: 1fr !important; }
+  /* Payslip cards */
+  .emp-payslip-grid     { grid-template-columns: 1fr !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   36. ADMIN DASHBOARD  — wide 3/4-col card layouts
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .admin-big-grid       { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 768px) {
+  .admin-kpi-row        { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+}
+@media (max-width: 400px) {
+  .admin-kpi-row        { grid-template-columns: 1fr !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   37. ANNOUNCEMENTS AUDIENCE TOGGLE (Team Lead modal 2-col toggle)
+   ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 460px) {
+  .audience-toggle-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   38. PROFILE EDIT MODAL  — ensure it always fits any viewport
+   ────────────────────────────────────────────────────────────────────────── */
+.employee-modal {
+  width: min(540px, calc(100vw - 24px)) !important;
+}
+
+@media (max-width: 560px) {
+  .employee-modal {
+    width: 100% !important;
+    max-width: 100vw !important;
+    border-radius: 20px 20px 0 0 !important;
+  }
+}
+
+/* Avatar preset list wraps nicely on small screens */
+.avatar-preset-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   39. TABLET PORTRAIT  (768 – 900 px) — common iPad portrait
+   ────────────────────────────────────────────────────────────────────────── */
+@media (min-width: 640px) and (max-width: 900px) {
+  .stats-grid           { grid-template-columns: repeat(2, 1fr) !important; }
+  .quick-action-grid    { grid-template-columns: repeat(3, 1fr) !important; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   40. ACCESSIBILITY — respect prefers-reduced-motion
+   ────────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
   }
 }

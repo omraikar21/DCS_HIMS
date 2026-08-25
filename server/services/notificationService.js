@@ -27,23 +27,70 @@ const fetchUserNotifications = async (user) => {
 };
 
 // ------------------------------------------
-// GET COMPANY ANNOUNCEMENTS
+// GET COMPANY & DEPARTMENT ANNOUNCEMENTS
 // ------------------------------------------
-const fetchCompanyAnnouncements = async () => {
-  return await getCompanyAnnouncements();
+const fetchCompanyAnnouncements = async (user) => {
+  return await getCompanyAnnouncements(user);
 };
 
 // ------------------------------------------
-// DEPLOY COMPANY-WIDE ANNOUNCEMENT (HR & ADMIN)
+// DEPLOY ANNOUNCEMENT (HR, ADMIN & TEAM LEAD)
 // ------------------------------------------
-const deployAnnouncement = async ({ title, message, priority = "NORMAL", category = "Company Announcement", sender }) => {
+const deployAnnouncement = async ({
+  title,
+  message,
+  priority = "NORMAL",
+  category = "Company Announcement",
+  sender,
+  targetDepartment,
+  targetUserEmail,
+  targetUserName,
+  targetUserId,
+  audienceType = "TEAM",
+  reason = "",
+}) => {
   if (!title || !message) {
     throw new Error("Announcement title and message are required.");
   }
 
+  const { pool } = require("../config/database");
   const senderRole = (sender?.role || "ADMIN").toUpperCase();
-  const senderName = sender?.name || (senderRole === "ADMIN" ? "Om Raikar (Admin)" : "Om Raikar (HR)");
-  const senderEmail = sender?.email || (senderRole === "ADMIN" ? "omraikar2128@gmail.com" : "raikarom9@gmail.com");
+  let resolvedDept = targetDepartment || "";
+
+  if (senderRole === "TEAM_LEAD" && !resolvedDept) {
+    try {
+      const empRes = await pool.query(
+        `SELECT d.name AS department_name FROM employees e 
+         LEFT JOIN departments d ON e.department_id = d.id 
+         WHERE e.user_id = $1 OR LOWER(e.email) = LOWER($2) LIMIT 1`,
+        [sender?.id || 0, (sender?.email || "").toLowerCase().trim()]
+      );
+      if (empRes.rows[0]?.department_name) {
+        resolvedDept = empRes.rows[0].department_name.trim();
+      }
+    } catch (err) {
+      console.warn("Could not determine team lead department:", err.message);
+    }
+  }
+
+  const senderName = sender?.name 
+    ? (senderRole === "TEAM_LEAD" ? `${sender.name} (${resolvedDept || "AIML"} Lead)` : sender.name)
+    : (senderRole === "ADMIN" ? "Om Raikar (Admin)" : "Om Raikar (HR)");
+  const senderEmail = sender?.email || "admin@dcs.com";
+
+  const targetRole = senderRole === "TEAM_LEAD" ? (resolvedDept || "AIML") : "ALL";
+  const finalCategory = senderRole === "TEAM_LEAD" ? (category || `${resolvedDept || "AIML"} Team Notice`) : category;
+
+  const isIndividual = audienceType === "INDIVIDUAL" && targetUserEmail;
+  const targetEmailVal = isIndividual ? targetUserEmail.trim().toLowerCase() : "ALL";
+
+  const metadataObj = {
+    target_department: resolvedDept || undefined,
+    audience_type: isIndividual ? "INDIVIDUAL" : "TEAM",
+    target_user_email: isIndividual ? targetUserEmail.trim().toLowerCase() : undefined,
+    target_user_name: isIndividual ? targetUserName : undefined,
+    reason: reason || undefined,
+  };
 
   const createdAnnouncement = await createNotification({
     title,
@@ -52,17 +99,20 @@ const deployAnnouncement = async ({ title, message, priority = "NORMAL", categor
     sender_role: senderRole,
     sender_name: senderName,
     sender_email: senderEmail,
-    target_role: "ALL",
-    target_email: "ALL",
-    category,
+    target_role: targetRole,
+    target_user_id: isIndividual ? (targetUserId || null) : null,
+    target_email: targetEmailVal,
+    target_name: isIndividual ? (targetUserName || "") : "",
+    category: finalCategory,
     priority,
     link: "/dashboard",
+    metadata: metadataObj,
   });
 
   // Record Audit Trail
   try {
     await createAuditLog({
-      action: "DEPLOY_COMPANY_ANNOUNCEMENT",
+      action: "DEPLOY_ANNOUNCEMENT",
       user_id: sender?.id || null,
       user_email: senderEmail,
       user_role: senderRole,
@@ -71,6 +121,9 @@ const deployAnnouncement = async ({ title, message, priority = "NORMAL", categor
         announcementId: createdAnnouncement.id,
         title,
         priority,
+        targetDepartment: resolvedDept || "ALL",
+        audienceType: isIndividual ? "INDIVIDUAL" : "TEAM",
+        targetUser: isIndividual ? targetUserEmail : "ENTIRE_DEPT",
       },
     });
   } catch (auditErr) {

@@ -37,7 +37,7 @@ import {
 
 
 function Employees() {
-  const { role } = useAuth();
+  const { user, role } = useAuth();
   const notification = useNotification();
   const canManageEmployees = ["ADMIN", "HR"].includes((role || "").toUpperCase());
   const [deleteConfirmEmployee, setDeleteConfirmEmployee] = useState(null);
@@ -181,15 +181,19 @@ function Employees() {
           await getEmployees();
 
 
-        const mappedEmployees =
-          (data || []).map(
-            mapEmployeeToUI
-          );
+        const mappedEmployees = (data || [])
+          .filter((emp) => {
+            const desig = (emp.designation || "").toLowerCase();
+            const email = (emp.email || "").toLowerCase();
+            const isSuper = email === "omraikar2128@gmail.com" || email === "omraikar2128@gamil.com";
+            const isAdmin =
+              desig.includes("administrator") ||
+              (user && emp.email && emp.email.toLowerCase() === user.email?.toLowerCase() && role === "ADMIN");
+            return !isSuper && !isAdmin;
+          })
+          .map(mapEmployeeToUI);
 
-
-        setEmployees(
-          mappedEmployees
-        );
+        setEmployees(mappedEmployees);
 
 
       } catch (err) {

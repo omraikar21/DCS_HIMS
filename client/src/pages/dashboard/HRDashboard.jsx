@@ -3,10 +3,10 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
   Users,
-  UserPlus,
   CalendarCheck,
   ClipboardList,
   FileText,
@@ -20,23 +20,31 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
 } from "recharts";
 
-import StatCard
-  from "../../components/dashboard/StatCard";
-
-import ChartCard
-  from "../../components/dashboard/ChartCard";
-
-import RecentActivities
-  from "../../components/dashboard/RecentActivities";
-
+import StatCard from "../../components/dashboard/StatCard";
+import ChartCard from "../../components/dashboard/ChartCard";
 import ProfileHeader from "../../components/dashboard/ProfileHeader";
 import CompanyAnnouncementsCard from "../../components/dashboard/CompanyAnnouncementsCard";
-
+import { useAuth } from "../../hooks/useAuth";
 import { getDashboardData } from "../../services/dashboardService";
 
+const chartColors = [
+  "#A1238E",
+  "#8E1F7D",
+  "#949599",
+  "#2563EB",
+  "#16A34A",
+  "#F0A500",
+];
+
 function HRDashboard() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [dashboard, setDashboard] = useState(null);
   const [error, setError] = useState("");
 
@@ -65,6 +73,14 @@ function HRDashboard() {
     : "100% attendance";
 
   const attendanceChartData = useMemo(() => {
+    if (dashboard?.weeklyAttendance && dashboard.weeklyAttendance.length > 0) {
+      return dashboard.weeklyAttendance.map((item) => ({
+        day: item.day || "Day",
+        present: Number(item.present) || 0,
+        absent: Number(item.absent) || 0,
+        leave: Number(item.leave) || 0,
+      }));
+    }
     const presentCount = presentToday || 0;
     const absentCount = Math.max(0, totalEmployees - presentCount);
     return [
@@ -74,50 +90,38 @@ function HRDashboard() {
       { day: "Thu", present: presentCount, absent: absentCount },
       { day: "Fri", present: presentCount, absent: absentCount },
     ];
-  }, [presentToday, totalEmployees]);
+  }, [dashboard, presentToday, totalEmployees]);
+
+  const departmentChartData = useMemo(() => {
+    if (dashboard?.employeesByDepartment && dashboard.employeesByDepartment.length > 0) {
+      return dashboard.employeesByDepartment.map((d) => ({
+        name: d.department || "General",
+        value: Number(d.employee_count) || 0,
+      }));
+    }
+    return [];
+  }, [dashboard]);
 
   return (
     <div className="admin-dashboard">
-
       {/* PROFILE */}
-
       <ProfileHeader />
 
-
       {/* HEADER */}
-
       <div className="dashboard-heading">
-
         <div>
-
           <p className="section-label">
-            HR OVERVIEW
+            HR EXECUTIVE DASHBOARD
           </p>
 
           <h1>
-            Welcome, HR 👋
+            Hi, {user?.name || "HR Member"} 👋
           </h1>
 
           <p className="dashboard-description">
-            Manage employees, attendance and
-            leave requests from one place.
+            Manage employees, team leads, attendance, and department allocations.
           </p>
-
         </div>
-
-        <button
-          className="primary-button"
-          onClick={() => {
-            window.location.href = "/employees";
-          }}
-        >
-
-          <UserPlus size={17} />
-
-          Add Employee
-
-        </button>
-
       </div>
 
       {error && (
@@ -126,11 +130,8 @@ function HRDashboard() {
         </div>
       )}
 
-
       {/* STAT CARDS */}
-
       <div className="stats-grid">
-
         <StatCard
           title="Total Employees"
           value={String(totalEmployees).padStart(2, "0")}
@@ -155,50 +156,39 @@ function HRDashboard() {
         />
 
         <StatCard
-          title="Documents"
-          value="142"
-          note="Employee documents"
+          title="Active Departments"
+          value={String(dashboard?.summary?.totalDepartments || 4).padStart(2, "0")}
+          note="Enterprise Wings"
           icon={FileText}
           type="blue"
         />
-
       </div>
 
-
-      {/* CHARTS */}
-
+      {/* CHARTS ROW */}
       <div className="dashboard-grid">
-
         <ChartCard
-          title="Weekly Attendance"
+          title="Weekly Attendance Overview"
+          onAction={() => navigate("/attendance")}
         >
-
-
           <ResponsiveContainer
             width="100%"
             height={270}
           >
-
             <BarChart
               data={attendanceChartData}
             >
-
               <CartesianGrid
                 strokeDasharray="3 3"
               />
-
               <XAxis
                 dataKey="day"
               />
-
               <YAxis />
-
               <Tooltip />
-
               <Bar
                 dataKey="present"
                 name="Present"
-                fill="#A1238E"
+                fill="#DB2777"
                 radius={[
                   5,
                   5,
@@ -206,7 +196,6 @@ function HRDashboard() {
                   0,
                 ]}
               />
-
               <Bar
                 dataKey="absent"
                 name="Absent"
@@ -218,52 +207,82 @@ function HRDashboard() {
                   0,
                 ]}
               />
-
             </BarChart>
-
           </ResponsiveContainer>
-
         </ChartCard>
 
-
-        <RecentActivities />
-
+        {/* DEPARTMENT DISTRIBUTION (PIE CHART MATCHING ADMIN) */}
+        <ChartCard
+          title="Department Distribution"
+          onAction={() => navigate("/departments")}
+        >
+          {departmentChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={270}>
+              <PieChart>
+                <Pie
+                  data={departmentChartData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                >
+                  {departmentChartData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={chartColors[index % chartColors.length]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "270px",
+                width: "100%",
+                color: "#64748B",
+                background: "#FAFCFF",
+                borderRadius: "12px",
+                border: "1px dashed #E2E8F0",
+                textAlign: "center",
+                padding: "20px",
+              }}
+            >
+              <span style={{ fontSize: "13.5px", fontWeight: "700", color: "#334155" }}>
+                No department employee records available
+              </span>
+            </div>
+          )}
+        </ChartCard>
       </div>
 
-
       {/* ANNOUNCEMENTS */}
-
       <CompanyAnnouncementsCard limit={3} />
 
-
       {/* HR TASKS */}
-
       <section className="dashboard-card">
-
         <div className="card-header">
-
           <div>
-
             <h3>
               HR Quick Actions
             </h3>
-
             <p>
               Frequently used HR operations
             </p>
-
           </div>
-
         </div>
 
-
         <div className="quick-action-grid">
-
           <button
             className="quick-action"
-            onClick={() => {
-              window.location.href = "/employees";
-            }}
+            onClick={() => navigate("/employees")}
           >
             <Users size={20} />
             <span>Employees</span>
@@ -271,9 +290,7 @@ function HRDashboard() {
 
           <button
             className="quick-action"
-            onClick={() => {
-              window.location.href = "/attendance";
-            }}
+            onClick={() => navigate("/attendance")}
           >
             <CalendarCheck size={20} />
             <span>Attendance</span>
@@ -281,9 +298,7 @@ function HRDashboard() {
 
           <button
             className="quick-action"
-            onClick={() => {
-              window.location.href = "/leave";
-            }}
+            onClick={() => navigate("/leave")}
           >
             <ClipboardList size={20} />
             <span>Leave Requests</span>
@@ -291,20 +306,15 @@ function HRDashboard() {
 
           <button
             className="quick-action"
-            onClick={() => {
-              window.location.href = "/documents";
-            }}
+            onClick={() => navigate("/departments")}
           >
             <FileText size={20} />
-            <span>Documents</span>
+            <span>Departments</span>
           </button>
-
         </div>
-
       </section>
-
     </div>
   );
 }
 
-export default HRDashboard;
+export default HRDashboard;

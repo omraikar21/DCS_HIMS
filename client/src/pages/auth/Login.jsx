@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Eye,
   EyeOff,
@@ -24,18 +24,23 @@ function Login() {
   // STATE
   // ============================================
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [showPassword, setShowPassword] =
-    useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [formData, setFormData] =
-    useState({
-      email: "",
-      password: "",
-    });
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
 
-  const [loginError, setLoginError] =
-    useState("");
+  const [loginError, setLoginError] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("error") === "suspended") {
+      setLoginError("Account Suspended: Your account is currently inactive or suspended. Access denied. Please contact your system administrator.");
+    }
+  }, [location]);
 
   // Forgot password modal state
   const [forgotModalOpen, setForgotModalOpen] =
@@ -139,12 +144,14 @@ function Login() {
 
       const role = response?.user?.role?.toUpperCase();
 
-      if (role === "ADMIN") {
+      if (role === "ADMIN" || role === "SUPER_ADMIN") {
         navigate("/dashboard");
       } else if (role === "HR") {
         navigate("/hr-dashboard");
       } else if (role === "FINANCE") {
         navigate("/finance-dashboard");
+      } else if (role === "TEAM_LEAD") {
+        navigate("/team-lead-dashboard");
       } else if (role === "EMPLOYEE") {
         navigate("/employee-dashboard");
       } else {
@@ -361,16 +368,39 @@ function Login() {
         <div className="login-card">
 
 
-          {/* MOBILE LOGO */}
-
+          {/* MOBILE LOGO (MOBILE VIEW ONLY) */}
           <div className="mobile-logo">
-
-            <div className="dcs-logo-box">
-              DCS
+            <div
+              style={{
+                width: "72px",
+                height: "72px",
+                borderRadius: "50%",
+                overflow: "hidden",
+                border: "3px solid #1E293B",
+                boxShadow: "0 8px 24px rgba(15, 23, 42, 0.18)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "#FFFFFF",
+                marginBottom: "8px",
+              }}
+            >
+              <img
+                src="/dcs-logo.png"
+                alt="DCS Logo"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  transform: "scale(1.42)",
+                  display: "block",
+                }}
+              />
             </div>
-
+            <span style={{ fontSize: "13px", fontWeight: "900", color: "#0F172A", letterSpacing: "1.2px", textTransform: "uppercase" }}>
+              DCS OFFICE MANAGEMENT
+            </span>
           </div>
-
 
           <p className="login-label">
             WELCOME BACK
@@ -488,22 +518,34 @@ function Login() {
                 className="login-error"
                 style={{
                   display: "flex",
-                  alignItems: "center",
+                  alignItems: "flex-start",
                   gap: "10px",
-                  padding: "12px 14px",
+                  padding: "14px 16px",
                   borderRadius: "10px",
-                  background: "#FFF1F2",
-                  border: "1px solid #FECDD3",
-                  color: "#BE123C",
+                  background: loginError.includes("Suspended") || loginError.includes("inactive")
+                    ? "linear-gradient(135deg, #FEF2F2 0%, #FFF1F2 100%)"
+                    : "#FFF1F2",
+                  border: loginError.includes("Suspended") || loginError.includes("inactive")
+                    ? "1.5px solid #FCA5A5"
+                    : "1px solid #FECDD3",
+                  color: "#991B1B",
                   fontSize: "13px",
                   fontWeight: "700",
+                  lineHeight: "1.4",
                   margin: "12px 0 16px",
-                  boxShadow: "0 2px 8px rgba(225, 29, 72, 0.08)",
+                  boxShadow: "0 4px 14px rgba(225, 29, 72, 0.12)",
                   animation: "fadeIn 0.2s ease-in-out",
                 }}
               >
-                <AlertCircle size={18} style={{ flexShrink: 0, color: "#E11D48" }} />
-                <span style={{ flex: 1 }}>{loginError}</span>
+                <AlertCircle size={20} style={{ flexShrink: 0, color: "#DC2626", marginTop: "1px" }} />
+                <div style={{ flex: 1 }}>
+                  {(loginError.includes("Suspended") || loginError.includes("inactive")) && (
+                    <strong style={{ display: "block", color: "#7F1D1D", marginBottom: "2px", fontSize: "13.5px" }}>
+                      ⛔ ACCOUNT SUSPENDED
+                    </strong>
+                  )}
+                  <span>{loginError}</span>
+                </div>
               </div>
             )}
 
@@ -683,7 +725,7 @@ function Login() {
                         setForgotError("");
                         setForgotSuccess("");
                       }}
-                      style={{ background: "none", border: "none", color: "#9E2686", fontSize: "12.5px", cursor: "pointer", fontWeight: "700", textDecoration: "underline" }}
+                      style={{ background: "none", border: "none", color: "#1E293B", fontSize: "12.5px", cursor: "pointer", fontWeight: "700", textDecoration: "underline" }}
                     >
                       Change
                     </button>

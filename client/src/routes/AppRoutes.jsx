@@ -16,6 +16,7 @@ const Login = lazy(() => import("../pages/auth/Login"));
 const ApiTestPage = lazy(() => import("../pages/ApiTestPage"));
 const AdminDashboard = lazy(() => import("../components/dashboard/AdminDashboard"));
 const HRDashboard = lazy(() => import("../pages/dashboard/HRDashboard"));
+const TeamLeadDashboard = lazy(() => import("../pages/dashboard/TeamLeadDashboard"));
 const EmployeeDashboard = lazy(() => import("../pages/dashboard/EmployeeDashboard"));
 const FinanceDashboard = lazy(() => import("../pages/dashboard/FinanceDashboard"));
 const Employees = lazy(() => import("../pages/employees/Employees"));
@@ -38,8 +39,7 @@ const Settings = lazy(() => import("../pages/settings/Settings"));
 const AuditLogs = lazy(() => import("../pages/audit/AuditLogs"));
 const Profile = lazy(() => import("../pages/profile/Profile"));
 const UserManagement = lazy(() => import("../pages/users/UserManagement"));
-
-
+const ServerLoad = lazy(() => import("../pages/system/ServerLoad"));
 
 // ============================================
 // APP ROUTES
@@ -99,7 +99,7 @@ function AppRoutes() {
 
 
         {/* ====================================
-            ADMIN DASHBOARD
+            SUPER ADMIN SERVER LOAD & DASHBOARD
         ==================================== */}
 
         <Route
@@ -107,6 +107,7 @@ function AppRoutes() {
             <RoleRoute
               allowedRoles={[
                 "ADMIN",
+                "SUPER_ADMIN",
               ]}
             />
           }
@@ -117,6 +118,15 @@ function AppRoutes() {
             element={
               <Layout role="ADMIN">
                 <AdminDashboard />
+              </Layout>
+            }
+          />
+
+          <Route
+            path="/server-load"
+            element={
+              <Layout role="ADMIN">
+                <ServerLoad />
               </Layout>
             }
           />
@@ -143,6 +153,32 @@ function AppRoutes() {
             element={
               <Layout role="HR">
                 <HRDashboard />
+              </Layout>
+            }
+          />
+
+        </Route>
+
+
+        {/* ====================================
+            TEAM LEAD DASHBOARD
+        ==================================== */}
+
+        <Route
+          element={
+            <RoleRoute
+              allowedRoles={[
+                "TEAM_LEAD",
+              ]}
+            />
+          }
+        >
+
+          <Route
+            path="/team-lead-dashboard"
+            element={
+              <Layout role="TEAM_LEAD">
+                <TeamLeadDashboard />
               </Layout>
             }
           />
@@ -204,7 +240,7 @@ function AppRoutes() {
 
         {/* ====================================
             EMPLOYEE MANAGEMENT
-            ADMIN + HR
+            ADMIN + HR + SUPER_ADMIN
         ==================================== */}
 
         <Route
@@ -213,6 +249,8 @@ function AppRoutes() {
               allowedRoles={[
                 "ADMIN",
                 "HR",
+                "SUPER_ADMIN",
+                "TEAM_LEAD",
               ]}
             />
           }
@@ -241,7 +279,7 @@ function AppRoutes() {
 
         {/* ====================================
             DEPARTMENT MANAGEMENT
-            ADMIN + HR
+            ADMIN + HR + TEAM_LEAD + SUPER_ADMIN
         ==================================== */}
 
         <Route
@@ -250,6 +288,8 @@ function AppRoutes() {
               allowedRoles={[
                 "ADMIN",
                 "HR",
+                "TEAM_LEAD",
+                "SUPER_ADMIN",
               ]}
             />
           }
@@ -278,7 +318,7 @@ function AppRoutes() {
 
         {/* ====================================
             ATTENDANCE
-            ADMIN + HR + EMPLOYEE + FINANCE
+            ADMIN + HR + EMPLOYEE + FINANCE + TEAM_LEAD + SUPER_ADMIN
         ==================================== */}
 
         <Route
@@ -289,6 +329,8 @@ function AppRoutes() {
                 "HR",
                 "EMPLOYEE",
                 "FINANCE",
+                "TEAM_LEAD",
+                "SUPER_ADMIN",
               ]}
             />
           }
@@ -308,7 +350,7 @@ function AppRoutes() {
 
         {/* ====================================
             LEAVE
-            ADMIN + HR + EMPLOYEE
+            ADMIN + HR + EMPLOYEE + TEAM_LEAD + SUPER_ADMIN
         ==================================== */}
 
         <Route
@@ -318,6 +360,8 @@ function AppRoutes() {
                 "ADMIN",
                 "HR",
                 "EMPLOYEE",
+                "TEAM_LEAD",
+                "SUPER_ADMIN",
               ]}
             />
           }
@@ -337,7 +381,7 @@ function AppRoutes() {
 
         {/* ====================================
             PAYROLL
-            ADMIN + FINANCE
+            ADMIN + FINANCE + SUPER_ADMIN
         ==================================== */}
 
         <Route
@@ -346,6 +390,7 @@ function AppRoutes() {
               allowedRoles={[
                 "ADMIN",
                 "FINANCE",
+                "SUPER_ADMIN",
               ]}
             />
           }
@@ -374,7 +419,7 @@ function AppRoutes() {
               allowedRoles={[
                 "ADMIN",
                 "HR",
-                "EMPLOYEE",
+                "TEAM_LEAD",
               ]}
             />
           }
@@ -403,7 +448,9 @@ function AppRoutes() {
               allowedRoles={[
                 "ADMIN",
                 "FINANCE",
+                "SUPER_ADMIN",
                 "EMPLOYEE",
+                "TEAM_LEAD",
               ]}
             />
           }
@@ -479,7 +526,7 @@ function AppRoutes() {
 
         {/* ====================================
             REPORTS
-            ADMIN + HR + FINANCE
+            ADMIN + FINANCE ONLY
         ==================================== */}
 
         <Route
@@ -487,9 +534,7 @@ function AppRoutes() {
             <RoleRoute
               allowedRoles={[
                 "ADMIN",
-                "HR",
                 "FINANCE",
-                "EMPLOYEE",
               ]}
             />
           }
@@ -519,7 +564,9 @@ function AppRoutes() {
                 "ADMIN",
                 "HR",
                 "FINANCE",
+                "TEAM_LEAD",
                 "EMPLOYEE",
+                "SUPER_ADMIN",
               ]}
             />
           }
@@ -547,8 +594,10 @@ function AppRoutes() {
             <RoleRoute
               allowedRoles={[
                 "ADMIN",
+                "SUPER_ADMIN",
                 "HR",
                 "FINANCE",
+                "TEAM_LEAD",
                 "EMPLOYEE",
               ]}
             />
@@ -604,8 +653,10 @@ function AppRoutes() {
             <RoleRoute
               allowedRoles={[
                 "ADMIN",
+                "SUPER_ADMIN",
                 "HR",
                 "FINANCE",
+                "TEAM_LEAD",
                 "EMPLOYEE",
               ]}
             />

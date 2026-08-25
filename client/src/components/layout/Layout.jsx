@@ -49,7 +49,7 @@ function Layout({
         "/notifications": "Notifications",
         "/settings": "Settings",
         "/profile": "My Profile",
-        "/audit-logs": "Audit Logs",
+        "/audit-logs": "User Logs",
         "/payslips": "Payslips",
         "/recruitment": "Recruitment",
         "/onboarding": "Onboarding",

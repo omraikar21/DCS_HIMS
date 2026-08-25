@@ -13,10 +13,10 @@ import {
     UserCircle,
     LogOut,
     X,
-    UserPlus,
     ShieldCheck,
     BellRing,
     BadgeCheck,
+    Activity,
 } from "lucide-react";
 
 
@@ -29,24 +29,14 @@ import { createAnnouncement } from "../../services/notificationService";
 const menuItems = {
     SUPER_ADMIN: [
         {
-            name: "Dashboard",
-            path: "/dashboard",
-            icon: LayoutDashboard,
+            name: "Server Load",
+            path: "/server-load",
+            icon: Activity,
         },
         {
-            name: "Roles & Users",
+            name: "Add Primary Admin",
             path: "/user-management",
             icon: ShieldCheck,
-        },
-        {
-            name: "Reports",
-            path: "/reports",
-            icon: BarChart3,
-        },
-        {
-            name: "Announcements",
-            path: "/announcements",
-            icon: Megaphone,
         },
         {
             name: "Server Notices",
@@ -55,7 +45,7 @@ const menuItems = {
             icon: BellRing,
         },
         {
-            name: "Audit Logs",
+            name: "User Logs",
             path: "/audit-logs",
             icon: ScrollText,
         },
@@ -88,6 +78,11 @@ const menuItems = {
             icon: Building2,
         },
         {
+            name: "Roles & Team Users",
+            path: "/user-management",
+            icon: ShieldCheck,
+        },
+        {
             name: "Attendance",
             path: "/attendance",
             icon: CalendarCheck,
@@ -103,12 +98,7 @@ const menuItems = {
             icon: WalletCards,
         },
         {
-            name: "Documents",
-            path: "/documents",
-            icon: FileText,
-        },
-        {
-            name: "Reports",
+            name: "Finance Reports",
             path: "/reports",
             icon: BarChart3,
         },
@@ -118,14 +108,9 @@ const menuItems = {
             icon: Megaphone,
         },
         {
-            name: "Audit Logs",
+            name: "User Logs",
             path: "/audit-logs",
             icon: ScrollText,
-        },
-        {
-            name: "Roles & Users",
-            path: "/user-management",
-            icon: ShieldCheck,
         },
         {
             name: "Settings",
@@ -146,16 +131,6 @@ const menuItems = {
             icon: LayoutDashboard,
         },
         {
-            name: "Recruitment",
-            path: "/recruitment",
-            icon: Users,
-        },
-        {
-            name: "Onboarding",
-            path: "/onboarding",
-            icon: UserPlus,
-        },
-        {
             name: "Employees",
             path: "/employees",
             icon: Users,
@@ -166,6 +141,11 @@ const menuItems = {
             icon: Building2,
         },
         {
+            name: "Roles & Team Users",
+            path: "/user-management",
+            icon: ShieldCheck,
+        },
+        {
             name: "Attendance",
             path: "/attendance",
             icon: CalendarCheck,
@@ -174,21 +154,6 @@ const menuItems = {
             name: "Leave Management",
             path: "/leave",
             icon: ClipboardList,
-        },
-        {
-            name: "Roles & Users",
-            path: "/user-management",
-            icon: ShieldCheck,
-        },
-        {
-            name: "Documents",
-            path: "/documents",
-            icon: FileText,
-        },
-        {
-            name: "Reports",
-            path: "/reports",
-            icon: BarChart3,
         },
         {
             name: "Announcements",
@@ -209,22 +174,17 @@ const menuItems = {
             icon: LayoutDashboard,
         },
         {
-            name: "My Attendance",
-            path: "/attendance",
-            icon: CalendarCheck,
-        },
-        {
-            name: "Payroll",
+            name: "Payroll (TL, HR, Emp)",
             path: "/payroll",
             icon: WalletCards,
         },
         {
-            name: "Payslips",
+            name: "Company Payslips",
             path: "/payslips",
             icon: FileText,
         },
         {
-            name: "Reports",
+            name: "Finance Reports for Admin",
             path: "/reports",
             icon: BarChart3,
         },
@@ -235,6 +195,39 @@ const menuItems = {
         },
         {
             name: "Profile",
+            path: "/profile",
+            icon: UserCircle,
+        },
+    ],
+
+    TEAM_LEAD: [
+        {
+            name: "Dashboard",
+            path: "/team-lead-dashboard",
+            icon: LayoutDashboard,
+        },
+        {
+            name: "My Team",
+            path: "/departments",
+            icon: Users,
+        },
+        {
+            name: "Leave Management",
+            path: "/leave",
+            icon: ClipboardList,
+        },
+        {
+            name: "Department Attendance",
+            path: "/attendance",
+            icon: CalendarCheck,
+        },
+        {
+            name: "Announcements",
+            path: "/announcements",
+            icon: Megaphone,
+        },
+        {
+            name: "My Profile",
             path: "/profile",
             icon: UserCircle,
         },
@@ -252,7 +245,7 @@ const menuItems = {
             icon: CalendarCheck,
         },
         {
-            name: "My Leave",
+            name: "My Leave Application",
             path: "/leave",
             icon: ClipboardList,
         },
@@ -260,16 +253,6 @@ const menuItems = {
             name: "My Payslips",
             path: "/payslips",
             icon: WalletCards,
-        },
-        {
-            name: "My Documents",
-            path: "/documents",
-            icon: FileText,
-        },
-        {
-            name: "Reports",
-            path: "/reports",
-            icon: BarChart3,
         },
         {
             name: "Announcements",
@@ -294,21 +277,23 @@ function Sidebar({
     const location = useLocation();
 
     const { user, role: authRole } = useAuth();
+    const userEmailClean = (user?.email || "").toLowerCase().trim();
     const isSuperAdmin = Boolean(
         user?.is_super_admin ||
-        (user?.email && user.email.toLowerCase().trim() === "omraikar2128@gmail.com")
+        userEmailClean === "omraikar2128@gmail.com" ||
+        userEmailClean === "omraikar2128@gamil.com"
     );
 
     const normalizedRole = (role || authRole || "ADMIN").toUpperCase();
-    const activeRoleKey = isSuperAdmin ? "SUPER_ADMIN" : normalizedRole;
+    const activeRoleKey = isSuperAdmin ? "SUPER_ADMIN" : (normalizedRole === "TEAM_LEAD" ? "TEAM_LEAD" : normalizedRole);
     const items = menuItems[activeRoleKey] || menuItems.ADMIN;
 
     const notification = useNotification();
     const [noticeModalOpen, setNoticeModalOpen] = useState(false);
     const [noticeData, setNoticeData] = useState({
-        title: "Server Operations & Low Load Status Notice",
-        timeframe: "Today 03:00 PM – 04:00 PM IST",
-        message: "All backend services and PostgreSQL database nodes are operating normally under low load (12%). System latency < 40ms.",
+        title: "",
+        timeframe: "",
+        message: "",
         priority: "NORMAL",
         isShutdown: false,
     });
@@ -493,100 +478,107 @@ function Sidebar({
             {/* SUPER ADMIN SERVER & DOWNTIME NOTICE MODAL */}
             {noticeModalOpen && (
                 <div className="modal-overlay" style={{ zIndex: 9999 }}>
-                    <div className="employee-modal" style={{ maxWidth: "560px" }}>
-                        <div className="modal-header">
+                    <div className="employee-modal" style={{ maxWidth: "560px", width: "92%", maxHeight: "88vh", borderRadius: "16px", overflow: "hidden", display: "flex", flexDirection: "column", background: "#FFFFFF", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }}>
+                        <div className="modal-header" style={{ padding: "18px 24px", borderBottom: "1px solid #E2E8F0" }}>
                             <div>
-                                <p className="section-label">PLATFORM GOVERNANCE</p>
-                                <h2>Broadcast Server / Downtime Notice</h2>
+                                <p className="section-label" style={{ fontSize: "11px", fontWeight: "700", color: "#64748B", letterSpacing: "0.6px", textTransform: "uppercase", margin: 0 }}>System Announcement</p>
+                                <h2 style={{ fontSize: "19px", fontWeight: "800", color: "#0F172A", margin: "4px 0 0" }}>Send System Announcement</h2>
                             </div>
                             <button className="modal-close" onClick={() => setNoticeModalOpen(false)}>
                                 <X size={18} />
                             </button>
                         </div>
 
-                        <form onSubmit={handleSendNotice}>
-                            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
-                                <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>
-                                    Broadcast real-time server health notifications, maintenance adjustments, or scheduled application downtime alerts directly from the developer console.
+                        <form onSubmit={handleSendNotice} style={{ display: "flex", flexDirection: "column", flex: 1, margin: 0, overflow: "hidden" }}>
+                            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px", overflowY: "auto", maxHeight: "calc(88vh - 130px)" }}>
+                                <p style={{ margin: 0, fontSize: "13px", color: "#64748B" }}>
+                                    Send an announcement or maintenance update to all user dashboards.
                                 </p>
 
                                 <div className="form-field">
-                                    <label>Notification Subject / Title</label>
+                                    <label style={{ fontSize: "12px", fontWeight: "700", color: "#334155" }}>Announcement Title *</label>
                                     <input
                                         type="text"
                                         required
-                                        placeholder="e.g. Server Maintenance & Temporary Downtime Alert"
+                                        placeholder="e.g. System Maintenance Notice"
                                         value={noticeData.title}
                                         onChange={(e) => setNoticeData({ ...noticeData, title: e.target.value })}
+                                        style={{ width: "100%", height: "42px", padding: "0 14px", borderRadius: "8px", border: "1.5px solid #CBD5E1", fontSize: "13.5px", color: "#0F172A", outline: "none" }}
                                     />
                                 </div>
 
                                 <div className="form-field">
-                                    <label>Scheduled Timeframe / Window</label>
+                                    <label style={{ fontSize: "12px", fontWeight: "700", color: "#334155" }}>Timeframe / Schedule</label>
                                     <input
                                         type="text"
-                                        placeholder="e.g. Today 03:00 PM – 04:00 PM IST (or Immediate)"
+                                        placeholder="e.g. Today 03:00 PM – 04:00 PM (or Immediate)"
                                         value={noticeData.timeframe}
                                         onChange={(e) => setNoticeData({ ...noticeData, timeframe: e.target.value })}
+                                        style={{ width: "100%", height: "42px", padding: "0 14px", borderRadius: "8px", border: "1.5px solid #CBD5E1", fontSize: "13.5px", color: "#0F172A", outline: "none" }}
                                     />
                                 </div>
 
                                 <div className="form-field">
-                                    <label>Notice Priority</label>
+                                    <label style={{ fontSize: "12px", fontWeight: "700", color: "#334155" }}>Priority</label>
                                     <select
                                         value={noticeData.priority}
                                         onChange={(e) => setNoticeData({ ...noticeData, priority: e.target.value })}
                                         style={{
                                             width: "100%",
-                                            padding: "10px 14px",
+                                            height: "42px",
+                                            padding: "0 14px",
                                             borderRadius: "8px",
-                                            border: "1px solid #EACEE3",
+                                            border: "1.5px solid #CBD5E1",
                                             backgroundColor: "#FFFFFF",
                                             fontSize: "13.5px",
-                                            color: "#18243A",
+                                            color: "#0F172A",
                                             fontWeight: "600",
+                                            outline: "none",
                                         }}
                                     >
-                                        <option value="NORMAL">Normal / Low Load Status Notice</option>
-                                        <option value="HIGH">High Priority / Scheduled Maintenance</option>
-                                        <option value="CRITICAL">Critical Infrastructure / Application Shutdown</option>
+                                        <option value="NORMAL">Normal Notice</option>
+                                        <option value="HIGH">Important Maintenance</option>
+                                        <option value="CRITICAL">Critical Update</option>
                                     </select>
                                 </div>
 
                                 <div className="form-field">
-                                    <label>Detailed System Message</label>
+                                    <label style={{ fontSize: "12px", fontWeight: "700", color: "#334155" }}>Message *</label>
                                     <textarea
                                         required
                                         rows={4}
-                                        placeholder="e.g. The application will undergo scheduled server optimization..."
+                                        placeholder="Enter detailed announcement message..."
                                         value={noticeData.message}
                                         onChange={(e) => setNoticeData({ ...noticeData, message: e.target.value })}
                                         style={{
                                             width: "100%",
                                             padding: "10px 14px",
                                             borderRadius: "8px",
-                                            border: "1px solid #EACEE3",
+                                            border: "1.5px solid #CBD5E1",
                                             fontFamily: "inherit",
-                                            fontSize: "13px",
+                                            fontSize: "13.5px",
+                                            color: "#0F172A",
                                             resize: "vertical",
+                                            outline: "none",
                                         }}
                                     />
                                 </div>
 
-                                <div style={{ padding: "12px", background: "#EDF9F2", borderRadius: "8px", border: "1px solid #A3E4C3", display: "flex", alignItems: "center", gap: "10px" }}>
-                                    <BadgeCheck size={18} color="#2E9B67" style={{ flexShrink: 0 }} />
-                                    <span style={{ fontSize: "12px", color: "#2E9B67", lineHeight: "1.4" }}>
-                                        <strong>Immediate Delivery:</strong> Recorded in database audit logs and instantly pushed to all active user dashboards.
+                                <div style={{ padding: "12px 14px", background: "#ECFDF5", borderRadius: "8px", border: "1px solid #A7F3D0", display: "flex", alignItems: "center", gap: "10px" }}>
+                                    <BadgeCheck size={18} color="#10B981" style={{ flexShrink: 0 }} />
+                                    <span style={{ fontSize: "12px", color: "#065F46", lineHeight: "1.4" }}>
+                                        <strong>Immediate Delivery:</strong> Broadcast instantly to active user dashboards.
                                     </span>
                                 </div>
                             </div>
 
-                            <div className="modal-footer" style={{ borderTop: "1px solid #EACEE3", padding: "14px 24px", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                            <div className="modal-footer" style={{ borderTop: "1px solid #E2E8F0", padding: "14px 24px", display: "flex", justifyContent: "flex-end", gap: "10px", background: "#F8FAFC" }}>
                                 <button
                                     type="button"
                                     className="secondary-button"
                                     onClick={() => setNoticeModalOpen(false)}
                                     disabled={sendingNotice}
+                                    style={{ padding: "10px 18px", borderRadius: "8px" }}
                                 >
                                     Cancel
                                 </button>
@@ -594,9 +586,9 @@ function Sidebar({
                                     type="submit"
                                     className="primary-button"
                                     disabled={sendingNotice}
-                                    style={{ background: "#9E2682", borderColor: "#9E2682" }}
+                                    style={{ background: "#1E293B", borderColor: "#1E293B", color: "#FFFFFF", padding: "10px 20px", borderRadius: "8px", boxShadow: "0 4px 12px rgba(15, 23, 42, 0.15)" }}
                                 >
-                                    {sendingNotice ? "Broadcasting..." : "Broadcast Server Notice"}
+                                    {sendingNotice ? "Sending..." : "Send Announcement"}
                                 </button>
                             </div>
                         </form>

@@ -327,7 +327,7 @@ function Settings() {
                   <option value="AED (د.إ)">AED (د.إ) - UAE Dirham</option>
                 </select>
                 <small style={{ color: "#64748b", fontSize: "11.5px", marginTop: "4px" }}>
-                  Current active symbol: <strong style={{ color: "#A1238E" }}>{settings.currencySymbol || "₹"}</strong>
+                  Current active symbol: <strong style={{ color: "#0F172A" }}>{settings.currencySymbol || "₹"}</strong>
                 </small>
               </div>
 

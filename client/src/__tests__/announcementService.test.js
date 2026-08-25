@@ -46,12 +46,12 @@ describe("announcementService", () => {
       pinned: true,
     });
 
-    expect(notificationService.createAnnouncement).toHaveBeenCalledWith({
+    expect(notificationService.createAnnouncement).toHaveBeenCalledWith(expect.objectContaining({
       title: "New Policy",
       message: "Details about remote work",
       category: "HR Policy",
       priority: "HIGH",
-    });
+    }));
     expect(result).toEqual({ id: 10, title: "New Policy" });
   });
 });

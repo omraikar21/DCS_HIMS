@@ -20,18 +20,22 @@ const getAllUsers =
     const result =
       await pool.query(`
         SELECT
-          id,
-          name,
-          email,
-          role,
-          avatar,
-          is_active,
-          is_super_admin,
-          must_change_password,
-          created_at,
-          updated_at
-        FROM users
-        ORDER BY is_super_admin DESC, id ASC
+          u.id,
+          u.name,
+          u.email,
+          u.role,
+          u.avatar,
+          u.is_active,
+          u.is_super_admin,
+          u.must_change_password,
+          u.created_at,
+          u.updated_at,
+          COALESCE(d.name, CASE WHEN u.is_super_admin THEN 'All Departments' WHEN u.role = 'HR' THEN 'Human Resources' WHEN u.role = 'FINANCE' THEN 'Finance' ELSE 'Administration' END) AS department_name,
+          d.id AS department_id
+        FROM users u
+        LEFT JOIN employees e ON LOWER(TRIM(e.email)) = LOWER(TRIM(u.email))
+        LEFT JOIN departments d ON d.id = e.department_id
+        ORDER BY u.is_super_admin DESC, u.id ASC
       `);
 
     return result.rows;
@@ -93,13 +97,21 @@ const getUserByEmail =
     if (!email) return null;
     const cleanEmail = email.trim().toLowerCase();
 
-    // 1. Check in users table
+    // 1. Check in users table joined with employees & departments
     const result =
       await pool.query(
         `
-        SELECT *
-        FROM users
-        WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))
+        SELECT 
+          u.*,
+          e.id AS employee_id,
+          e.employee_code,
+          e.designation,
+          COALESCE(d.name, CASE WHEN u.is_super_admin THEN 'All Departments' WHEN u.role = 'HR' THEN 'Human Resources' WHEN u.role = 'FINANCE' THEN 'Finance' ELSE 'Development' END) AS department_name,
+          d.id AS department_id
+        FROM users u
+        LEFT JOIN employees e ON LOWER(TRIM(e.email)) = LOWER(TRIM(u.email))
+        LEFT JOIN departments d ON d.id = e.department_id
+        WHERE LOWER(TRIM(u.email)) = LOWER(TRIM($1))
         `,
         [cleanEmail]
       );
@@ -111,9 +123,10 @@ const getUserByEmail =
     // 2. Fallback: Check if employee exists in employees table
     const empResult = await pool.query(
       `
-      SELECT *
-      FROM employees
-      WHERE LOWER(TRIM(email)) = LOWER(TRIM($1))
+      SELECT e.*, d.name AS department_name
+      FROM employees e
+      LEFT JOIN departments d ON d.id = e.department_id
+      WHERE LOWER(TRIM(e.email)) = LOWER(TRIM($1))
       `,
       [cleanEmail]
     );
@@ -132,7 +145,14 @@ const getUserByEmail =
         mustChangePassword: false,
       });
 
-      return newUser;
+      return {
+        ...newUser,
+        employee_id: emp.id,
+        employee_code: emp.employee_code,
+        designation: emp.designation,
+        department_name: emp.department_name || "Development",
+        department_id: emp.department_id,
+      };
     }
 
     return null;

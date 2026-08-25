@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import {
   ShieldCheck,
   ShieldAlert,
-  Users,
   Building,
   WalletCards,
   Lock,
@@ -20,6 +19,7 @@ import {
   updateUserAccount,
   deleteUserAccount,
 } from "../../services/userService";
+import { getDepartments, createDepartment } from "../../services/departmentService";
 
 function UserManagement() {
   const { user, role } = useAuth();
@@ -29,20 +29,22 @@ function UserManagement() {
 
   const isAdmin = userRole === "ADMIN";
   const isHR = userRole === "HR";
+  const userEmailClean = (user?.email || "").toLowerCase().trim();
   const isSuperAdmin = Boolean(
     user?.is_super_admin ||
-    (user?.email && user.email.toLowerCase().trim() === "omraikar2128@gmail.com")
+    userEmailClean === "omraikar2128@gmail.com" ||
+    userEmailClean === "omraikar2128@gamil.com"
   );
+  const isPrimaryAdmin = isAdmin && !isSuperAdmin;
 
   const [data, setData] = useState({
     users: [],
     telemetry: {
       totalUsers: 0,
-      primaryAdminCount: 1,
-      coAdminCount: 0,
-      maxCoAdmins: 4,
-      canAddCoAdmin: false,
-      remainingSlots: 4,
+      primaryAdminCount: 0,
+      maxPrimaryAdmin: 1,
+      canAddPrimaryAdmin: false,
+      remainingSlots: 1,
     },
     permissions: {},
   });
@@ -53,18 +55,28 @@ function UserManagement() {
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalTargetRole, setModalTargetRole] = useState("ADMIN"); // 'ADMIN' | 'HR' | 'FINANCE'
+  const [modalTargetRole, setModalTargetRole] = useState("ADMIN"); // 'ADMIN' | 'HR' | 'FINANCE' | 'TEAM_LEAD'
   const [editUser, setEditUser] = useState(null);
+  const [departmentsList, setDepartmentsList] = useState([]);
+  const [customDepartment, setCustomDepartment] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     role: "ADMIN",
+    department: "",
     isActive: true,
   });
   const [submitting, setSubmitting] = useState(false);
 
-  // Button Hover States for perfect visual control
+  // Available Departments
+  const availableAdminDepartments = useMemo(() => {
+    const valid = departmentsList.filter((d) => d && d !== "Human Resources" && d !== "Finance");
+    if (valid.length > 0) return valid;
+    return ["Software Development", "Quality Assurance", "Marketing", "Product & Design", "Operations"];
+  }, [departmentsList]);
+
+  // Button Hover States
   const [hoveredBtn, setHoveredBtn] = useState(null);
 
   // Delete Confirm Modal
@@ -87,21 +99,38 @@ function UserManagement() {
     }
   };
 
+  const loadDepartmentsData = async () => {
+    try {
+      const depts = await getDepartments();
+      if (depts && depts.length > 0) {
+        const names = depts.map((d) => d.name).filter(Boolean);
+        setDepartmentsList(names);
+      }
+    } catch (err) {
+      console.warn("Failed to load departments:", err);
+    }
+  };
+
   useEffect(() => {
     loadData();
+    loadDepartmentsData();
   }, []);
 
   const { users = [], telemetry = {} } = data;
 
-  const coAdminCount = telemetry.coAdminCount || 0;
-  const maxCoAdmins = telemetry.maxCoAdmins || 4;
-  const remainingSlots = Math.max(0, maxCoAdmins - coAdminCount);
-  const canAddAdmin = isAdmin && remainingSlots > 0;
+  const primaryAdminCount = telemetry.primaryAdminCount || (users.filter(u => u.role === "ADMIN" && !u.is_super_admin).length);
+  const maxPrimaryAdmin = 1;
+  const remainingSlots = Math.max(0, maxPrimaryAdmin - primaryAdminCount);
+  const canAddPrimaryAdmin = isSuperAdmin && remainingSlots > 0;
+  const canAddAdmin = canAddPrimaryAdmin;
+  const coAdminCount = primaryAdminCount;
+  const maxCoAdmins = maxPrimaryAdmin;
 
   // Filtered Users
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
       if (activeTab === "ADMIN" && u.role !== "ADMIN") return false;
+      if (activeTab === "TEAM_LEAD" && u.role !== "TEAM_LEAD") return false;
       if (activeTab === "HR" && u.role !== "HR") return false;
       if (activeTab === "FINANCE" && u.role !== "FINANCE") return false;
       if (activeTab === "EMPLOYEE" && u.role !== "EMPLOYEE") return false;
@@ -123,13 +152,16 @@ function UserManagement() {
     setEditUser(null);
     setModalTargetRole(targetRole);
 
+    const defaultDept = availableAdminDepartments.length > 0 ? availableAdminDepartments[0] : "Software Development";
     setFormData({
       name: "",
       email: "",
       password: "",
       role: targetRole,
+      department: targetRole === "ADMIN" ? "Administration" : targetRole === "HR" ? "Human Resources" : (targetRole === "FINANCE" ? "Finance" : defaultDept),
       isActive: true,
     });
+    setCustomDepartment("");
     setModalOpen(true);
   };
 
@@ -142,8 +174,10 @@ function UserManagement() {
       email: target.email || "",
       password: "",
       role: target.role || "FINANCE",
+      department: target.department_name || target.department || "",
       isActive: target.is_active !== false,
     });
+    setCustomDepartment("");
     setModalOpen(true);
   };
 
@@ -170,14 +204,51 @@ function UserManagement() {
       return;
     }
 
+    const resolvedDept =
+      formData.role === "ADMIN"
+        ? "Administration"
+        : formData.role === "HR"
+        ? "Human Resources"
+        : formData.role === "FINANCE"
+        ? "Finance"
+        : formData.department === "CUSTOM"
+        ? customDepartment.trim()
+        : formData.department;
+
+    if (!resolvedDept) {
+      notification.error("Please select or enter a valid department name.");
+      return;
+    }
+
     try {
       setSubmitting(true);
+
+      // Check if custom or newly entered department exists in DB; if not, persist it!
+      const existsInDb = departmentsList.some(
+        (d) => (d || "").toLowerCase().trim() === resolvedDept.toLowerCase().trim()
+      );
+
+      if (!existsInDb) {
+        try {
+          await createDepartment({
+            name: resolvedDept,
+            description: "Provisioned department during user role allocation",
+            isActive: true,
+          });
+          notification.success(`New Department '${resolvedDept}' registered in database!`);
+          await loadDepartmentsData();
+        } catch (deptErr) {
+          console.warn("Could not insert custom department into DB:", deptErr.message);
+        }
+      }
 
       if (editUser) {
         // Update existing user
         await updateUserAccount(editUser.id, {
           name: formData.name.trim(),
           role: formData.role,
+          department: resolvedDept,
+          departmentName: resolvedDept,
           isActive: formData.isActive,
         });
         notification.success(`Account for ${formData.name} updated successfully!`);
@@ -188,11 +259,14 @@ function UserManagement() {
           email: formData.email.trim(),
           password: formData.password || undefined,
           role: formData.role,
+          department: resolvedDept,
+          departmentName: resolvedDept,
         });
-        notification.success(`${formData.role} account for ${formData.name} created & authenticated in database!`);
+        notification.success(`${formData.role} account (${resolvedDept}) for ${formData.name} created & authenticated!`);
       }
 
       setModalOpen(false);
+      setCustomDepartment("");
       await loadData();
     } catch (err) {
       notification.error(err.message || "Operation failed");
@@ -260,6 +334,28 @@ function UserManagement() {
         >
           <ShieldAlert size={12} />
           ADMINISTRATOR
+        </span>
+      );
+    }
+
+    if (u.role === "TEAM_LEAD") {
+      return (
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "5px",
+            padding: "4px 10px",
+            borderRadius: "14px",
+            backgroundColor: "#FFF0F7",
+            color: "#DB2777",
+            border: "1px solid #FBCFE8",
+            fontSize: "11px",
+            fontWeight: "700",
+          }}
+        >
+          <ShieldCheck size={12} />
+          TEAM LEAD
         </span>
       );
     }
@@ -343,14 +439,26 @@ function UserManagement() {
   const getModalRoleMeta = () => {
     if (modalTargetRole === "ADMIN") {
       return {
-        title: editUser ? "Edit Administrator Account" : (isSuperAdmin ? "Provision Secondary Administrator Account" : "Provision Administrator Account"),
-        subtitle: "Assign secondary administrative access (up to 4 co-admins)",
-        roleLabel: isSuperAdmin ? "SECONDARY ADMINISTRATOR (Co-Admin)" : "ADMINISTRATOR (Co-Admin)",
+        title: editUser ? "Edit Primary Administrator Account" : "Provision Primary Administrator Account",
+        subtitle: "Assign Primary Administrative access for system operations (Strict 1 Primary Admin limit)",
+        roleLabel: "PRIMARY ADMINISTRATOR (System Operations)",
         icon: ShieldCheck,
         badgeBg: "#FFF0F7",
         badgeBorder: "#FCE7F3",
         badgeColor: "#DB2777",
         defaultPasswordHint: "Admin@123",
+      };
+    }
+    if (modalTargetRole === "TEAM_LEAD") {
+      return {
+        title: editUser ? "Edit Department Team Lead" : "Provision Department Team Lead",
+        subtitle: "Assign Team Lead to manage department staff, attendance, and leave approvals",
+        roleLabel: "DEPARTMENT TEAM LEAD (Department Head)",
+        icon: ShieldCheck,
+        badgeBg: "#FFF0F7",
+        badgeBorder: "#FBCFE8",
+        badgeColor: "#DB2777",
+        defaultPasswordHint: "TeamLead@123",
       };
     }
     if (modalTargetRole === "HR") {
@@ -363,6 +471,18 @@ function UserManagement() {
         badgeBorder: "#DBEAFE",
         badgeColor: "#2563EB",
         defaultPasswordHint: "HR@123",
+      };
+    }
+    if (modalTargetRole === "EMPLOYEE") {
+      return {
+        title: editUser ? "Edit Employee Account" : "Provision Employee Account",
+        subtitle: "Manage staff profile, status, and department assignment",
+        roleLabel: "EMPLOYEE (Staff Member)",
+        icon: User,
+        badgeBg: "#F8FAFC",
+        badgeBorder: "#E2E8F0",
+        badgeColor: "#475569",
+        defaultPasswordHint: "Employee@123",
       };
     }
     return {
@@ -387,7 +507,7 @@ function UserManagement() {
         <div>
           <p className="section-label">ENTERPRISE GOVERNANCE</p>
           <h1 style={{ margin: "4px 0 6px 0", fontSize: "26px", fontWeight: "800", color: "#0F172A" }}>
-            Team & Role Management
+            Roles & Team Users
           </h1>
           <p style={{ margin: 0, color: "#64748B", fontSize: "14px", lineHeight: "1.5" }}>
             Provision enterprise administrators, configure HR & Finance teams, and manage permission hierarchies.
@@ -396,8 +516,8 @@ function UserManagement() {
 
         {/* UNIFIED EXECUTIVE ACTION BUTTONS */}
         <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
-          {isSuperAdmin ? (
-            /* SUPER ADMIN: EXCLUSIVELY CAN PROVISION SECONDARY ADMINISTRATORS */
+          {isSuperAdmin && (
+            /* SUPER ADMIN: EXCLUSIVELY CAN PROVISION PRIMARY ADMINISTRATOR */
             <button
               type="button"
               onClick={() => handleOpenCreateForRole("ADMIN")}
@@ -412,13 +532,13 @@ function UserManagement() {
                 backgroundColor: !canAddAdmin
                   ? "#F8FAFC"
                   : hoveredBtn === "ADMIN"
-                  ? "#BE185D"
-                  : "#FFF0F7",
+                    ? "#BE185D"
+                    : "#FFF0F7",
                 color: !canAddAdmin
                   ? "#94A3B8"
                   : hoveredBtn === "ADMIN"
-                  ? "#FFFFFF"
-                  : "#BE185D",
+                    ? "#FFFFFF"
+                    : "#BE185D",
                 fontSize: "13px",
                 fontWeight: "700",
                 display: "inline-flex",
@@ -429,258 +549,130 @@ function UserManagement() {
                 boxShadow: canAddAdmin && hoveredBtn === "ADMIN" ? "0 4px 12px rgba(190, 24, 93, 0.25)" : "none",
                 transform: canAddAdmin && hoveredBtn === "ADMIN" ? "translateY(-1px)" : "none",
               }}
-              title={canAddAdmin ? "Provision Secondary Administrator Account (up to 4 co-admins)" : "Administrator Capacity Reached (4/4)"}
+              title={canAddAdmin ? "Provision Primary Administrator Account (1 Admin Max)" : "Primary Administrator Capacity Reached (1/1)"}
             >
               <ShieldCheck size={16} color={!canAddAdmin ? "#94A3B8" : hoveredBtn === "ADMIN" ? "#FFFFFF" : "#BE185D"} />
-              <span>+ Add Secondary Admin ({coAdminCount}/4)</span>
+              <span>+ Add Primary Admin ({coAdminCount}/{maxCoAdmins})</span>
             </button>
-          ) : (
-            /* SECONDARY ADMIN / HR: CAN ADD HR AND FINANCE (OR CO-ADMIN IF QUOTA PERMITS) */
+          )}
+
+          {isPrimaryAdmin && (
             <>
-              {isAdmin && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenCreateForRole("ADMIN")}
-                    disabled={!canAddAdmin}
-                    onMouseEnter={() => setHoveredBtn("ADMIN")}
-                    onMouseLeave={() => setHoveredBtn(null)}
-                    style={{
-                      height: "38px",
-                      padding: "0 18px",
-                      borderRadius: "10px",
-                      border: "1.5px solid #F3D3E7",
-                      backgroundColor: !canAddAdmin
-                        ? "#F8FAFC"
-                        : hoveredBtn === "ADMIN"
-                        ? "#BE185D"
-                        : "#FFF0F7",
-                      color: !canAddAdmin
-                        ? "#94A3B8"
-                        : hoveredBtn === "ADMIN"
-                        ? "#FFFFFF"
-                        : "#BE185D",
-                      fontSize: "13px",
-                      fontWeight: "700",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "7px",
-                      cursor: canAddAdmin ? "pointer" : "not-allowed",
-                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                      boxShadow: canAddAdmin && hoveredBtn === "ADMIN" ? "0 4px 12px rgba(190, 24, 93, 0.25)" : "none",
-                      transform: canAddAdmin && hoveredBtn === "ADMIN" ? "translateY(-1px)" : "none",
-                    }}
-                    title={canAddAdmin ? "Provision Administrator Account (up to 4 co-admins)" : "Administrator Capacity Reached (4/4)"}
-                  >
-                    <ShieldCheck size={16} color={!canAddAdmin ? "#94A3B8" : hoveredBtn === "ADMIN" ? "#FFFFFF" : "#BE185D"} />
-                    <span>+ Add Administrator ({coAdminCount}/4)</span>
-                  </button>
+              <button
+                type="button"
+                onClick={() => handleOpenCreateForRole("TEAM_LEAD")}
+                onMouseEnter={() => setHoveredBtn("TEAM_LEAD")}
+                onMouseLeave={() => setHoveredBtn(null)}
+                style={{
+                  height: "38px",
+                  padding: "0 18px",
+                  borderRadius: "10px",
+                  border: "1.5px solid #FBCFE8",
+                  backgroundColor: hoveredBtn === "TEAM_LEAD" ? "#DB2777" : "#FFF0F7",
+                  color: hoveredBtn === "TEAM_LEAD" ? "#FFFFFF" : "#DB2777",
+                  fontSize: "13px",
+                  fontWeight: "700",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "7px",
+                  cursor: "pointer",
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                  boxShadow: hoveredBtn === "TEAM_LEAD" ? "0 4px 12px rgba(219, 39, 119, 0.25)" : "none",
+                  transform: hoveredBtn === "TEAM_LEAD" ? "translateY(-1px)" : "none",
+                }}
+                title="Provision Department Team Lead Account"
+              >
+                <ShieldCheck size={16} color={hoveredBtn === "TEAM_LEAD" ? "#FFFFFF" : "#DB2777"} />
+                <span>+ Add Team Lead</span>
+              </button>
 
-                  <button
-                    type="button"
-                    onClick={() => handleOpenCreateForRole("HR")}
-                    onMouseEnter={() => setHoveredBtn("HR")}
-                    onMouseLeave={() => setHoveredBtn(null)}
-                    style={{
-                      height: "38px",
-                      padding: "0 18px",
-                      borderRadius: "10px",
-                      border: "1.5px solid #DBEAFE",
-                      backgroundColor: hoveredBtn === "HR" ? "#1D4ED8" : "#EFF6FF",
-                      color: hoveredBtn === "HR" ? "#FFFFFF" : "#1D4ED8",
-                      fontSize: "13px",
-                      fontWeight: "700",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "7px",
-                      cursor: "pointer",
-                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                      boxShadow: hoveredBtn === "HR" ? "0 4px 12px rgba(29, 78, 216, 0.25)" : "none",
-                      transform: hoveredBtn === "HR" ? "translateY(-1px)" : "none",
-                    }}
-                    title="Provision HR Manager Account"
-                  >
-                    <Building size={16} color={hoveredBtn === "HR" ? "#FFFFFF" : "#1D4ED8"} />
-                    <span>+ Add HR Member</span>
-                  </button>
-                </>
-              )}
+              <button
+                type="button"
+                onClick={() => handleOpenCreateForRole("HR")}
+                onMouseEnter={() => setHoveredBtn("HR")}
+                onMouseLeave={() => setHoveredBtn(null)}
+                style={{
+                  height: "38px",
+                  padding: "0 18px",
+                  borderRadius: "10px",
+                  border: "1.5px solid #DBEAFE",
+                  backgroundColor: hoveredBtn === "HR" ? "#1D4ED8" : "#EFF6FF",
+                  color: hoveredBtn === "HR" ? "#FFFFFF" : "#1D4ED8",
+                  fontSize: "13px",
+                  fontWeight: "700",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "7px",
+                  cursor: "pointer",
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                  boxShadow: hoveredBtn === "HR" ? "0 4px 12px rgba(29, 78, 216, 0.25)" : "none",
+                  transform: hoveredBtn === "HR" ? "translateY(-1px)" : "none",
+                }}
+                title="Provision HR Manager Account"
+              >
+                <Building size={16} color={hoveredBtn === "HR" ? "#FFFFFF" : "#1D4ED8"} />
+                <span>+ Add HR Member</span>
+              </button>
 
-              {(isAdmin || isHR) && (
-                <button
-                  type="button"
-                  onClick={() => handleOpenCreateForRole("FINANCE")}
-                  onMouseEnter={() => setHoveredBtn("FINANCE")}
-                  onMouseLeave={() => setHoveredBtn(null)}
-                  style={{
-                    height: "38px",
-                    padding: "0 18px",
-                    borderRadius: "10px",
-                    border: "1.5px solid #A7F3D0",
-                    backgroundColor: hoveredBtn === "FINANCE" ? "#047857" : "#ECFDF5",
-                    color: hoveredBtn === "FINANCE" ? "#FFFFFF" : "#047857",
-                    fontSize: "13px",
-                    fontWeight: "700",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "7px",
-                    cursor: "pointer",
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    boxShadow: hoveredBtn === "FINANCE" ? "0 4px 12px rgba(4, 120, 87, 0.25)" : "none",
-                    transform: hoveredBtn === "FINANCE" ? "translateY(-1px)" : "none",
-                  }}
-                  title="Provision Finance Team Member Account"
-                >
-                  <WalletCards size={16} color={hoveredBtn === "FINANCE" ? "#FFFFFF" : "#047857"} />
-                  <span>+ Add Finance Member</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => handleOpenCreateForRole("FINANCE")}
+                onMouseEnter={() => setHoveredBtn("FINANCE")}
+                onMouseLeave={() => setHoveredBtn(null)}
+                style={{
+                  height: "38px",
+                  padding: "0 18px",
+                  borderRadius: "10px",
+                  border: "1.5px solid #A7F3D0",
+                  backgroundColor: hoveredBtn === "FINANCE" ? "#047857" : "#ECFDF5",
+                  color: hoveredBtn === "FINANCE" ? "#FFFFFF" : "#047857",
+                  fontSize: "13px",
+                  fontWeight: "700",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "7px",
+                  cursor: "pointer",
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                  boxShadow: hoveredBtn === "FINANCE" ? "0 4px 12px rgba(4, 120, 87, 0.25)" : "none",
+                  transform: hoveredBtn === "FINANCE" ? "translateY(-1px)" : "none",
+                }}
+                title="Provision Finance Team Member Account"
+              >
+                <WalletCards size={16} color={hoveredBtn === "FINANCE" ? "#FFFFFF" : "#047857"} />
+                <span>+ Add Finance Member</span>
+              </button>
             </>
           )}
-        </div>
-      </div>
 
-      {/* TELEMETRY & CAPACITY CARDS */}
-      <div className="stats-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" }}>
-        {/* ADMIN CAPACITY CARD */}
-        <div
-          className="dashboard-card"
-          style={{
-            background: "linear-gradient(135deg, #FFFFFF 0%, #FFF8FC 100%)",
-            border: "1px solid #F3D3E7",
-            padding: "20px",
-            borderRadius: "14px",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
-            <div>
-              <span style={{ fontSize: "11px", fontWeight: "800", color: "#DB2777", letterSpacing: "0.5px" }}>
-                ADMINISTRATOR CAPACITY
-              </span>
-              <h3 style={{ margin: "4px 0 0 0", fontSize: "22px", color: "#0F172A", fontWeight: "800" }}>
-                {coAdminCount} / {maxCoAdmins} Assigned
-              </h3>
-            </div>
-            <div
+          {isHR && !isPrimaryAdmin && (
+            <button
+              type="button"
+              onClick={() => handleOpenCreateForRole("TEAM_LEAD")}
+              onMouseEnter={() => setHoveredBtn("TEAM_LEAD")}
+              onMouseLeave={() => setHoveredBtn(null)}
               style={{
-                width: "38px",
                 height: "38px",
+                padding: "0 18px",
                 borderRadius: "10px",
-                background: "#FFF0F7",
-                color: "#DB2777",
-                display: "flex",
+                border: "1.5px solid #FBCFE8",
+                backgroundColor: hoveredBtn === "TEAM_LEAD" ? "#DB2777" : "#FFF0F7",
+                color: hoveredBtn === "TEAM_LEAD" ? "#FFFFFF" : "#DB2777",
+                fontSize: "13px",
+                fontWeight: "700",
+                display: "inline-flex",
                 alignItems: "center",
-                justifyContent: "center",
+                gap: "7px",
+                cursor: "pointer",
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                boxShadow: hoveredBtn === "TEAM_LEAD" ? "0 4px 12px rgba(219, 39, 119, 0.25)" : "none",
+                transform: hoveredBtn === "TEAM_LEAD" ? "translateY(-1px)" : "none",
               }}
+              title="Provision Department Team Lead Account"
             >
-              <ShieldCheck size={20} />
-            </div>
-          </div>
-
-          {/* PROGRESS SLOTS */}
-          <div style={{ display: "flex", gap: "6px", margin: "12px 0 10px" }}>
-            {[1, 2, 3, 4].map((slot) => {
-              const isFilled = slot <= coAdminCount;
-              return (
-                <div
-                  key={slot}
-                  style={{
-                    flex: 1,
-                    height: "7px",
-                    borderRadius: "4px",
-                    backgroundColor: isFilled ? "#DB2777" : "#FCE7F3",
-                    transition: "all 0.3s ease",
-                  }}
-                  title={isFilled ? `Slot ${slot}: Assigned` : `Slot ${slot}: Available`}
-                />
-              );
-            })}
-          </div>
-          <p style={{ margin: 0, fontSize: "12.5px", color: "#64748B" }}>
-            {remainingSlots > 0
-              ? `${remainingSlots} secondary administrator slot(s) available for delegation.`
-              : "Maximum capacity reached (4 secondary admins assigned)."}
-          </p>
-        </div>
-
-        {/* ROOT SUPER ADMIN PROTECTION */}
-        <div
-          className="dashboard-card"
-          style={{
-            background: "#FFFFFF",
-            border: "1px solid #E2E8F0",
-            padding: "20px",
-            borderRadius: "14px",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
-            <div>
-              <span style={{ fontSize: "11px", fontWeight: "800", color: "#059669", letterSpacing: "0.5px" }}>
-                GOVERNANCE & SECURITY
-              </span>
-              <h3 style={{ margin: "4px 0 0 0", fontSize: "18px", color: "#0F172A", fontWeight: "800" }}>
-                Super Admin Protected
-              </h3>
-            </div>
-            <div
-              style={{
-                width: "38px",
-                height: "38px",
-                borderRadius: "10px",
-                background: "#ECFDF5",
-                color: "#059669",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Lock size={20} />
-            </div>
-          </div>
-          <p style={{ margin: 0, fontSize: "12.5px", color: "#64748B", lineHeight: "1.45" }}>
-            The root developer administrator account is permanent and cannot be deleted or demoted.
-          </p>
-        </div>
-
-        {/* CARD 3: ROLE AUTHORITY & PROVISIONING DELEGATION */}
-        <div
-          className="dashboard-card"
-          style={{
-            background: "#FFFFFF",
-            border: "1px solid #E2E8F0",
-            padding: "20px",
-            borderRadius: "14px",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
-            <div>
-              <span style={{ fontSize: "11px", fontWeight: "800", color: "#2563EB", letterSpacing: "0.5px" }}>
-                {isSuperAdmin ? "ADMINISTRATIVE PRIVILEGES" : "DEPARTMENT DELEGATION"}
-              </span>
-              <h3 style={{ margin: "4px 0 0 0", fontSize: "18px", color: "#0F172A", fontWeight: "800" }}>
-                {isSuperAdmin ? "Total Office Management" : "HR & Finance Provisioning"}
-              </h3>
-            </div>
-            <div
-              style={{
-                width: "38px",
-                height: "38px",
-                borderRadius: "10px",
-                background: "#EFF6FF",
-                color: "#2563EB",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {isSuperAdmin ? <ShieldCheck size={20} /> : <Users size={20} />}
-            </div>
-          </div>
-          <p style={{ margin: 0, fontSize: "12.5px", color: "#64748B", lineHeight: "1.45" }}>
-            {isSuperAdmin
-              ? "Provisioned Secondary Administrators manage all employees, departments, HR & Finance teams, payroll, and corporate operations."
-              : "HR managers have dedicated authority to provision, update, and manage Finance team members."}
-          </p>
+              <ShieldCheck size={16} color={hoveredBtn === "TEAM_LEAD" ? "#FFFFFF" : "#DB2777"} />
+              <span>+ Add Team Lead</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -703,6 +695,7 @@ function UserManagement() {
             {[
               { id: "ALL", label: "All Accounts" },
               { id: "ADMIN", label: `Administrators (${coAdminCount + 1})` },
+              { id: "TEAM_LEAD", label: "Team Leads" },
               { id: "HR", label: "HR Department" },
               { id: "FINANCE", label: "Finance Team" },
               { id: "EMPLOYEE", label: "Employees" },
@@ -758,6 +751,7 @@ function UserManagement() {
               <tr style={{ backgroundColor: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
                 <th style={{ padding: "14px 20px", fontSize: "12px", color: "#64748B", fontWeight: "700" }}>USER DETAILS</th>
                 <th style={{ padding: "14px 20px", fontSize: "12px", color: "#64748B", fontWeight: "700" }}>ROLE & AUTHORITY</th>
+                <th style={{ padding: "14px 20px", fontSize: "12px", color: "#64748B", fontWeight: "700" }}>ASSIGNED DEPARTMENT</th>
                 <th style={{ padding: "14px 20px", fontSize: "12px", color: "#64748B", fontWeight: "700" }}>STATUS</th>
                 <th style={{ padding: "14px 20px", fontSize: "12px", color: "#64748B", fontWeight: "700", textAlign: "right" }}>ACTIONS</th>
               </tr>
@@ -765,36 +759,53 @@ function UserManagement() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={4} style={{ padding: "34px", textAlign: "center", color: "#94A3B8" }}>
+                  <td colSpan={5} style={{ padding: "34px", textAlign: "center", color: "#94A3B8" }}>
                     Loading user directory...
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} style={{ padding: "34px", textAlign: "center", color: "#94A3B8" }}>
+                  <td colSpan={5} style={{ padding: "34px", textAlign: "center", color: "#94A3B8" }}>
                     No users found matching the selected filters.
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map((u) => {
-                  const isSuper = Boolean(u.is_super_admin) || (u.email || "").toLowerCase() === "omraikar2128@gmail.com";
+                  const isTargetSuper = Boolean(u.is_super_admin) || (u.email || "").toLowerCase().trim() === "omraikar2128@gmail.com" || (u.email || "").toLowerCase().trim() === "omraikar2128@gamil.com";
+                  const isTargetAdmin = u.role === "ADMIN";
                   const isSelf = u.id === currentUserId;
 
-                  const canEditThisUser =
-                    isAdmin ||
-                    (isHR && u.role === "FINANCE");
+                  const canEditThisUser = isSuperAdmin
+                    ? !isTargetSuper
+                    : isTargetSuper || isTargetAdmin
+                    ? false
+                    : isPrimaryAdmin
+                    ? true
+                    : isHR
+                    ? (u.role === "EMPLOYEE" || u.role === "TEAM_LEAD")
+                    : false;
 
                   const canDeleteThisUser =
-                    !isSuper &&
+                    !isTargetSuper &&
                     !isSelf &&
-                    (isAdmin || (isHR && u.role === "FINANCE"));
+                    (isSuperAdmin
+                      ? isTargetAdmin
+                      : isPrimaryAdmin
+                      ? !isTargetAdmin
+                      : isHR
+                      ? (u.role === "EMPLOYEE" || u.role === "TEAM_LEAD")
+                      : false);
+
+                  const displayDeptName = isTargetSuper
+                    ? "All Departments (Super Admin)"
+                    : u.department_name || u.department || (u.role === "HR" ? "Human Resources" : u.role === "FINANCE" ? "Finance" : "Administration");
 
                   return (
                     <tr
                       key={u.id}
                       style={{
                         borderBottom: "1px solid #F1F5F9",
-                        backgroundColor: isSuper ? "rgba(219, 39, 119, 0.02)" : "#FFFFFF",
+                        backgroundColor: isTargetSuper ? "rgba(219, 39, 119, 0.02)" : "#FFFFFF",
                         transition: "background-color 0.15s ease",
                       }}
                     >
@@ -806,10 +817,10 @@ function UserManagement() {
                               width: "38px",
                               height: "38px",
                               borderRadius: "50%",
-                              background: isSuper
+                              background: isTargetSuper
                                 ? "linear-gradient(135deg, #DB2777 0%, #BE185D 100%)"
                                 : "#F1F5F9",
-                              color: isSuper ? "#FFFFFF" : "#475569",
+                              color: isTargetSuper ? "#FFFFFF" : "#475569",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
@@ -839,6 +850,45 @@ function UserManagement() {
                         {getRoleBadge(u)}
                       </td>
 
+                      {/* ASSIGNED DEPARTMENT */}
+                      <td style={{ padding: "14px 20px" }}>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            padding: "4px 10px",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            fontWeight: "700",
+                            backgroundColor: isTargetSuper
+                              ? "#FDF2F8"
+                              : u.role === "HR"
+                              ? "#EFF6FF"
+                              : u.role === "FINANCE"
+                              ? "#ECFDF5"
+                              : "#F8FAFC",
+                            color: isTargetSuper
+                              ? "#BE185D"
+                              : u.role === "HR"
+                              ? "#1D4ED8"
+                              : u.role === "FINANCE"
+                              ? "#047857"
+                              : "#334155",
+                            border: isTargetSuper
+                              ? "1px solid #FBCFE8"
+                              : u.role === "HR"
+                              ? "1px solid #BFDBFE"
+                              : u.role === "FINANCE"
+                              ? "1px solid #A7F3D0"
+                              : "1px solid #E2E8F0",
+                          }}
+                        >
+                          <Building size={13} />
+                          {displayDeptName}
+                        </span>
+                      </td>
+
                       {/* STATUS */}
                       <td style={{ padding: "14px 20px" }}>
                         <span
@@ -866,7 +916,7 @@ function UserManagement() {
                       {/* ACTIONS */}
                       <td style={{ padding: "14px 20px", textAlign: "right" }}>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                          {isSuper ? (
+                          {isTargetSuper ? (
                             <span
                               style={{
                                 display: "inline-flex",
@@ -880,10 +930,29 @@ function UserManagement() {
                                 fontSize: "11.5px",
                                 fontWeight: "700",
                               }}
-                              title="Primary administrator is permanent and cannot be removed"
+                              title="Super administrator account is permanent"
                             >
                               <Lock size={13} />
-                              Permanent
+                              Super Admin
+                            </span>
+                          ) : isTargetAdmin && !isSuperAdmin ? (
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "5px",
+                                padding: "6px 14px",
+                                borderRadius: "8px",
+                                backgroundColor: "#FFF0F7",
+                                border: "1px solid #FBCFE8",
+                                color: "#DB2777",
+                                fontSize: "11.5px",
+                                fontWeight: "700",
+                              }}
+                              title="Primary Admin is the executive head (Managed by Super Admin)"
+                            >
+                              <ShieldCheck size={13} />
+                              Head Admin
                             </span>
                           ) : (
                             <>
@@ -971,25 +1040,28 @@ function UserManagement() {
           style={{
             position: "fixed",
             inset: 0,
-            backgroundColor: "rgba(15, 23, 42, 0.6)",
-            backdropFilter: "blur(4px)",
+            backgroundColor: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(6px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 1000,
-            padding: "20px",
+            padding: "16px",
+            boxSizing: "border-box",
           }}
           onClick={() => setModalOpen(false)}
         >
           <div
             style={{
               backgroundColor: "#FFFFFF",
-              borderRadius: "16px",
+              borderRadius: "18px",
               width: "100%",
-              maxWidth: "500px",
-              border: "1px solid #F3D3E7",
-              boxShadow: "0 20px 45px rgba(0, 0, 0, 0.2)",
-              overflow: "hidden",
+              maxWidth: "490px",
+              maxHeight: "92vh",
+              overflowY: "auto",
+              border: "1px solid #E2E8F0",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.28)",
+              boxSizing: "border-box",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -997,7 +1069,7 @@ function UserManagement() {
             <div
               style={{
                 padding: "20px 24px",
-                borderBottom: "1px solid #FCE7F3",
+                borderBottom: "1px solid #F1F5F9",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -1007,21 +1079,22 @@ function UserManagement() {
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <div
                   style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "10px",
+                    width: "42px",
+                    height: "42px",
+                    borderRadius: "12px",
                     background: modalMeta.badgeBg,
-                    border: `1px solid ${modalMeta.badgeBorder}`,
+                    border: `1.5px solid ${modalMeta.badgeBorder}`,
                     color: modalMeta.badgeColor,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
+                    flexShrink: 0,
                   }}
                 >
                   <ModalRoleIcon size={20} />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: "17px", color: "#0F172A", fontWeight: "800" }}>
+                  <h3 style={{ margin: 0, fontSize: "16.5px", color: "#0F172A", fontWeight: "800" }}>
                     {modalMeta.title}
                   </h3>
                   <span style={{ fontSize: "12px", color: "#64748B" }}>
@@ -1035,25 +1108,27 @@ function UserManagement() {
                 onClick={() => setModalOpen(false)}
                 style={{
                   border: "none",
-                  background: "#FFF0F7",
+                  background: "#F1F5F9",
                   color: "#64748B",
-                  width: "30px",
-                  height: "30px",
+                  width: "32px",
+                  height: "32px",
                   borderRadius: "50%",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  flexShrink: 0,
+                  transition: "background-color 0.15s ease",
                 }}
               >
                 <X size={16} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <form onSubmit={handleSubmit} style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
               {/* ASSIGNED ROLE (LOCKED & PRESELECTED TO THE CLICKED BUTTON) */}
               <div>
-                <label style={{ display: "block", fontSize: "12.5px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>
+                <label style={{ display: "block", fontSize: "11.5px", fontWeight: "800", color: "#475569", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                   Assigned Authority & Role
                 </label>
                 <div
@@ -1062,9 +1137,9 @@ function UserManagement() {
                     alignItems: "center",
                     gap: "8px",
                     padding: "10px 14px",
-                    borderRadius: "8px",
+                    borderRadius: "10px",
                     backgroundColor: modalMeta.badgeBg,
-                    border: `1px solid ${modalMeta.badgeBorder}`,
+                    border: `1.5px solid ${modalMeta.badgeBorder}`,
                     color: modalMeta.badgeColor,
                     fontSize: "13px",
                     fontWeight: "800",
@@ -1077,22 +1152,24 @@ function UserManagement() {
 
               {/* NAME */}
               <div>
-                <label style={{ display: "block", fontSize: "12.5px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>
+                <label style={{ display: "block", fontSize: "11.5px", fontWeight: "800", color: "#475569", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                   Full Name *
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Sarah Jenkins"
+                  placeholder="e.g. Swapnil Patil"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   style={{
                     width: "100%",
-                    padding: "10px 14px",
-                    borderRadius: "8px",
-                    border: "1px solid #CBD5E1",
+                    height: "42px",
+                    padding: "0 14px",
+                    borderRadius: "10px",
+                    border: "1.5px solid #CBD5E1",
                     fontSize: "13.5px",
                     outline: "none",
                     boxSizing: "border-box",
+                    backgroundColor: "#FFFFFF",
                   }}
                   required
                 />
@@ -1100,20 +1177,21 @@ function UserManagement() {
 
               {/* EMAIL */}
               <div>
-                <label style={{ display: "block", fontSize: "12.5px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>
+                <label style={{ display: "block", fontSize: "11.5px", fontWeight: "800", color: "#475569", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                   Email Address *
                 </label>
                 <input
                   type="email"
-                  placeholder="e.g. employee@example.com"
+                  placeholder="e.g. swapnil@example.com"
                   value={formData.email}
                   disabled={!!editUser}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   style={{
                     width: "100%",
-                    padding: "10px 14px",
-                    borderRadius: "8px",
-                    border: "1px solid #CBD5E1",
+                    height: "42px",
+                    padding: "0 14px",
+                    borderRadius: "10px",
+                    border: "1.5px solid #CBD5E1",
                     fontSize: "13.5px",
                     outline: "none",
                     backgroundColor: editUser ? "#F1F5F9" : "#FFFFFF",
@@ -1123,10 +1201,128 @@ function UserManagement() {
                 />
               </div>
 
+              {/* ASSIGNED DEPARTMENT */}
+              <div>
+                <label style={{ display: "block", fontSize: "11.5px", fontWeight: "800", color: "#475569", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  Assigned Department *
+                </label>
+                {formData.role === "ADMIN" ? (
+                  <input
+                    type="text"
+                    disabled
+                    value="Administration"
+                    style={{
+                      width: "100%",
+                      height: "42px",
+                      padding: "0 14px",
+                      borderRadius: "10px",
+                      border: "1.5px solid #CBD5E1",
+                      fontSize: "13.5px",
+                      backgroundColor: "#F1F5F9",
+                      fontWeight: "700",
+                      color: "#BE185D",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                ) : formData.role === "HR" ? (
+                  <input
+                    type="text"
+                    disabled
+                    value="Human Resources"
+                    style={{
+                      width: "100%",
+                      height: "42px",
+                      padding: "0 14px",
+                      borderRadius: "10px",
+                      border: "1.5px solid #CBD5E1",
+                      fontSize: "13.5px",
+                      backgroundColor: "#F1F5F9",
+                      fontWeight: "700",
+                      color: "#2563EB",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                ) : formData.role === "FINANCE" ? (
+                  <input
+                    type="text"
+                    disabled
+                    value="Finance"
+                    style={{
+                      width: "100%",
+                      height: "42px",
+                      padding: "0 14px",
+                      borderRadius: "10px",
+                      border: "1.5px solid #CBD5E1",
+                      fontSize: "13.5px",
+                      backgroundColor: "#F1F5F9",
+                      fontWeight: "700",
+                      color: "#059669",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                ) : (
+                  <>
+                    <select
+                      value={formData.department}
+                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                      style={{
+                        width: "100%",
+                        height: "42px",
+                        padding: "0 14px",
+                        borderRadius: "10px",
+                        border: "1.5px solid #CBD5E1",
+                        fontSize: "13.5px",
+                        outline: "none",
+                        backgroundColor: "#FFFFFF",
+                        boxSizing: "border-box",
+                        fontWeight: "600",
+                        color: "#0F172A",
+                      }}
+                      required
+                    >
+                      {availableAdminDepartments.map((d) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                      <option value="CUSTOM">+ Add Custom Department...</option>
+                    </select>
+
+                    {formData.department === "CUSTOM" && (
+                      <input
+                        type="text"
+                        placeholder="Enter custom department name (e.g. AI Research)"
+                        value={customDepartment}
+                        onChange={(e) => setCustomDepartment(e.target.value)}
+                        style={{
+                          width: "100%",
+                          height: "42px",
+                          marginTop: "8px",
+                          padding: "0 14px",
+                          borderRadius: "10px",
+                          border: "1.5px solid #DB2777",
+                          fontSize: "13.5px",
+                          outline: "none",
+                          boxSizing: "border-box",
+                        }}
+                        required
+                      />
+                    )}
+                  </>
+                )}
+                <p style={{ margin: "5px 0 0 0", fontSize: "11.5px", color: "#64748B", lineHeight: "1.4" }}>
+                  {formData.role === "ADMIN"
+                    ? "Primary Admin manages system-wide operations and departments."
+                    : formData.role === "TEAM_LEAD"
+                    ? "Assigns Team Lead authority over staff, attendance, and leave requests in this department."
+                    : formData.role === "HR"
+                    ? "Human Resources management and staff onboarding authority."
+                    : "Financial operations and payroll access."}
+                </p>
+              </div>
+
               {/* PASSWORD (OPTIONAL FOR NEW) */}
               {!editUser && (
                 <div>
-                  <label style={{ display: "block", fontSize: "12.5px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>
+                  <label style={{ display: "block", fontSize: "11.5px", fontWeight: "800", color: "#475569", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                     Initial Password (Optional)
                   </label>
                   <input
@@ -1136,15 +1332,16 @@ function UserManagement() {
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     style={{
                       width: "100%",
-                      padding: "10px 14px",
-                      borderRadius: "8px",
-                      border: "1px solid #CBD5E1",
+                      height: "42px",
+                      padding: "0 14px",
+                      borderRadius: "10px",
+                      border: "1.5px solid #CBD5E1",
                       fontSize: "13.5px",
                       outline: "none",
                       boxSizing: "border-box",
                     }}
                   />
-                  <p style={{ margin: "4px 0 0 0", fontSize: "11.5px", color: "#64748B" }}>
+                  <p style={{ margin: "5px 0 0 0", fontSize: "11.5px", color: "#64748B" }}>
                     User can log in immediately with this password upon database provisioning.
                   </p>
                 </div>
@@ -1153,7 +1350,7 @@ function UserManagement() {
               {/* STATUS (FOR EDIT) */}
               {editUser && !editUser.is_super_admin && editUser.id !== 1 && (
                 <div>
-                  <label style={{ display: "block", fontSize: "12.5px", fontWeight: "700", color: "#334155", marginBottom: "6px" }}>
+                  <label style={{ display: "block", fontSize: "11.5px", fontWeight: "800", color: "#475569", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                     Account Status
                   </label>
                   <select
@@ -1161,9 +1358,10 @@ function UserManagement() {
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.value === "true" })}
                     style={{
                       width: "100%",
-                      padding: "10px 14px",
-                      borderRadius: "8px",
-                      border: "1px solid #CBD5E1",
+                      height: "42px",
+                      padding: "0 14px",
+                      borderRadius: "10px",
+                      border: "1.5px solid #CBD5E1",
                       fontSize: "13.5px",
                       outline: "none",
                       backgroundColor: "#FFFFFF",
@@ -1176,18 +1374,19 @@ function UserManagement() {
                 </div>
               )}
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px", flexWrap: "wrap" }}>
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
                   style={{
-                    padding: "9px 18px",
-                    borderRadius: "8px",
-                    border: "1px solid #CBD5E1",
+                    height: "40px",
+                    padding: "0 20px",
+                    borderRadius: "10px",
+                    border: "1.5px solid #CBD5E1",
                     background: "#FFFFFF",
                     color: "#475569",
                     fontSize: "13px",
-                    fontWeight: "600",
+                    fontWeight: "700",
                     cursor: "pointer",
                   }}
                 >
@@ -1198,18 +1397,35 @@ function UserManagement() {
                   type="submit"
                   disabled={submitting}
                   style={{
-                    padding: "9px 22px",
-                    borderRadius: "8px",
+                    height: "40px",
+                    padding: "0 22px",
+                    borderRadius: "10px",
                     border: "none",
                     background: "linear-gradient(135deg, #DB2777 0%, #BE185D 100%)",
                     color: "#FFFFFF",
                     fontSize: "13px",
-                    fontWeight: "700",
+                    fontWeight: "800",
                     cursor: submitting ? "not-allowed" : "pointer",
                     boxShadow: "0 4px 14px rgba(219, 39, 119, 0.3)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
                   }}
                 >
-                  {submitting ? "Saving to DB..." : editUser ? "Update Account" : `Provision ${formData.role}`}
+                  {submitting
+                    ? "Saving to DB..."
+                    : editUser
+                    ? "Update Account"
+                    : `Provision ${
+                        formData.role === "TEAM_LEAD"
+                          ? "Team Lead"
+                          : formData.role === "HR"
+                          ? "HR Manager"
+                          : formData.role === "FINANCE"
+                          ? "Finance Member"
+                          : "Primary Admin"
+                      }`}
                 </button>
               </div>
             </form>

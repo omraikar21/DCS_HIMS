@@ -14,7 +14,7 @@ const runSeed = async () => {
     console.log("DCS-HIMS Database Seed & Init");
     console.log("==================================");
 
-    await initDatabase();
+    await initDatabase(true);
     await initSettingsTable();
     await syncAllEmployeesToUsers();
 

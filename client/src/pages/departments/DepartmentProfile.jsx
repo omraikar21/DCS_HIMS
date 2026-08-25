@@ -226,14 +226,6 @@ function DepartmentProfile() {
                             Active staff members assigned to {department.name} ({department.employeesList?.length || 0})
                         </p>
                     </div>
-
-                    <button
-                        className="primary-button"
-                        style={{ padding: "8px 16px", fontSize: "12.5px" }}
-                        onClick={() => navigate("/employees")}
-                    >
-                        Manage All Employees
-                    </button>
                 </div>
 
                 {(!department.employeesList || department.employeesList.length === 0) ? (
@@ -245,13 +237,6 @@ function DepartmentProfile() {
                         <p style={{ fontSize: "12.5px", color: "#64748B", margin: "0 0 14px" }}>
                             There are currently no staff members linked to this department.
                         </p>
-                        <button
-                            className="primary-button"
-                            style={{ padding: "8px 14px", fontSize: "12px" }}
-                            onClick={() => navigate("/employees")}
-                        >
-                            Assign Employees
-                        </button>
                     </div>
                 ) : (
                     <div style={{ overflowX: "auto" }}>
@@ -351,7 +336,18 @@ function DepartmentProfile() {
                                             <td style={{ padding: "12px 14px", textAlign: "right" }}>
                                                 <button
                                                     title="View Employee Profile"
-                                                    onClick={() => navigate("/employees")}
+                                                    onClick={() =>
+                                                        navigate(
+                                                            `/employees/${emp.id || emp.databaseId || emp.employee_code}`,
+                                                            {
+                                                                state: {
+                                                                    fromDepartment: true,
+                                                                    departmentId: id || department.databaseId || department.id,
+                                                                    departmentName: department.name,
+                                                                },
+                                                            }
+                                                        )
+                                                    }
                                                     style={{
                                                         background: "#F8FAFC",
                                                         border: "1px solid #CBD5E1",

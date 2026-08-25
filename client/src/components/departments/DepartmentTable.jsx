@@ -1,12 +1,14 @@
 import {
   Eye,
   Pencil,
+  Trash2,
 } from "lucide-react";
 
 function DepartmentTable({
   departments,
   onView,
   onEdit,
+  onDelete,
 }) {
   return (
     <div className="department-table-wrapper">
@@ -22,11 +24,11 @@ function DepartmentTable({
             </th>
 
             <th>
-              Employees
+              Allocated Admin
             </th>
 
             <th>
-              Location
+              Employees
             </th>
 
             <th>
@@ -92,6 +94,26 @@ function DepartmentTable({
 
 
                   <td>
+                    <span
+                      style={{
+                        fontSize: "12.5px",
+                        fontWeight: "700",
+                        color: department.allocatedAdmin !== "Unassigned" ? "#BE185D" : "#64748B",
+                        backgroundColor: department.allocatedAdmin !== "Unassigned" ? "#FFF0F7" : "#F8FAFC",
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        border: department.allocatedAdmin !== "Unassigned" ? "1px solid #F3D3E7" : "1px solid #E2E8F0",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      {department.allocatedAdmin}
+                    </span>
+                  </td>
+
+
+                  <td>
 
                     <span className="employee-count">
 
@@ -99,12 +121,6 @@ function DepartmentTable({
 
                     </span>
 
-                  </td>
-
-
-
-                  <td>
-                    {department.location}
                   </td>
 
 
@@ -127,7 +143,6 @@ function DepartmentTable({
                   <td>
 
                     <div className="employee-actions">
-
                       <button
                         title="View department"
                         onClick={() =>
@@ -146,6 +161,15 @@ function DepartmentTable({
                         <Pencil size={16} />
                       </button>
 
+                      <button
+                        title="Delete department"
+                        onClick={() =>
+                          onDelete && onDelete(department)
+                        }
+                        style={{ color: "#E11D48" }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
 
                   </td>

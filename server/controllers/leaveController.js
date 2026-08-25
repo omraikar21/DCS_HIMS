@@ -127,20 +127,17 @@ const create =
 
     try {
 
-      const {
-        employeeId,
-        leaveType,
-        startDate,
-        endDate,
-        reason,
-      } = req.body;
-
+      const rawEmployeeId = req.body.employeeId || req.body.employee_id || req.user?.employee_id || req.user?.id;
+      const rawLeaveType = (req.body.leaveType || req.body.leave_type || "").toUpperCase().trim();
+      const rawStartDate = req.body.startDate || req.body.start_date;
+      const rawEndDate = req.body.endDate || req.body.end_date;
+      const rawReason = req.body.reason || "";
 
       if (
-        !isRequired(employeeId) ||
-        !isRequired(leaveType) ||
-        !isRequired(startDate) ||
-        !isRequired(endDate)
+        !isRequired(rawEmployeeId) ||
+        !isRequired(rawLeaveType) ||
+        !isRequired(rawStartDate) ||
+        !isRequired(rawEndDate)
       ) {
 
         return res.status(400).json({
@@ -157,7 +154,7 @@ const create =
 
       if (
         !validLeaveTypes.includes(
-          leaveType
+          rawLeaveType
         )
       ) {
 
@@ -174,8 +171,8 @@ const create =
 
 
       if (
-        new Date(startDate) >
-        new Date(endDate)
+        new Date(rawStartDate) >
+        new Date(rawEndDate)
       ) {
 
         return res.status(400).json({
@@ -194,16 +191,16 @@ const create =
         await addLeave({
 
           employeeId:
-            Number(employeeId),
+            Number(rawEmployeeId),
 
-          leaveType,
+          leaveType: rawLeaveType,
 
-          startDate,
+          startDate: rawStartDate,
 
-          endDate,
+          endDate: rawEndDate,
 
           reason:
-            reason || null,
+            rawReason || null,
 
           status:
             "PENDING",

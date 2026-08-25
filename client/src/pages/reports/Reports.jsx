@@ -3,7 +3,6 @@ import { useSearchParams } from "react-router-dom";
 import {
   FileSpreadsheet,
   Download,
-  BarChart3,
   Users,
   Receipt,
   Printer,
@@ -74,47 +73,32 @@ function Reports() {
 
     return employees.filter((emp) => {
       const empEmail = (emp.email || "").toLowerCase().trim();
-      // 1. Exclude self (Self receiver report cannot be made)
+      // Exclude self
       if (empEmail === currentEmail) return false;
-
-      // 2. If sender is Finance, they can only send reports to HR and Employees (not Admin)
-      if (userRole === "FINANCE") {
-        const empRole = (emp.user_role || emp.role || "").toUpperCase();
-        const empDesignation = (emp.designation || "").toUpperCase();
-        const empDept = (emp.department_name || emp.department || "").toUpperCase();
-        if (empRole === "ADMIN" || empDesignation.includes("ADMIN") || empDept.includes("ADMIN")) {
-          return false;
-        }
-      }
-
       return true;
     });
-  }, [employees, userEmail, userRole]);
+  }, [employees, userEmail]);
 
   // Form State for creating and sending Finance Report
   const [financeForm, setFinanceForm] = useState({
     targetEmail: "",
-    reportTitle: "Monthly Salary Statement",
-    fiscalPeriod: new Date().toLocaleString("en-US", { month: "long", year: "numeric" }),
-    grossSalary: "55000",
-    allowances: "5000",
-    deductions: "3000",
-    specialNotes: "Regular monthly salary credit with verified statutory deductions.",
+    reportTitle: "",
+    fiscalPeriod: "",
+    grossSalary: "",
+    allowances: "",
+    deductions: "",
+    specialNotes: "",
   });
 
   const handleOpenCreateModal = () => {
-    const firstEmp = availableTargetEmployees[0];
-    const initialTargetEmail = firstEmp?.email || "";
     setFinanceForm({
-      targetEmail: initialTargetEmail,
-      reportTitle: "Monthly Salary Statement",
-      fiscalPeriod: new Date().toLocaleString("en-US", { month: "long", year: "numeric" }),
-      grossSalary: firstEmp?.salary ? String(Number(firstEmp.salary)) : "55000",
-      allowances: firstEmp?.allowances ? String(Number(firstEmp.allowances)) : "5000",
-      deductions: (firstEmp?.pf_deduction || firstEmp?.tax_deduction)
-        ? String((Number(firstEmp.pf_deduction) || 0) + (Number(firstEmp.tax_deduction) || 0))
-        : "3000",
-      specialNotes: "Regular monthly salary credit with verified statutory deductions.",
+      targetEmail: "",
+      reportTitle: "",
+      fiscalPeriod: "",
+      grossSalary: "",
+      allowances: "",
+      deductions: "",
+      specialNotes: "",
     });
     setCreateModalOpen(true);
   };
@@ -191,7 +175,13 @@ function Reports() {
   useEffect(() => {
     const reportId = searchParams.get("reportId");
     if (reportId && allReports.length > 0) {
-      const target = allReports.find((r) => r.id === reportId);
+      const cleanId = reportId.trim().toLowerCase();
+      const target = allReports.find((r) =>
+        r.id.toLowerCase() === cleanId ||
+        r.id.toLowerCase() === `rep-db-${cleanId}` ||
+        r.id.toLowerCase().endsWith(cleanId) ||
+        (r.title && r.title.toLowerCase().includes(cleanId))
+      );
       if (target) {
         setSelectedReport(target);
         setPreviewModalOpen(true);
@@ -426,16 +416,50 @@ function Reports() {
     printWindow.document.close();
   };
 
+  const handleDownloadExcel = (report) => {
+    if (!report) return;
+    const title = (report.title || "Financial_Report").replace(/[^a-zA-Z0-9_-]/g, "_");
+    let csv = "\uFEFF"; // UTF-8 BOM for Excel
+    csv += `"${settings.companyName || "DHARAM CONSULTANCY SERVICES"} - FINANCIAL STATEMENT"\n`;
+    csv += `"Report Title:","${report.title || ""}"\n`;
+    csv += `"Reference:","${report.id || ""}"\n`;
+    csv += `"Date:","${report.date || ""}"\n`;
+    csv += `"Issued By:","${report.generatedBy || "Finance Team"}"\n`;
+    csv += `"Target / Recipient:","${report.targetEmployeeName || "Admin"}"\n\n`;
+
+    csv += `"SUMMARY METRICS"\n`;
+    csv += `"Metric Label","Amount / Value"\n`;
+    (report.data?.summary || []).forEach((s) => {
+      csv += `"${s.label}","${s.value}"\n`;
+    });
+
+    csv += `\n"DETAILED FINANCIAL LEDGER"\n`;
+    csv += `"Particulars / Item","Category","Metric","Amount / Status"\n`;
+    (report.data?.details || []).forEach((d) => {
+      csv += `"${d.item}","${d.dept}","${d.metric}","${d.score}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${title}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    notification.success("Excel Spreadsheet downloaded successfully!");
+  };
+
   return (
     <div className="reports-page">
       <div className="module-heading">
         <div>
-          <p className="section-label">BUSINESS INTELLIGENCE & COMPENSATION EXPORTS</p>
-          <h1>Enterprise Reports Hub</h1>
+          <p className="section-label" style={{ color: "#64748B" }}>REPORTS</p>
+          <h1>Reports</h1>
           <p>
             {isEmployee
-              ? `Personalized finance & compensation reports sent by the Finance Team to ${user?.name || "you"}.`
-              : "Generate, review, and export employee salary reports, executive payroll analytics, and department audits."}
+              ? `Salary reports sent to ${user?.name || "you"}.`
+              : "View and generate salary reports for employees."}
           </p>
         </div>
 
@@ -451,39 +475,23 @@ function Reports() {
                 padding: "10px 18px",
                 fontSize: "13.5px",
                 fontWeight: "700",
-                background: "linear-gradient(135deg, #A51D8D 0%, #7B2A9B 100%)",
-                boxShadow: "0 4px 14px rgba(165, 29, 141, 0.25)",
+                backgroundColor: "#1E293B",
+                borderColor: "#1E293B",
+                color: "#FFFFFF",
+                boxShadow: "0 4px 14px rgba(15, 23, 42, 0.12)",
               }}
             >
               <PlusCircle size={16} />
-              Create & Send Finance Report
+              Create Salary Report
             </button>
           )}
-
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "8px 16px",
-              backgroundColor: "#F8F2FA",
-              color: "#A51D8D",
-              border: "1px solid #DDD2E2",
-              borderRadius: "20px",
-              fontSize: "12.5px",
-              fontWeight: "800",
-            }}
-          >
-            <BarChart3 size={15} />
-            {userRole} Workspace
-          </span>
         </div>
       </div>
 
       <div
         style={{
-          background: "linear-gradient(135deg, rgba(165, 29, 141, 0.06) 0%, rgba(123, 42, 155, 0.04) 100%)",
-          border: "1px solid #DDD2E2",
+          background: "#F8FAFC",
+          border: "1px solid #E2E8F0",
           borderRadius: "12px",
           padding: "16px 20px",
           marginBottom: "24px",
@@ -494,10 +502,10 @@ function Reports() {
       >
         <div
           style={{
-            width: "42px",
-            height: "42px",
+            width: "40px",
+            height: "40px",
             borderRadius: "10px",
-            background: "#A51D8D",
+            background: "#1E293B",
             color: "#FFFFFF",
             display: "flex",
             alignItems: "center",
@@ -505,18 +513,18 @@ function Reports() {
             flexShrink: 0,
           }}
         >
-          <Sparkles size={20} />
+          <Sparkles size={18} />
         </div>
         <div style={{ flex: 1 }}>
-          <strong style={{ color: "#18243A", fontSize: "14px", display: "block" }}>
+          <strong style={{ color: "#0F172A", fontSize: "14px", display: "block" }}>
             {isEmployee
-              ? `Personalized Compensation Slips & Financial Statements for ${user?.name || "Employee"}`
-              : "Role-Based Report Governance & Employee Referral"}
+              ? `Salary Statements for ${user?.name || "Employee"}`
+              : "Salary Reports Overview"}
           </strong>
           <span style={{ color: "#475569", fontSize: "13px", lineHeight: "1.4" }}>
             {isEmployee
-              ? "The reports displayed below were generated directly by the Finance Team and linked to your employee profile. Click 'Preview' or 'Generate & Export' for verified documentation."
-              : "Finance and Admin teams can develop tailored financial reports for individual employees or company-wide. When published, each report is automatically routed to the target employee's personal dashboard."}
+              ? "The salary statements below were generated for your profile. Click 'Preview' or 'Export PDF' to view."
+              : "Create salary statements for employees. Once published, reports will appear on the employee's dashboard."}
           </span>
         </div>
       </div>
@@ -707,14 +715,14 @@ function Reports() {
 
       {createModalOpen && (
         <div className="modal-overlay">
-          <div className="employee-modal" style={{ maxWidth: "620px", width: "100%", borderRadius: "16px", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }}>
-            <div className="modal-header" style={{ padding: "20px 24px", borderBottom: "1px solid #F1F5F9" }}>
+          <div className="employee-modal" style={{ maxWidth: "600px", width: "92%", maxHeight: "88vh", borderRadius: "16px", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)", background: "#FFFFFF" }}>
+            <div className="modal-header" style={{ padding: "20px 24px", borderBottom: "1px solid #E2E8F0" }}>
               <div>
-                <p className="section-label" style={{ fontSize: "11px", fontWeight: "700", color: "#9E2682", letterSpacing: "0.6px", textTransform: "uppercase", margin: 0 }}>
-                  FINANCE DEPARTMENT ACTION
+                <p className="section-label" style={{ fontSize: "11px", fontWeight: "700", color: "#64748B", letterSpacing: "0.6px", textTransform: "uppercase", margin: 0 }}>
+                  Salary Statement
                 </p>
                 <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#0F172A", margin: "4px 0 0" }}>
-                  Create & Send Finance Report
+                  Create Salary Report
                 </h2>
               </div>
               <button className="modal-close" onClick={() => setCreateModalOpen(false)}>
@@ -722,12 +730,12 @@ function Reports() {
               </button>
             </div>
 
-            <form onSubmit={handlePublishFinanceReport} style={{ display: "flex", flexDirection: "column", flex: 1, margin: 0 }}>
-              <div className="modal-body" style={{ padding: "22px 26px", display: "flex", flexDirection: "column", gap: "18px", maxHeight: "75vh", overflowY: "auto" }}>
-                {/* TARGET EMPLOYEE */}
+            <form onSubmit={handlePublishFinanceReport} style={{ display: "flex", flexDirection: "column", flex: 1, margin: 0, overflow: "hidden" }}>
+              <div className="modal-body" style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: "16px", overflowY: "auto", maxHeight: "calc(88vh - 130px)" }}>
+                {/* SELECT EMPLOYEE */}
                 <div>
                   <label style={{ fontSize: "12px", fontWeight: "700", color: "#334155", display: "block", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-                    Select Target Employee to Receive Report: *
+                    Select Employee: *
                   </label>
                   <select
                     value={financeForm.targetEmail}
@@ -735,37 +743,34 @@ function Reports() {
                     required
                     style={{
                       width: "100%",
-                      height: "44px",
-                      padding: "0 36px 0 14px",
+                      height: "42px",
+                      padding: "0 14px",
                       border: "1.5px solid #CBD5E1",
                       borderRadius: "8px",
                       fontSize: "13.5px",
-                      color: "#0F172A",
+                      color: financeForm.targetEmail ? "#0F172A" : "#64748B",
                       backgroundColor: "#FFFFFF",
                       cursor: "pointer",
                       outline: "none",
                     }}
                   >
-                    {availableTargetEmployees.length === 0 ? (
-                      <option value="" disabled>No eligible recipient employees found</option>
-                    ) : (
-                      availableTargetEmployees.map((emp) => (
-                        <option key={emp.id} value={emp.email} style={{ padding: "8px", background: "#FFFFFF", color: "#0F172A" }}>
-                          {emp.first_name} {emp.last_name || ""} ({emp.employee_code || `DCS-EMP-${emp.id}`}) — {emp.email}
-                        </option>
-                      ))
-                    )}
-                    <option value="ALL" style={{ padding: "8px", background: "#FFFFFF", color: "#0F172A" }}>All Company Employees (General Broadcast)</option>
+                    <option value="" disabled>-- Select Employee --</option>
+                    {availableTargetEmployees.map((emp) => (
+                      <option key={emp.id} value={emp.email} style={{ padding: "8px", background: "#FFFFFF", color: "#0F172A" }}>
+                        {emp.first_name} {emp.last_name || ""} ({emp.employee_code || `DCS-EMP-${emp.id}`}) — {emp.email}
+                      </option>
+                    ))}
+                    <option value="ALL" style={{ padding: "8px", background: "#FFFFFF", color: "#0F172A" }}>All Employees</option>
                   </select>
                   {availableTargetEmployees.length === 0 && (
-                    <span style={{ fontSize: "12px", color: "#E11D48", marginTop: "4px", display: "block" }}>
-                      Self-recipient reporting is disabled. Other staff members must be onboarded to receive reports.
+                    <span style={{ fontSize: "12px", color: "#EF4444", marginTop: "4px", display: "block" }}>
+                      Other staff members must be onboarded to receive reports.
                     </span>
                   )}
                 </div>
 
                 {/* REPORT TITLE & FISCAL PERIOD */}
-                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "14px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px" }}>
                   <div>
                     <label style={{ fontSize: "12px", fontWeight: "700", color: "#334155", display: "block", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.3px" }}>
                       Report Title: *
@@ -778,7 +783,7 @@ function Reports() {
                       placeholder="e.g. Monthly Salary Statement"
                       style={{
                         width: "100%",
-                        height: "44px",
+                        height: "42px",
                         padding: "0 14px",
                         border: "1.5px solid #CBD5E1",
                         borderRadius: "8px",
@@ -792,7 +797,7 @@ function Reports() {
 
                   <div>
                     <label style={{ fontSize: "12px", fontWeight: "700", color: "#334155", display: "block", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-                      Fiscal Period: *
+                      Month / Period: *
                     </label>
                     <input
                       type="text"
@@ -802,7 +807,7 @@ function Reports() {
                       placeholder="e.g. August 2026"
                       style={{
                         width: "100%",
-                        height: "44px",
+                        height: "42px",
                         padding: "0 14px",
                         border: "1.5px solid #CBD5E1",
                         borderRadius: "8px",
@@ -816,10 +821,10 @@ function Reports() {
                 </div>
 
                 {/* SALARY EARNINGS / DEDUCTIONS 3 COLUMNS */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "12px" }}>
                   <div>
                     <label style={{ fontSize: "11.5px", fontWeight: "700", color: "#334155", display: "block", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.2px" }}>
-                      Gross Base ({currencySymbol}):
+                      Basic Salary ({currencySymbol}):
                     </label>
                     <input
                       type="number"
@@ -828,7 +833,7 @@ function Reports() {
                       required
                       style={{
                         width: "100%",
-                        height: "44px",
+                        height: "42px",
                         padding: "0 12px",
                         border: "1.5px solid #CBD5E1",
                         borderRadius: "8px",
@@ -851,7 +856,7 @@ function Reports() {
                       onChange={(e) => setFinanceForm({ ...financeForm, allowances: e.target.value })}
                       style={{
                         width: "100%",
-                        height: "44px",
+                        height: "42px",
                         padding: "0 12px",
                         border: "1.5px solid #CBD5E1",
                         borderRadius: "8px",
@@ -874,7 +879,7 @@ function Reports() {
                       onChange={(e) => setFinanceForm({ ...financeForm, deductions: e.target.value })}
                       style={{
                         width: "100%",
-                        height: "44px",
+                        height: "42px",
                         padding: "0 12px",
                         border: "1.5px solid #CBD5E1",
                         borderRadius: "8px",
@@ -888,11 +893,11 @@ function Reports() {
                   </div>
                 </div>
 
-                {/* NET PAYOUT CALCULATION */}
+                {/* CALCULATED NET TAKE-HOME PAYOUT BOX */}
                 <div
                   style={{
-                    backgroundColor: "#FDF2F8",
-                    border: "1.5px solid #FBCFE8",
+                    backgroundColor: "#F8FAFC",
+                    border: "1.5px solid #E2E8F0",
                     borderRadius: "10px",
                     padding: "14px 18px",
                     display: "flex",
@@ -902,13 +907,13 @@ function Reports() {
                 >
                   <div>
                     <span style={{ fontSize: "13px", fontWeight: "700", color: "#0F172A", display: "block" }}>
-                      Calculated Net Take-Home Payout:
+                      Calculated Net Salary:
                     </span>
-                    <span style={{ fontSize: "11px", color: "#94A3B8" }}>
-                      Gross + Allowances − Deductions
+                    <span style={{ fontSize: "11.5px", color: "#64748B" }}>
+                      Basic + Allowances − Deductions
                     </span>
                   </div>
-                  <strong style={{ fontSize: "20px", color: "#9E2682", fontWeight: "800" }}>
+                  <strong style={{ fontSize: "20px", color: "#0F172A", fontWeight: "800" }}>
                     {currencySymbol}
                     {(
                       (Number(financeForm.grossSalary) || 0) +
@@ -918,16 +923,16 @@ function Reports() {
                   </strong>
                 </div>
 
-                {/* REMARKS */}
+                {/* REMARKS & NOTES */}
                 <div>
                   <label style={{ fontSize: "12px", fontWeight: "700", color: "#334155", display: "block", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-                    Finance Remarks & Notes for Employee:
+                    Remarks / Notes for Employee:
                   </label>
                   <textarea
                     rows={2}
                     value={financeForm.specialNotes}
                     onChange={(e) => setFinanceForm({ ...financeForm, specialNotes: e.target.value })}
-                    placeholder="Enter notes or statutory remarks..."
+                    placeholder="Enter notes for employee..."
                     style={{
                       width: "100%",
                       minHeight: "65px",
@@ -953,17 +958,19 @@ function Reports() {
                   className="primary-button"
                   disabled={!financeForm.targetEmail && availableTargetEmployees.length === 0}
                   style={{
-                    background: "linear-gradient(135deg, #9E2682 0%, #D946EF 100%)",
+                    backgroundColor: "#1E293B",
+                    borderColor: "#1E293B",
+                    color: "#FFFFFF",
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "8px",
                     padding: "10px 22px",
                     borderRadius: "8px",
-                    boxShadow: "0 4px 12px rgba(158, 38, 130, 0.25)",
+                    boxShadow: "0 4px 12px rgba(15, 23, 42, 0.15)",
                   }}
                 >
                   <Send size={15} />
-                  Publish & Send to Employee
+                  Send Report
                 </button>
               </div>
             </form>
@@ -1051,9 +1058,15 @@ function Reports() {
                 Verified by {settings.companyName || "DCS Corporate"}
               </span>
 
-              <div style={{ display: "flex", gap: "10px" }}>
-                <button className="secondary-button" onClick={() => setPreviewModalOpen(false)}>
-                  Close
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  style={{ borderColor: "#10B981", color: "#065F46", background: "#ECFDF5", gap: "6px" }}
+                  onClick={() => handleDownloadExcel(selectedReport)}
+                >
+                  <FileSpreadsheet size={15} color="#10B981" />
+                  Download Excel Sheet
                 </button>
                 <button
                   className="primary-button"
@@ -1062,6 +1075,9 @@ function Reports() {
                 >
                   <Printer size={15} />
                   Print / Save PDF
+                </button>
+                <button className="secondary-button" onClick={() => setPreviewModalOpen(false)}>
+                  Close
                 </button>
               </div>
             </div>

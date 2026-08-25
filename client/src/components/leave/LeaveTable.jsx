@@ -3,6 +3,7 @@ import {
   Check,
   X,
   PauseCircle,
+  Trash2,
 } from "lucide-react";
 
 function LeaveTable({
@@ -11,7 +12,7 @@ function LeaveTable({
   onApprove,
   onReject,
   onHold,
-  canApprove = true,
+  onDelete,
 }) {
 
   return (
@@ -173,72 +174,79 @@ function LeaveTable({
 
                     {/* STATUS */}
 
+                    {/* STATUS & APPROVER ROUTING BADGE */}
                     <td>
+                      <div>
+                        <span
+                          className={`status-badge leave-status-${record.status.toLowerCase()}`}
+                        >
+                          {record.status}
+                        </span>
 
-                      <span
-                        className={`status-badge leave-status-${record.status.toLowerCase()}`}
-                      >
-                        {record.status}
-                      </span>
-
+                        <small
+                          style={{
+                            display: "block",
+                            marginTop: "4px",
+                            fontSize: "10.5px",
+                            fontWeight: "700",
+                            color:
+                              record.applicantRole === "ADMIN"
+                                ? "#7C3AED"
+                                : (record.applicantRole === "HR" || record.applicantRole === "FINANCE")
+                                ? "#2563EB"
+                                : record.applicantRole === "TEAM_LEAD"
+                                ? "#DB2777"
+                                : "#059669",
+                          }}
+                        >
+                          {record.applicantRole === "ADMIN"
+                            ? "→ Super Admin Approval"
+                            : (record.applicantRole === "HR" || record.applicantRole === "FINANCE")
+                            ? "→ Admin Approval"
+                            : record.applicantRole === "TEAM_LEAD"
+                            ? "→ HR Approval"
+                            : "→ Team Lead / HR Approval"}
+                        </small>
+                      </div>
                     </td>
 
-
                     {/* ACTIONS */}
-
                     <td>
-
                       <div className="leave-actions">
-
                         <button
-                          title="View"
-                          onClick={() =>
-                            onView(record)
-                          }
+                          title="View Details"
+                          onClick={() => onView(record)}
                         >
                           <Eye size={15} />
                         </button>
 
-
-                        {canApprove && (
+                        {Boolean(record.canApproveThisRecord) && (
                           <>
                             {record.status !== "Approved" && (
                               <button
                                 className="approve-button"
-                                title="Approve"
-                                onClick={() =>
-                                  onApprove(
-                                    record
-                                  )
-                                }
+                                title="Approve Leave"
+                                onClick={() => onApprove(record)}
                               >
-                                <Check
-                                  size={15}
-                                />
+                                <Check size={15} />
                               </button>
                             )}
 
                             {record.status !== "Rejected" && (
                               <button
                                 className="reject-button"
-                                title="Reject"
-                                onClick={() =>
-                                  onReject(
-                                    record
-                                  )
-                                }
+                                title="Reject Leave"
+                                onClick={() => onReject(record)}
                               >
-                                <X
-                                  size={15}
-                                />
+                                <X size={15} />
                               </button>
                             )}
 
                             {record.status !== "Pending" && (
                               <button
                                 style={{
-                                  background: "#fef3c7",
-                                  color: "#d97706",
+                                  background: "#FEF3C7",
+                                  color: "#D97706",
                                   border: "none",
                                   borderRadius: "6px",
                                   padding: "6px",
@@ -248,20 +256,34 @@ function LeaveTable({
                                   justifyContent: "center",
                                 }}
                                 title="Put on Hold"
-                                onClick={() =>
-                                  onHold && onHold(record)
-                                }
+                                onClick={() => onHold && onHold(record)}
                               >
-                                <PauseCircle
-                                  size={15}
-                                />
+                                <PauseCircle size={15} />
                               </button>
                             )}
                           </>
                         )}
 
+                        {onDelete && Boolean(record.canDeleteThisRecord) && (
+                          <button
+                            style={{
+                              background: "#FFF1F2",
+                              color: "#E11D48",
+                              border: "1px solid #FECDD3",
+                              borderRadius: "6px",
+                              padding: "6px",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                            title="Delete My Leave Request"
+                            onClick={() => onDelete(record)}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
                       </div>
-
                     </td>
 
                   </tr>

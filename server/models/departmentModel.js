@@ -17,11 +17,27 @@ const getAllDepartments =
     const result =
       await pool.query(`
         SELECT 
-          d.*,
-          COALESCE(COUNT(e.id), 0)::INTEGER AS employee_count
+          d.id,
+          d.name,
+          d.description,
+          d.is_active,
+          d.created_at,
+          d.updated_at,
+          d.team_lead_id,
+          COALESCE(tl.name, emp_tl.name, d.department_head, 'Unassigned') AS team_lead_name,
+          COALESCE(tl.email, emp_tl.email) AS team_lead_email,
+          COALESCE(d.department_head, tl.name, emp_tl.name, 'Unassigned') AS department_head,
+          COALESCE(COUNT(DISTINCT e.id), 0)::INTEGER AS employee_count
         FROM departments d
+        LEFT JOIN users tl ON tl.id = d.team_lead_id
+        LEFT JOIN (
+          SELECT emp.department_id, u.name, u.email
+          FROM employees emp
+          JOIN users u ON u.id = emp.user_id OR LOWER(TRIM(emp.email)) = LOWER(TRIM(u.email))
+          WHERE u.role = 'TEAM_LEAD'
+        ) emp_tl ON emp_tl.department_id = d.id
         LEFT JOIN employees e ON e.department_id = d.id
-        GROUP BY d.id
+        GROUP BY d.id, tl.id, emp_tl.name, emp_tl.email
         ORDER BY d.id ASC
       `);
 
@@ -30,7 +46,7 @@ const getAllDepartments =
 
 
 // ------------------------------------------
-// GET DEPARTMENT BY ID (WITH EMPLOYEES)
+// GET DEPARTMENT BY ID (WITH EMPLOYEES & TEAM LEAD)
 // ------------------------------------------
 
 const getDepartmentById =
@@ -40,12 +56,28 @@ const getDepartmentById =
       await pool.query(
         `
         SELECT 
-          d.*,
-          COALESCE(COUNT(e.id), 0)::INTEGER AS employee_count
+          d.id,
+          d.name,
+          d.description,
+          d.is_active,
+          d.created_at,
+          d.updated_at,
+          d.team_lead_id,
+          COALESCE(tl.name, emp_tl.name, d.department_head, 'Unassigned') AS team_lead_name,
+          COALESCE(tl.email, emp_tl.email) AS team_lead_email,
+          COALESCE(d.department_head, tl.name, emp_tl.name, 'Unassigned') AS department_head,
+          COALESCE(COUNT(DISTINCT e.id), 0)::INTEGER AS employee_count
         FROM departments d
+        LEFT JOIN users tl ON tl.id = d.team_lead_id
+        LEFT JOIN (
+          SELECT emp.department_id, u.name, u.email
+          FROM employees emp
+          JOIN users u ON u.id = emp.user_id OR LOWER(TRIM(emp.email)) = LOWER(TRIM(u.email))
+          WHERE u.role = 'TEAM_LEAD'
+        ) emp_tl ON emp_tl.department_id = d.id
         LEFT JOIN employees e ON e.department_id = d.id
         WHERE d.id = $1
-        GROUP BY d.id
+        GROUP BY d.id, tl.id, emp_tl.name, emp_tl.email
         `,
         [id]
       );
@@ -71,7 +103,7 @@ const getDepartmentById =
         e.avatar,
         u.role AS user_role
       FROM employees e
-      LEFT JOIN users u ON u.id = e.user_id
+      LEFT JOIN users u ON u.id = e.user_id OR LOWER(TRIM(e.email)) = LOWER(TRIM(u.email))
       WHERE e.department_id = $1
       ORDER BY e.id ASC
       `,
@@ -93,7 +125,14 @@ const createDepartment =
   async ({
     name,
     description,
+    teamLeadId,
+    team_lead_id,
+    departmentHead,
+    department_head,
   }) => {
+
+    const tLeadId = teamLeadId || team_lead_id || null;
+    const deptHead = departmentHead || department_head || null;
 
     const result =
       await pool.query(
@@ -101,15 +140,19 @@ const createDepartment =
         INSERT INTO departments
         (
           name,
-          description
+          description,
+          team_lead_id,
+          department_head
         )
         VALUES
-        ($1, $2)
+        ($1, $2, $3, $4)
         RETURNING *
         `,
         [
           name,
           description,
+          tLeadId,
+          deptHead,
         ]
       );
 
@@ -128,25 +171,38 @@ const updateDepartment =
       name,
       description,
       isActive,
+      is_active,
+      teamLeadId,
+      team_lead_id,
+      departmentHead,
+      department_head,
     }
   ) => {
+
+    const tLeadId = teamLeadId !== undefined ? teamLeadId : team_lead_id;
+    const deptHead = departmentHead !== undefined ? departmentHead : department_head;
+    const active = isActive !== undefined ? isActive : is_active;
 
     const result =
       await pool.query(
         `
         UPDATE departments
         SET
-          name = $1,
-          description = $2,
-          is_active = $3,
+          name = COALESCE($1, name),
+          description = COALESCE($2, description),
+          is_active = COALESCE($3, is_active),
+          team_lead_id = COALESCE($4, team_lead_id),
+          department_head = COALESCE($5, department_head),
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $4
+        WHERE id = $6
         RETURNING *
         `,
         [
           name,
           description,
-          isActive,
+          active,
+          tLeadId,
+          deptHead,
           id,
         ]
       );
